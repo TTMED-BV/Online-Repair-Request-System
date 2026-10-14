@@ -397,6 +397,19 @@ textarea{resize:vertical;min-height:76px}
 .cal-dnum{font-size:11px;font-weight:600;color:var(--tx2);text-align:right;line-height:1}
 .cal-ev{font-size:10px;line-height:1.3;padding:2px 5px;border-radius:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
 .cal-dot{display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:-1px;margin-right:2px}
+/* v12: ปฏิทินแบบแถบยาว — แถวละสัปดาห์ */
+.cw{position:relative;min-height:96px;margin-bottom:4px}
+.cw-bg{position:absolute;inset:0;display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cw-bg>div{background:var(--surf2);border:.5px solid var(--bd);border-radius:8px;padding:4px 6px}
+.cw-bg>div.out{opacity:.45}
+.cw-bg>div.today{border:1.5px solid var(--accent);background:var(--accent-soft)}
+.cw-bars{position:relative;display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:19px;row-gap:3px;padding:22px 0 8px}
+.cw-bar{font-size:10.5px;line-height:19px;padding:0 6px;margin:0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;border-radius:0}
+.cw-bar.s{border-top-left-radius:6px;border-bottom-left-radius:6px;margin-left:4px}
+.cw-bar.e{border-top-right-radius:6px;border-bottom-right-radius:6px;margin-right:4px}
+.cw-bar.cont{padding-left:4px}
+.cw-more{position:absolute;right:8px;bottom:2px;font-size:10px;color:var(--tx3)}
+@media(max-width:640px){.cw-bar{font-size:9px;padding:0 3px}.cw{min-height:72px}}
 .ev-over{background:var(--red-bg);color:var(--red-tx)}
 .ev-high{background:#fbe7d6;color:#9a4b09}
 .ev-tk{background:var(--blue-bg);color:var(--blue-tx)}
@@ -470,6 +483,7 @@ textarea{resize:vertical;min-height:76px}
 <div class="modal-bg" id="assignMd" style="display:none"><div class="modal" id="assignContent"></div></div>
 <div class="modal-bg" id="statusMd" style="display:none"><div class="modal" id="statusContent"></div></div>
 <div class="modal-bg" id="editMd" style="display:none"><div class="modal" id="editContent"></div></div>
+<div class="modal-bg" id="dueMd" style="display:none"><div class="modal" id="dueContent" style="max-width:440px"></div></div>
 <div class="modal-bg" id="userMd" style="display:none"><div class="modal" id="userContent"></div></div>
 
 <script>
@@ -767,7 +781,14 @@ function pausedDays(t){
 }
 // จำนวนวันที่นับ SLA จริง = วันทั้งหมด - วันที่พัก
 function effElapsed(t){ return Math.max(0, elapsed(t.createdAt) - pausedDays(t)); }
-function isOverSLA(t){ if(CLOSED_STATUS.includes(t.status)||SLA_PAUSED.includes(t.status)) return false; return effElapsed(t)>getSLA(t.category); }
+function isOverSLA(t){
+  if(CLOSED_STATUS.includes(t.status)||SLA_PAUSED.includes(t.status)) return false;
+  if(t.dueOverride){ const d=parseYmd(t.dueOverride); if(d){ const td=new Date(); td.setHours(0,0,0,0); return td>d; } }   // v12: แอดมินกำหนดวันเอง
+  return effElapsed(t)>getSLA(t.category);
+}
+// 'YYYY-MM-DD' → Date (เวลาท้องถิ่น 00:00)
+function parseYmd(v){ if(!v) return null; const m=String(v).match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); return m?new Date(+m[1],+m[2]-1,+m[3]):null; }
+function escHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 // ─── วันที่คาดว่าจะเสร็จ ───
 // แปลงวันที่เป็น 'YYYY-MM-DD' ตามเวลาท้องถิ่น (กัน off-by-one จาก timezone)
@@ -786,6 +807,7 @@ function addWorkingDays(date, n){
 }
 // วันที่คาดว่าจะเสร็จ = วันอนุมัติ + SLA (วันทำการ) + วันที่พัก
 function dueDate(t){
+  if(t && t.dueOverride){ const o=parseYmd(t.dueOverride); if(o) return o; }   // v12: วันที่แอดมินกำหนดเอง มาก่อนเสมอ
   if(!t || !t.approvedAt) return null;              // ยังไม่อนุมัติ = คาดการณ์ไม่ได้
   const base = addWorkingDays(new Date(t.approvedAt), getSLA(t.category));
   const pd = pausedDays(t);
@@ -799,7 +821,14 @@ function dueInfo(t){
   if(t.status==='cannot') return {text:'—', sub:'ซ่อมไม่ได้', cls:'b-red'};
   const d = dueDate(t);
   if(!d) return {text:'รออนุมัติ', sub:'', cls:'b-amber'};
-  const diff = Math.ceil((d - new Date())/86400000);
+  const r = dueInfoRaw(t,d);
+  if(t.dueOverride) r.sub = (r.sub?r.sub+' · ':'')+'📌 กำหนดเอง';
+  return r;
+}
+function dueInfoRaw(t,d){
+  const td=new Date(); td.setHours(0,0,0,0);
+  const dd=new Date(d); dd.setHours(0,0,0,0);
+  const diff = Math.round((dd - td)/86400000);
   if(SLA_PAUSED.includes(t.status)) return {text:fdShort(d), sub:'พักชั่วคราว', cls:'b-teal'};
   if(diff < 0)  return {text:fdShort(d), sub:`เกิน ${Math.abs(diff)} วัน`, cls:'b-red'};
   if(diff === 0)return {text:fdShort(d), sub:'ครบกำหนดวันนี้', cls:'b-red'};
@@ -819,9 +848,18 @@ function assigneeChips(assignees) {
   }).join('');
 }
 
+// v12: เฉพาะคนที่ "รับงานซ่อมได้" (บริหารที่ไม่ได้ซ่อมจะไม่ขึ้นในรายชื่อมอบหมาย/ภาระงาน)
+function isAssignableUser(usr){
+  if(!usr) return false;
+  if(usr.isEngineer) return true;
+  const r=roleOf(usr.role);
+  if(r) return (r.caps||[]).includes('assignable');
+  return usr.role!=='manager';
+}
+function assignableEntries(){ return Object.entries(USERS).filter(([u,usr])=>isAssignableUser(usr)); }
 function suggestAssignees(cat) {
   const active = DB.tickets.filter(t=>!CLOSED_STATUS.includes(t.status));
-  let list = Object.entries(USERS)
+  let list = assignableEntries()
     .map(([u,v]) => {
       const wl = active.filter(t=>(t.assignees||[]).includes(u)).length;
       const sp = v.specialty||[];
@@ -1231,6 +1269,12 @@ function pgStatus() {
           <option value="med">🟡 ปานกลาง</option>
           <option value="low">🟢 ปกติ</option>
         </select>
+        <select id="srate" onchange="filterStatus()" style="width:auto">
+          <option value="">⭐ การประเมินทั้งหมด</option>
+          <option value="unrated">ยังไม่ประเมิน (ทั้งหมด)</option>
+          <option value="proxy">รอประเมินแทน (เกิน ${RATE_PROXY_DAYS} วัน)</option>
+          <option value="rated">ประเมินแล้ว</option>
+        </select>
         ${cu?`<select id="sover" onchange="filterStatus()" style="width:auto">
           <option value="">⏱ ทั้งหมด (SLA)</option>
           <option value="over">เกิน SLA เท่านั้น</option>
@@ -1303,37 +1347,67 @@ function sortTable(k){
   // re-render using current filter set
   filterStatus();
 }
+// v12: สถานะการประเมิน — null (ยังไม่เสร็จ) | rated | waiting (ภายใน 3 วัน) | proxy (เกิน 3 วัน เปิดให้ประเมินแทน)
+const RATE_PROXY_DAYS=3;
+function doneAtOf(t){ if(t.completedAt) return new Date(t.completedAt); const h=(t.history||[]).filter(x=>x.status==='done'); return h.length?new Date(h[0].date):null; }
+function rateState(t){
+  if(t.status!=='done') return null;
+  if(t.rating>0) return 'rated';
+  const d=doneAtOf(t);
+  return d && (Date.now()-d)>=RATE_PROXY_DAYS*86400000 ? 'proxy' : 'waiting';
+}
+function rateBadge(t){
+  const r=rateState(t);
+  if(r==='rated') return `<span class="badge b-amber nodot">⭐ ${t.rating}${t.ratedBy?' · ประเมินแทน':''}</span>`;
+  if(r==='waiting') return '<span class="badge b-gray nodot">⭐ ยังไม่ประเมิน</span>';
+  if(r==='proxy') return '<span class="badge b-red nodot">⭐ รอประเมินแทน</span>';
+  return '';
+}
+function lastNote(t){
+  const h=(t.history||[]).slice().reverse().find(x=>x.note && x.note!=='-' && x.note!=='รับแจ้งซ่อมเข้าระบบ');
+  return h||null;
+}
 function renderStatusList(tickets) {
-  if (!tickets.length) return `<div class="empty"><div class="empty-ic"><i class="ti ti-clipboard-search"></i></div><div class="empty-ttl">ยังไม่มีรายการแจ้งซ่อม</div><div class="empty-sub">เมื่อมีการแจ้งซ่อมเข้ามา รายการจะแสดงที่นี่ พร้อมสถานะและผู้รับผิดชอบ</div></div>`;
-  return `<div style="display:flex;flex-direction:column;gap:.5rem">${tickets.map(t=>{
+  if (!tickets.length) return `<div class="empty"><div class="empty-ic"><i class="ti ti-clipboard-search"></i></div><div class="empty-ttl">ไม่พบรายการ</div><div class="empty-sub">ลองเปลี่ยนตัวกรอง — เมื่อมีการแจ้งซ่อมเข้ามา รายการจะแสดงที่นี่</div></div>`;
+  return `<div style="display:flex;flex-direction:column;gap:.6rem">${tickets.map(t=>{
     const s=getSI(t.status),b=getBI(t.building);
     const pCls=t.priority==='high'?'b-red':t.priority==='med'?'b-amber':'b-gray';
     const pLbl={high:'เร่งด่วน',med:'ปานกลาง',low:'ปกติ'}[t.priority];
-    const el=effElapsed(t),sla=getSLA(t.category),over=isOverSLA(t);
+    const over=isOverSLA(t);
     const peCls=over?'pe-over':t.priority==='high'?'pe-high':t.priority==='med'?'pe-med':'pe-low';
-    return `<div class="rowc ${peCls}">
+    const di=dueInfo(t), ln=lastNote(t);
+    const doneAt=t.status==='done'?doneAtOf(t):null;
+    const step=(lbl,val,on)=>`<span style="display:inline-flex;flex-direction:column;min-width:72px"><span style="font-size:10.5px;color:var(--tx3)">${lbl}</span><span style="font-size:12px;font-weight:${on?600:400};color:${on?'var(--tx)':'var(--tx3)'}">${val}</span></span>`;
+    return `<div class="rowc ${peCls}" style="align-items:flex-start">
         <div style="flex:1;min-width:0">
-          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:5px;align-items:center">
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px;align-items:center">
             <span class="mono">${t.id}</span>
             <span class="badge ${s.cls}">${s.label}</span>
             <span class="badge ${pCls} nodot">${pLbl}</span>
             ${t.source==='PM'?'<span class="badge b-teal nodot">🛠 PM</span>':''}
             ${over?'<span class="badge b-red">เกิน SLA</span>':''}
+            ${rateBadge(t)}
           </div>
-          <div style="font-weight:600;font-size:13.5px;margin-bottom:2px">${b.icon} ${b.name} — ${t.room}</div>
-          <div style="font-size:12px;color:var(--tx2)">${t.category} · ${t.name} · ${fd(t.createdAt)}</div>
-          ${cu?(()=>{const di=dueInfo(t);return `<div style="font-size:12px;margin-top:5px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-            <span style="color:var(--tx3)">คาดว่าเสร็จ:</span>
-            <span class="badge ${di.cls}">${di.text}${di.sub?' · '+di.sub:''}</span>
-          </div>`;})():''}
-          <div style="font-size:12px;margin-top:5px">${assigneeChips(t.assignees)}</div>
+          <div style="font-weight:700;font-size:15.5px;line-height:1.35;margin-bottom:3px">${b.icon} ${escHtml(t.room)}</div>
+          <div style="font-size:12px;color:var(--tx3);margin-bottom:6px">${b.name} · ${t.category}</div>
+          <div style="font-size:13px;margin-bottom:4px"><i class="ti ti-user" style="color:var(--tx3)"></i> <b>${escHtml(t.name)}</b>${t.dept?` <span style="color:var(--tx2)">· ${escHtml(t.dept)}</span>`:''}${cu&&t.phone&&t.phone!=='-'?` <span style="color:var(--tx2)">· <i class="ti ti-phone"></i> ${escHtml(t.phone)}</span>`:''}</div>
+          ${t.desc?`<div style="font-size:12.5px;color:var(--tx2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:6px">${escHtml(t.desc)}</div>`:''}
+          <div style="display:flex;gap:6px 14px;flex-wrap:wrap;align-items:flex-end;background:var(--surf2);border-radius:8px;padding:6px 10px;margin-bottom:6px">
+            ${step('แจ้ง',fdShort(t.createdAt),true)}
+            <span style="color:var(--tx3)">→</span>
+            ${step('อนุมัติ',t.approvedAt?fdShort(t.approvedAt):'รอ',!!t.approvedAt)}
+            <span style="color:var(--tx3)">→</span>
+            ${doneAt?step('เสร็จจริง',fdShort(doneAt),true):step('คาดว่าเสร็จ',`<span class="badge ${di.cls}" style="font-size:10.5px">${di.text}${di.sub?' · '+di.sub:''}</span>`,true)}
+          </div>
+          ${ln?`<div style="font-size:12px;color:var(--tx2);margin-bottom:5px"><i class="ti ti-message-2" style="color:var(--tx3)"></i> ล่าสุด: ${escHtml(ln.note)} <span style="color:var(--tx3)">— ${escHtml(ln.by||'')} · ${fdShort(ln.date)}</span></div>`:''}
+          <div style="font-size:12px">${assigneeChips(t.assignees)}</div>
         </div>
-        <button class="btn btn-sm" onclick="openDet('${t.id}')"><i class="ti ti-eye"></i> รายละเอียด</button>
+        <button class="btn btn-sm" onclick="openDet('${t.id}')"><i class="ti ti-eye"></i> ${rateState(t)&&rateState(t)!=='rated'?'ประเมิน':'รายละเอียด'}</button>
     </div>`;
   }).join('')}</div>`;
 }
 function filterStatus() {
-  const q=(v('sq')||'').toLowerCase(),bl=v('sbld')||'',st2=v('ssta')||'',cat=v('scat')||'',pri=v('spri')||'',over=v('sover')||'';
+  const q=(v('sq')||'').toLowerCase(),bl=v('sbld')||'',st2=v('ssta')||'',cat=v('scat')||'',pri=v('spri')||'',over=v('sover')||'',rate=v('srate')||'';
   let t=DB.tickets.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
   if(st2!=='cancelled') t=t.filter(x=>x.status!=='cancelled'); // ซ่อนใบยกเลิก เว้นแต่เลือกกรองดูโดยตรง
   if(q) t=t.filter(x=>x.id.toLowerCase().includes(q)||(x.name||'').toLowerCase().includes(q)||getBI(x.building).name.toLowerCase().includes(q)||(x.room||'').toLowerCase().includes(q)||(x.desc||'').toLowerCase().includes(q));
@@ -1342,14 +1416,16 @@ function filterStatus() {
   if(cat) t=t.filter(x=>x.category===cat);
   if(pri) t=t.filter(x=>x.priority===pri);
   if(over==='over') t=t.filter(x=>isOverSLA(x));
+  if(rate==='unrated') t=t.filter(x=>['waiting','proxy'].includes(rateState(x)));
+  else if(rate) t=t.filter(x=>rateState(x)===rate);
   document.getElementById('stlist').innerHTML=renderStatusList(t);
   const tbl=document.getElementById('sttable'); if(tbl) tbl.innerHTML=renderStatusTable(t);
   const fc=document.getElementById('filterCount');
-  if(fc){ const active=[q&&'คำค้น',bl&&'อาคาร',st2&&'สถานะ',cat&&'ประเภท',pri&&'ความเร่งด่วน',over&&'SLA'].filter(Boolean);
+  if(fc){ const active=[q&&'คำค้น',bl&&'อาคาร',st2&&'สถานะ',cat&&'ประเภท',pri&&'ความเร่งด่วน',over&&'SLA',rate&&'การประเมิน'].filter(Boolean);
     fc.textContent = active.length ? `พบ ${t.length} รายการ · กรองด้วย: ${active.join(', ')}` : `แสดงทั้งหมด ${t.length} รายการ`; }
 }
 function clearFilters(){
-  ['sq','sbld','ssta','scat','spri','sover'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  ['sq','sbld','ssta','scat','spri','sover','srate'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   filterStatus();
 }
 
@@ -1456,7 +1532,7 @@ function openAssign(id) {
   const t=DB.tickets.find(t=>t.id===id); if(!t) return;
   const suggested=suggestAssignees(t.category);
   const active=DB.tickets.filter(x=>!CLOSED_STATUS.includes(x.status));
-  const techList=Object.entries(USERS).map(([u,usr])=>{
+  const techList=assignableEntries().map(([u,usr])=>{
     const wl=active.filter(x=>(x.assignees||[]).includes(u)).length;
     const isSugg=suggested.indexOf(u);
     const sugg=isSugg===0?'⭐ แนะนำ':isSugg===1?'✓ รอง':'';
@@ -1478,6 +1554,7 @@ function openAssign(id) {
     </div>
     <div class="ff"><label>หมายเหตุจากผู้อนุมัติ</label><textarea id="asNote" placeholder="คำแนะนำสำหรับช่าง..."></textarea></div>
     <div class="ff"><label>งบประมาณที่อนุมัติ (บาท)</label><input id="asBudget" type="number" value="${t.estimatedCost||0}"></div>
+    <div class="ff"><label>วันคาดว่าเสร็จ (ไม่บังคับ — เว้นว่าง = ตาม SLA ${getSLA(t.category)} วันทำการ)</label><input id="asDue" type="date" value="${t.dueOverride||''}"></div>
     <label class="cb-item" style="cursor:pointer"><input type="checkbox" id="asNeedBuy" ${t.needsPurchase?'checked':''} style="width:auto"> <span class="cb-label">งานนี้ต้องจัดซื้อ/ใช้เงิน (ต้องให้บริหารอนุมัติก่อนจัดซื้อ)</span></label>
     <button class="btn btn-p" style="width:100%;margin-top:.75rem" onclick="confirmAssign('${id}')">ยืนยันอนุมัติและมอบหมาย</button>`;
   document.getElementById('assignMd').style.display='flex';
@@ -1496,12 +1573,16 @@ async function confirmAssign(id) {
   if(!selected.length){alert('กรุณาเลือกผู้รับผิดชอบอย่างน้อย 1 คน');return;}
   const note=v('asNote'),budget=parseFloat(document.getElementById('asBudget').value)||0;
   const needBuy=!!document.getElementById('asNeedBuy')?.checked;
+  const due=(document.getElementById('asDue')?.value||'').trim();
   const t=DB.tickets.find(t=>t.id===id);if(!t)return;
   t.status='assigned'; t.assignees=selected; t.approvedAt=now(); t.approvedBy=cu.username; t.approvedBudget=budget; t.needsPurchase=needBuy;
-  const entry={status:'assigned',date:now(),note:`อนุมัติโดย ${cu.name} → มอบหมาย: ${selected.map(getUserName).join(', ')}${needBuy?' (ต้องจัดซื้อ)':''}${note?' — '+note:''}`,by:cu.name};
+  if(due) t.dueOverride=due;
+  const entry={status:'assigned',date:now(),note:`อนุมัติโดย ${cu.name} → มอบหมาย: ${selected.map(getUserName).join(', ')}${needBuy?' (ต้องจัดซื้อ)':''}${due?' · กำหนดเสร็จ '+fdShort(parseYmd(due)):''}${note?' — '+note:''}`,by:cu.name};
   if(!t.history)t.history=[];
   t.history.push(entry);
-  await syncUpdate(id,{status:'assigned',assignees:selected,approvedAt:t.approvedAt,approvedBy:t.approvedBy,approvedBudget:budget,needsPurchase:needBuy},entry);
+  const f={status:'assigned',assignees:selected,approvedAt:t.approvedAt,approvedBy:t.approvedBy,approvedBudget:budget,needsPurchase:needBuy};
+  if(due) f.dueOverride=due;
+  await syncUpdate(id,f,entry);
   hideLoader(); cm('assignMd'); updApvCnt(); rp();
   showToast(`มอบหมายงานให้ ${selected.map(u=>getUserName(u).split(' ')[0]).join(' + ')} แล้ว`);
 }
@@ -1531,61 +1612,116 @@ async function doApprovePurchase(id){
 }
 
 // ════════════════════════ PAGE: MANAGE ════════════════════════
+// v12: ฟิลเตอร์หน้าจัดการงาน (จำไว้ในเครื่อง)
+let MF=(()=>{ try{ return JSON.parse(localStorage.getItem('vr3_mf')||'{}'); }catch(e){ return {}; } })();
+function mfSave(){ try{ localStorage.setItem('vr3_mf',JSON.stringify(MF)); }catch(e){} }
+function mfSet(k,val){ MF[k]=val; if(k==='bld') MF.floor=''; mfSave(); if(k==='bld'){ rp(); return; } renderManageList(); }
+function mfClear(){ MF={}; mfSave(); rp(); }
+// ชั้นของใบงาน: ใช้ช่อง floor ถ้ามี ไม่งั้นดูจากข้อความห้อง "ชั้น X — ..."
+function ticketFloor(t){ if(t.floor) return t.floor; const p=String(t.room||'').split(' — ')[0]; return FLOORS.some(f=>f.floor===p)?p:''; }
+function manageFiltered(){
+  let arr=DB.tickets.filter(t=>t.status!=='cancelled').slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const q=(MF.q||'').toLowerCase().trim();
+  if(MF.who==='me') arr=arr.filter(t=>(t.assignees||[]).includes(cu.username));
+  else if(MF.who==='none') arr=arr.filter(t=>!(t.assignees||[]).length);
+  else if(MF.who) arr=arr.filter(t=>(t.assignees||[]).includes(MF.who));
+  if(MF.st) arr=arr.filter(t=>t.status===MF.st);
+  if(MF.over) arr=arr.filter(t=>isOverSLA(t));
+  if(MF.bld) arr=arr.filter(t=>t.building===MF.bld);
+  if(MF.floor) arr=arr.filter(t=>ticketFloor(t)===MF.floor);
+  if(MF.cat) arr=arr.filter(t=>t.category===MF.cat);
+  if(MF.pri) arr=arr.filter(t=>t.priority===MF.pri);
+  if(MF.from){ const f=parseYmd(MF.from); arr=arr.filter(t=>new Date(t.createdAt)>=f); }
+  if(MF.to){ const e=parseYmd(MF.to); e.setDate(e.getDate()+1); arr=arr.filter(t=>new Date(t.createdAt)<e); }
+  if(q) arr=arr.filter(t=>[t.id,t.name,t.room,t.desc,t.dept].some(x=>String(x||'').toLowerCase().includes(q)));
+  return arr;
+}
+function manageCard(t){
+  const s=getSI(t.status),b=getBI(t.building),el=effElapsed(t),pd=pausedDays(t),sla=getSLA(t.category),over=isOverSLA(t);
+  const di=dueInfo(t);
+  return `<div class="card card-sm" style="${over?'border-left:3px solid #e35b5b':''}">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:.5rem">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:3px">
+          <span class="mono">${t.id}</span>
+          <span class="badge ${s.cls}">${s.label}</span>
+          ${t.priority==='high'?'<span class="badge b-red nodot">เร่งด่วน</span>':''}
+          ${t.source==='PM'?'<span class="badge b-teal nodot">🛠 PM</span>':''}
+          ${over?'<span class="badge b-red">เกิน SLA</span>':''}
+        </div>
+        <div style="font-weight:600;font-size:13px">${b.icon} ${b.name} — ${escHtml(t.room)}</div>
+        <div style="font-size:12px;color:var(--tx2)">${t.category} | ${escHtml(t.name)} | นับ SLA ${el} วัน / ${sla} วัน${pd>0?` <span style="color:var(--purple-tx)">(พัก ${pd} วัน)</span>`:''}</div>
+        <div style="font-size:12px;margin-top:4px;display:flex;align-items:center;gap:5px;flex-wrap:wrap"><span style="color:var(--tx3)">คาดว่าเสร็จ:</span><span class="badge ${di.cls}">${di.text}${di.sub?' · '+di.sub:''}</span></div>
+        <div style="margin-top:4px">${assigneeChips(t.assignees)}</div>
+      </div>
+      <div style="display:flex;gap:5px">
+        <button class="btn btn-sm" onclick="openDet('${t.id}')">ดู</button>
+        ${CLOSED_STATUS.includes(t.status)?'':`<button class="btn btn-sm btn-p" onclick="openStatusUpdate('${t.id}')">อัปเดต</button>`}
+      </div>
+    </div>
+  </div>`;
+}
+function renderManageList(){
+  const box=document.getElementById('mgList'); if(!box) return;
+  const all=manageFiltered();
+  const active=all.filter(t=>!CLOSED_STATUS.includes(t.status)&&t.status!=='pending_approval');
+  const done=all.filter(t=>CLOSED_STATUS.includes(t.status));
+  const total=DB.tickets.filter(t=>!['cancelled','pending_approval'].includes(t.status)).length;
+  const nOn=['who','st','over','bld','floor','cat','pri','from','to','q'].filter(k=>MF[k]).length;
+  const cnt=document.getElementById('mgCount');
+  if(cnt) cnt.textContent = nOn ? `พบ ${active.length+done.length} จาก ${total} รายการ · ใช้ตัวกรอง ${nOn} อย่าง` : `ทั้งหมด ${total} รายการ`;
+  box.innerHTML=`
+    <div style="font-size:13px;font-weight:600;margin-bottom:.75rem">กำลังดำเนินการ (${active.length})</div>
+    <div style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:1.5rem">
+      ${active.length?active.map(manageCard).join(''):`<div class="empty" style="padding:2rem"><div class="empty-ic"><i class="ti ti-checklist"></i></div><div class="empty-ttl">ไม่มีงานที่ตรงกับตัวกรอง</div><div class="empty-sub">ลองล้างตัวกรอง หรือเลือกเงื่อนไขอื่น</div></div>`}
+    </div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:.75rem;color:var(--tx2)">งานสิ้นสุด (${done.length})${done.length>20?' — แสดง 20 รายการล่าสุด':''}</div>
+    <div style="display:flex;flex-direction:column;gap:.5rem;opacity:.8">${done.slice(0,20).map(manageCard).join('')}</div>`;
+}
 function pgManage() {
   if (!cu) return `<div class="empty">กรุณาเข้าสู่ระบบ</div>`;
-  // ทุกคน role=admin เห็นทั้งหมด
-  let tickets=DB.tickets.filter(t=>t.status!=='cancelled').slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
-  const active=tickets.filter(t=>!['done','cannot','pending_approval'].includes(t.status));
-  const done=tickets.filter(t=>CLOSED_STATUS.includes(t.status));
+  if(MF.who && MF.who!=='me' && MF.who!=='none' && !USERS[MF.who]) MF.who='';
+  const sel=(k,val)=>MF[k]===val?'selected':'';
+  const fls=MF.bld?floorsOf(MF.bld):Array.from(new Set(FLOORS.map(f=>f.floor)));
+  setTimeout(renderManageList,0);
   return `<div>
-    <div class="notice n-info" style="margin-bottom:1rem;font-size:12px">
-      ผู้ใช้: <b>${cu.name}</b> — เห็นและจัดการงานได้ทุกรายการ
+    <div class="card" style="margin-bottom:1rem">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input placeholder="🔍 ค้นหารหัส / ผู้แจ้ง / ห้อง / รายละเอียด" value="${escAttr(MF.q||'')}" oninput="mfSet('q',this.value)" style="flex:1;min-width:200px">
+        <button class="btn btn-sm" onclick="loadAll().then(rp)">🔄 รีเฟรช</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
+        <select style="width:auto" onchange="mfSet('who',this.value)">
+          <option value="">👷 ทุกผู้รับผิดชอบ</option>
+          <option value="me" ${sel('who','me')}>⭐ งานของฉัน</option>
+          <option value="none" ${sel('who','none')}>ยังไม่มอบหมาย</option>
+          ${assignableEntries().map(([u,usr])=>`<option value="${u}" ${sel('who',u)}>${escHtml(usr.name)}</option>`).join('')}
+        </select>
+        <select style="width:auto" onchange="mfSet('st',this.value)">
+          <option value="">📋 ทุกสถานะ</option>${STATUSES.filter(x=>!['pending_approval','cancelled'].includes(x.id)).map(x=>`<option value="${x.id}" ${sel('st',x.id)}>${x.label}</option>`).join('')}
+        </select>
+        <label style="font-size:12.5px;display:inline-flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" style="width:auto" ${MF.over?'checked':''} onchange="mfSet('over',this.checked)"> เฉพาะเกิน SLA</label>
+        <select style="width:auto" onchange="mfSet('bld',this.value)">
+          <option value="">🏢 ทุกอาคาร</option>${BUILDINGS.map(b=>`<option value="${b.id}" ${sel('bld',b.id)}>${b.icon} ${b.short}</option>`).join('')}
+        </select>
+        <select style="width:auto" onchange="mfSet('floor',this.value)">
+          <option value="">ทุกชั้น</option>${fls.map(f=>`<option value="${escAttr(f)}" ${sel('floor',f)}>${escHtml(f)}</option>`).join('')}
+        </select>
+        <select style="width:auto" onchange="mfSet('cat',this.value)">
+          <option value="">🔧 ทุกประเภท</option>${CATS.map(c=>`<option value="${escAttr(c)}" ${sel('cat',c)}>${c}</option>`).join('')}
+        </select>
+        <select style="width:auto" onchange="mfSet('pri',this.value)">
+          <option value="">⚡ ทุกความเร่งด่วน</option>
+          <option value="high" ${sel('pri','high')}>🔴 เร่งด่วน</option>
+          <option value="med" ${sel('pri','med')}>🟡 ปานกลาง</option>
+          <option value="low" ${sel('pri','low')}>🟢 ปกติ</option>
+        </select>
+        <span style="font-size:12.5px;display:inline-flex;align-items:center;gap:4px">แจ้งตั้งแต่ <input type="date" style="width:auto" value="${MF.from||''}" onchange="mfSet('from',this.value)"> ถึง <input type="date" style="width:auto" value="${MF.to||''}" onchange="mfSet('to',this.value)"></span>
+        <button class="btn btn-sm" onclick="mfClear()" style="margin-left:auto">✕ ล้างตัวกรอง</button>
+      </div>
+      <div id="mgCount" style="font-size:11.5px;color:var(--tx3);margin-top:8px"></div>
     </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
-      <div style="font-size:13px;font-weight:600">กำลังดำเนินการ (${active.length})</div>
-      <button class="btn btn-sm" onclick="loadAll().then(rp)">🔄 รีเฟรช</button>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:1.5rem">
-    ${!active.length?`<div class="empty" style="padding:2rem"><div class="empty-ic"><i class="ti ti-checklist"></i></div><div class="empty-ttl">ไม่มีงานที่กำลังดำเนินการ</div><div class="empty-sub">งานที่ได้รับอนุมัติและมอบหมายแล้วจะแสดงที่นี่</div></div>`:''}
-    ${active.map(t=>{
-      const s=getSI(t.status),b=getBI(t.building),el=effElapsed(t),pd=pausedDays(t),sla=getSLA(t.category),over=isOverSLA(t);
-      return `<div class="card card-sm" style="${over?'border-left:3px solid #e35b5b':''}">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:.5rem">
-          <div style="flex:1">
-            <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:3px">
-              <span class="mono">${t.id}</span>
-              <span class="badge ${s.cls}">${s.label}</span>
-              ${over?'<span class="badge b-red">เกิน SLA</span>':''}
-            </div>
-            <div style="font-weight:600;font-size:13px">${b.icon} ${b.name} — ${t.room}</div>
-            <div style="font-size:12px;color:var(--tx2)">${t.category} | ${t.name} | นับ SLA ${el} วัน / ${sla} วัน${pd>0?` <span style="color:var(--purple-tx)">(พัก ${pd} วัน)</span>`:''}</div>
-            ${(()=>{const di=dueInfo(t);return `<div style="font-size:12px;margin-top:4px;display:flex;align-items:center;gap:5px;flex-wrap:wrap"><span style="color:var(--tx3)">คาดว่าเสร็จ:</span><span class="badge ${di.cls}">${di.text}${di.sub?' · '+di.sub:''}</span></div>`;})()}
-            <div style="margin-top:4px">${assigneeChips(t.assignees)}</div>
-          </div>
-          <div style="display:flex;gap:5px">
-            <button class="btn btn-sm" onclick="openDet('${t.id}')">ดู</button>
-            <button class="btn btn-sm btn-p" onclick="openStatusUpdate('${t.id}')">อัปเดต</button>
-          </div>
-        </div>
-      </div>`;
-    }).join('')}
-    </div>
-    <div style="font-size:13px;font-weight:600;margin-bottom:.75rem;color:var(--tx2)">งานสิ้นสุด (${done.length})</div>
-    <div style="display:flex;flex-direction:column;gap:.5rem">
-    ${done.slice(0,10).map(t=>{
-      const s=getSI(t.status),b=getBI(t.building);
-      return `<div class="card card-sm" style="opacity:.75">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem">
-          <div>
-            <span class="mono">${t.id}</span> <span class="badge ${s.cls}">${s.label}</span>
-            <div style="font-size:12px;color:var(--tx2);margin-top:2px">${b.icon} ${b.short} — ${t.category} | ${t.name}</div>
-            <div style="margin-top:3px">${assigneeChips(t.assignees)}</div>
-          </div>
-          <button class="btn btn-sm" onclick="openDet('${t.id}')">ดู</button>
-        </div>
-      </div>`;
-    }).join('')}
-    </div>
+    <div id="mgList"></div>
   </div>`;
 }
 
@@ -1664,29 +1800,96 @@ function donutSVG(segments, total){
 // ════════════════════════ PAGE: PM (ซ่อมบำรุงเชิงป้องกัน) ════════════════════════
 let pmDraft=null;
 function ensurePMDraft(){ if(!pmDraft) pmDraft=JSON.parse(JSON.stringify(PM_LIST||[])); return pmDraft; }
+// v12: หารอบ PM ถัดไป — ต้องตรงกับ pmNextOcc_ ใน Code.gs
+function pmNextOcc(p, nowD){
+  const now=nowD||new Date();
+  const today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const last=p.lastDone?new Date(p.lastDone):null;
+  const sc=p.schedule||{};
+  const after=d=> last ? d>last : d>=today;
+  const dt=(y,m,d)=>{ const mx=new Date(y,m+1,0).getDate(); return new Date(y,m,Math.min(d,mx)); };
+  const mode=p.mode||'interval';
+  if(mode==='interval'){
+    if(!last) return {start:today,end:null};
+    return {start:new Date(last.getTime()+(Number(p.intervalDays)||180)*86400000),end:null};
+  }
+  if(mode==='dates'){
+    const ds=(sc.dates||[]).map(parseYmd).filter(Boolean).sort((a,b)=>a-b);
+    for(const d of ds) if(after(d)) return {start:d,end:null};
+    return null;
+  }
+  const y0=last?Math.min(last.getFullYear(),today.getFullYear()):today.getFullYear();
+  if(mode==='monthly'){
+    const day=Number(sc.day)||1, m0=last?last.getMonth():today.getMonth();
+    for(let n=0;n<40;n++){ const c=dt(y0,m0+n,day); if(after(c)) return {start:c,end:null}; }
+    return null;
+  }
+  if(mode==='yearly'){
+    for(let y=y0;y<y0+3;y++){ const c=dt(y,(Number(sc.month)||1)-1,Number(sc.day)||1); if(after(c)) return {start:c,end:null}; }
+    return null;
+  }
+  if(mode==='range'){
+    const a=parseYmd(sc.start), b=parseYmd(sc.end);
+    if(!a||!b) return null;
+    if(!sc.yearly){
+      if(last && last>=a) return null;
+      if(b<today) return null;
+      return {start:a,end:b};
+    }
+    for(let yy=y0-1;yy<y0+3;yy++){
+      const sa=dt(yy,a.getMonth(),a.getDate());
+      const sb=new Date(sa.getTime()+Math.max(0,Math.round((b-a)/86400000))*86400000);
+      if(sb<today) continue;
+      if(last && last>=sa) continue;
+      return {start:sa,end:sb};
+    }
+    return null;
+  }
+  return null;
+}
 function pmDue(p){
   if(p.active===false) return null;
-  const iv=Number(p.intervalDays)||180;
-  if(!p.lastDone) return {due:true,days:null};
-  const d=Math.floor((Date.now()-new Date(p.lastDone))/86400000);
-  return {due:d>=iv, days:iv-d};
+  const occ=pmNextOcc(p);
+  if(!occ) return {due:false,days:null,none:true};
+  const td=new Date(); td.setHours(0,0,0,0);
+  const days=Math.round((occ.start-td)/86400000);
+  return {due:days<=0, days, occ};
 }
+const PM_MODES={interval:'ตามรอบวัน',dates:'ระบุวันที่',range:'ช่วงวันที่',monthly:'รายเดือน',yearly:'รายปี'};
+const TH_MONTHS=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+function pmSchedCell(p,i){
+  const sc=p.schedule||{}, mode=p.mode||'interval';
+  const sel=`<select onchange="pmEdit(${i},'mode',this.value)" style="margin-bottom:5px">${Object.entries(PM_MODES).map(([k,l])=>`<option value="${k}" ${mode===k?'selected':''}>${l}</option>`).join('')}</select>`;
+  let body='';
+  if(mode==='interval') body=`ทุก <input type="number" value="${p.intervalDays||180}" min="1" style="width:70px" onchange="pmEdit(${i},'intervalDays',this.value)"> วัน`;
+  else if(mode==='dates') body=`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px">${(sc.dates||[]).slice().sort().map((d,k)=>`<span class="badge b-blue nodot">${fdShort(parseYmd(d))} <a href="javascript:void 0" onclick="pmDateDel(${i},'${d}')" style="color:inherit;text-decoration:none;margin-left:3px">✕</a></span>`).join('')||'<span style="font-size:11px;color:var(--tx3)">ยังไม่มีวันที่</span>'}</div>
+      <input type="date" id="pmdt_${i}" style="width:auto"> <button class="btn btn-sm" onclick="pmDateAdd(${i})">+ เพิ่มวัน</button>`;
+  else if(mode==='range') body=`<input type="date" value="${sc.start||''}" style="width:auto" onchange="pmSched(${i},'start',this.value)"> ถึง <input type="date" value="${sc.end||''}" style="width:auto" onchange="pmSched(${i},'end',this.value)">
+      <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;margin-left:4px;cursor:pointer"><input type="checkbox" ${sc.yearly?'checked':''} style="width:auto" onchange="pmSched(${i},'yearly',this.checked)"> ทำซ้ำทุกปี</label>`;
+  else if(mode==='monthly') body=`ทุกวันที่ <input type="number" min="1" max="31" value="${sc.day||1}" style="width:60px" onchange="pmSched(${i},'day',Number(this.value)||1)"> ของเดือน`;
+  else if(mode==='yearly') body=`ทุกปี วันที่ <input type="number" min="1" max="31" value="${sc.day||1}" style="width:60px" onchange="pmSched(${i},'day',Number(this.value)||1)"> <select style="width:auto" onchange="pmSched(${i},'month',Number(this.value))">${TH_MONTHS.map((m,k)=>`<option value="${k+1}" ${(Number(sc.month)||1)===k+1?'selected':''}>${m}</option>`).join('')}</select>`;
+  return `<div style="min-width:230px;font-size:12.5px">${sel}<div>${body}</div></div>`;
+}
+function pmSched(i,key,val){ const d=ensurePMDraft(); d[i].schedule=d[i].schedule||{}; d[i].schedule[key]=val; rp(); }
+function pmDateAdd(i){ const el=document.getElementById('pmdt_'+i); const v2=el&&el.value; if(!v2) return; const d=ensurePMDraft(); const sc=d[i].schedule=d[i].schedule||{}; sc.dates=Array.from(new Set([...(sc.dates||[]),v2])); rp(); }
+function pmDateDel(i,dv){ const d=ensurePMDraft(); const sc=d[i].schedule||{}; sc.dates=(sc.dates||[]).filter(x=>x!==dv); rp(); }
 function pgPM(){
   if(!cu) return `<div class="empty">กรุณาเข้าสู่ระบบ</div>`;
   const d=ensurePMDraft();
   const catOpts=CATS.map(c=>`<option value="${c}">${c}</option>`).join('');
   const rows=d.map((p,i)=>{
     const st=pmDue(p);
+    const occTxt = st&&st.occ ? (st.occ.end?`${fdShort(st.occ.start)} – ${fdShort(st.occ.end)}`:fdShort(st.occ.start)) : '';
     const statusBadge = p.active===false ? '<span class="badge b-gray">ปิดอยู่</span>'
-      : st&&st.due ? '<span class="badge b-red">ถึงรอบแล้ว</span>'
-      : st&&st.days!=null ? `<span class="badge b-green">อีก ${st.days} วัน</span>`
-      : '<span class="badge b-amber">ยังไม่เคยทำ</span>';
+      : st&&st.none ? '<span class="badge b-gray">ไม่มีรอบถัดไป</span>'
+      : st&&st.due ? `<span class="badge b-red">ถึงรอบแล้ว</span><div style="font-size:10.5px;color:var(--tx3);margin-top:3px">${occTxt}</div>`
+      : `<span class="badge b-green">อีก ${st.days} วัน</span><div style="font-size:10.5px;color:var(--tx3);margin-top:3px">${occTxt}</div>`;
     const fls=floorsOf(p.building);
     return `<tr>
       <td><input value="${escAttr(p.name||'')}" placeholder="เช่น ล้างแอร์ชั้น 3" onchange="pmEdit(${i},'name',this.value)" style="min-width:150px"></td>
       <td><select onchange="pmEdit(${i},'floor',this.value)">${fls.length?fls.map(f=>`<option value="${f}" ${p.floor===f?'selected':''}>${f}</option>`).join(''):'<option value="">-</option>'}</select></td>
       <td><select onchange="pmEdit(${i},'category',this.value)">${CATS.map(c=>`<option value="${c}" ${p.category===c?'selected':''}>${c}</option>`).join('')}</select></td>
-      <td><input type="number" value="${p.intervalDays||180}" min="1" style="width:70px" onchange="pmEdit(${i},'intervalDays',this.value)"> วัน</td>
+      <td>${pmSchedCell(p,i)}</td>
       <td style="font-size:12px;white-space:nowrap">${p.lastDone?fdShort(p.lastDone):'—'}</td>
       <td style="text-align:center">${statusBadge}</td>
       <td style="text-align:center"><label style="cursor:pointer"><input type="checkbox" ${p.active!==false?'checked':''} onchange="pmEdit(${i},'active',this.checked)" style="width:auto;accent-color:var(--accent)"></label></td>
@@ -1697,9 +1900,9 @@ function pgPM(){
   return `<div>
     <div class="ph" style="margin-bottom:1rem">
       <div class="ph-title">🛠 แผนซ่อมบำรุงเชิงป้องกัน (PM)</div>
-      <div class="ph-sub">ตั้งงานบำรุงรักษาตามรอบ (เป็นจำนวนวัน) — เมื่อถึงรอบ ระบบจะสร้างใบแจ้งซ่อมให้อัตโนมัติตอนมีคนเปิดเว็บ</div>
+      <div class="ph-sub">ตั้งงานบำรุงรักษาได้ 5 แบบ: ตามรอบวัน · ระบุวันที่ · ช่วงวันที่ · รายเดือน · รายปี — ถึงกำหนดแล้วระบบสร้างใบแจ้งซ่อมให้อัตโนมัติทุกเช้า 06:00 น.</div>
     </div>
-    <div class="notice n-info" style="margin-bottom:1rem"><i class="ti ti-info-circle ni"></i><div>รอบนับจาก “วันทำล่าสุด” + จำนวนวัน · ถ้ายังไม่เคยทำ (วันทำล่าสุด —) ถือว่าถึงรอบทันที · เมื่อสร้างใบแล้วระบบจะอัปเดตวันทำล่าสุดให้เอง</div></div>
+    <div class="notice n-info" style="margin-bottom:1rem"><i class="ti ti-info-circle ni"></i><div><b>ตามรอบวัน</b> นับจากวันทำล่าสุด (ยังไม่เคยทำ = ถึงรอบทันที) · <b>ระบุวันที่</b> ใส่ได้หลายวัน · <b>ช่วงวันที่</b> สร้างใบวันแรกของช่วง และกำหนดเสร็จเป็นวันสุดท้ายของช่วง (ติ๊กทำซ้ำทุกปีได้) · <b>รายเดือน/รายปี</b> วันที่คงที่ · สร้างใบแล้วระบบอัปเดตวันทำล่าสุดให้เอง</div></div>
     ${dueCount?`<div class="notice n-amber" style="margin-bottom:1rem"><i class="ti ti-bell ni"></i><div>มี <b>${dueCount}</b> รายการถึงรอบแล้ว — จะสร้างใบแจ้งซ่อมอัตโนมัติเมื่อบันทึก/เปิดเว็บครั้งถัดไป</div></div>`:''}
     <div class="card">
       <div class="ctitle" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
@@ -1707,7 +1910,7 @@ function pgPM(){
         <button class="btn btn-sm" onclick="pmAdd()"><i class="ti ti-plus"></i> เพิ่มรายการ</button>
       </div>
       <div style="overflow-x:auto"><table class="tbl xls">
-        <thead><tr><th>ชื่องาน</th><th>ชั้น</th><th>ประเภท</th><th>รอบ</th><th>ทำล่าสุด</th><th>สถานะ</th><th>เปิด</th><th>ลบ</th></tr></thead>
+        <thead><tr><th>ชื่องาน</th><th>ชั้น</th><th>ประเภท</th><th>กำหนดวัน</th><th>ทำล่าสุด</th><th>รอบถัดไป</th><th>เปิด</th><th>ลบ</th></tr></thead>
         <tbody>${rows||'<tr><td colspan="8" style="text-align:center;color:var(--tx3);padding:16px">ยังไม่มีรายการ PM — กด “เพิ่มรายการ”</td></tr>'}</tbody>
       </table></div>
       <div id="pmMsg" style="margin-top:.9rem"></div>
@@ -1717,7 +1920,7 @@ function pgPM(){
 }
 function pmAdd(){
   const d=ensurePMDraft();
-  d.push({id:'',name:'',building:BUILDINGS[0]?BUILDINGS[0].id:'b1',floor:(floorsOf(BUILDINGS[0]?BUILDINGS[0].id:'b1')[0]||''),category:CATS[0]||'อื่นๆ',priority:'low',intervalDays:180,lastDone:'',desc:'',active:true});
+  d.push({id:'',name:'',building:BUILDINGS[0]?BUILDINGS[0].id:'b1',floor:(floorsOf(BUILDINGS[0]?BUILDINGS[0].id:'b1')[0]||''),category:CATS[0]||'อื่นๆ',priority:'low',intervalDays:180,lastDone:'',desc:'',active:true,mode:'interval',schedule:{}});
   rp();
 }
 function pmEdit(i,field,val){
@@ -1725,13 +1928,17 @@ function pmEdit(i,field,val){
   if(field==='intervalDays') val=Number(val)||180;
   d[i][field]=val; 
   // แก้ชั้น/สถานะ ต้องวาดใหม่เพื่ออัปเดต badge
-  if(field==='active'||field==='intervalDays') rp();
+  if(field==='mode'){ d[i].schedule=d[i].schedule||{}; }
+  if(field==='active'||field==='intervalDays'||field==='mode') rp();
 }
 function pmRemove(i){ const d=ensurePMDraft(); d.splice(i,1); rp(); }
 async function savePMList(){
   const d=ensurePMDraft();
   const msg=document.getElementById('pmMsg');
-  for(const p of d){ if(!p.name||!p.name.trim()){ msg.innerHTML='<div class="notice n-red" style="margin:0">ชื่องาน PM ห้ามว่าง</div>'; return; } }
+  for(const p of d){ if(!p.name||!p.name.trim()){ msg.innerHTML='<div class="notice n-red" style="margin:0">ชื่องาน PM ห้ามว่าง</div>'; return; }
+    const sc=p.schedule||{}, m=p.mode||'interval';
+    if(m==='dates'&&!(sc.dates||[]).length){ msg.innerHTML=`<div class="notice n-red" style="margin:0">“${escHtml(p.name)}” ยังไม่ได้ใส่วันที่</div>`; return; }
+    if(m==='range'&&(!sc.start||!sc.end||sc.end<sc.start)){ msg.innerHTML=`<div class="notice n-red" style="margin:0">“${escHtml(p.name)}” ช่วงวันที่ไม่ถูกต้อง</div>`; return; } }
   showLoader('กำลังบันทึกแผน PM...');
   try{
     if(GAS_URL) await api('savePM',{list:d,token:AUTH_TOKEN});
@@ -1789,44 +1996,63 @@ function pmNextDue(p){
 function calShift(n){ const c=calCursor||(()=>{const d=new Date();return{y:d.getFullYear(),m:d.getMonth()};})(); let m=c.m+n,y=c.y; if(m<0){m=11;y--;} if(m>11){m=0;y++;} calCursor={y,m}; rp(); }
 function calToday(){ calCursor=null; rp(); }
 function pgCalendar(){
-  const today=new Date(); const tkey=dkey(today);
+  const today=new Date(); today.setHours(0,0,0,0); const tkey=dkey(today);
   const cur = calCursor || {y:today.getFullYear(), m:today.getMonth()};
-  const first=new Date(cur.y,cur.m,1), startDow=first.getDay(), days=new Date(cur.y,cur.m+1,0).getDate();
+  const first=new Date(cur.y,cur.m,1), last=new Date(cur.y,cur.m+1,0);
   const THm=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  const day0=d=>{ const x=new Date(d); x.setHours(0,0,0,0); return x; };
+  const addD=(d,n)=>new Date(d.getFullYear(),d.getMonth(),d.getDate()+n);
+  const BG={tk:'var(--blue-bg)',high:'#fbe7d6',pend:'var(--amber-bg)',pm:'var(--teal-bg)',over:'rgba(227,91,91,.38)'};
 
-  // รวม event ต่อวัน
-  const ev={};  // key -> [{type,label,cls,id}]
-  const push=(k,e)=>{ (ev[k]=ev[k]||[]).push(e); };
-  const open=DB.tickets.filter(t=>!CLOSED_STATUS.includes(t.status));
-  let overdue=[];
-  open.forEach(t=>{
-    const dd=dueDate(t);
-    const b=getBI(t.building);
-    const over=isOverSLA(t);
-    const e={type:'ticket', id:t.id, over, label:`${b.icon} ${t.room||b.short}`, cls:over?'ev-over':(t.priority==='high'?'ev-high':'ev-tk')};
-    if(dd){ push(dkey(dd), e); if(over) overdue.push({t,dd}); }
-    else  { push(dkey(t.createdAt), {...e, cls:'ev-pend', label:'⏳ '+e.label}); }  // ยังไม่อนุมัติ
+  // v12: แต่ละงาน = แถบจากวันแจ้ง → วันคาดว่าเสร็จ (ยังไม่อนุมัติ = ถึงวันนี้, เลยกำหนด = ส่วนเกินเป็นสีแดง)
+  const items=[]; let overdue=[];
+  DB.tickets.filter(t=>!CLOSED_STATUS.includes(t.status)).forEach(t=>{
+    const b=getBI(t.building), st=day0(t.createdAt), dd=dueDate(t), over=isOverSLA(t);
+    let type = t.status==='pending_approval' && !t.dueOverride ? 'pend' : (t.priority==='high'?'high':'tk');
+    let end = dd ? day0(dd) : today, overFrom=null;
+    if(!dd) end = today;
+    if(over && dd){ overFrom=addD(day0(dd),1); end=today; overdue.push({t,dd}); }
+    if(end<st) end=st;
+    const di=dueInfo(t);
+    items.push({kind:'t', id:t.id, start:st, end, overFrom, type,
+      label:`${t.status==='pending_approval'?'⏳ ':''}${b.icon} ${t.room||b.short}`,
+      tip:`${t.id} · ${getSI(t.status).label}\n${b.name} — ${t.room}\nแจ้ง ${fdShort(st)} → คาดว่าเสร็จ ${dd?fdShort(dd):'(รออนุมัติ)'}${di.sub?' · '+di.sub:''}`});
   });
   (PM_LIST||[]).filter(p=>p.active!==false).forEach(p=>{
-    const nd=pmNextDue(p); const b=getBI(p.building);
-    push(dkey(nd), {type:'pm', label:'🛠 '+(p.name||'PM'), cls:'ev-pm'});
+    const o=pmNextOcc(p); if(!o) return;
+    items.push({kind:'pm', start:day0(o.start), end:day0(o.end||o.start), type:'pm', label:'🛠 '+(p.name||'PM'),
+      tip:`PM: ${p.name}\n${o.end?fdShort(o.start)+' – '+fdShort(o.end):fdShort(o.start)}`});
   });
+  items.sort((a,b)=>a.start-b.start || (b.end-b.start)-(a.end-a.start));
 
-  // ตารางปฏิทิน
-  let cells='';
-  for(let i=0;i<startDow;i++) cells+=`<div class="cal-cell cal-empty"></div>`;
-  for(let d=1; d<=days; d++){
-    const k=cur.y+'-'+String(cur.m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-    const list=ev[k]||[];
-    const isToday=(k===tkey);
-    const chips=list.slice(0,4).map(e=> e.type==='ticket'
-      ? `<div class="cal-ev ${e.cls}" onclick="openDet('${e.id}')" title="${escAttr(e.label)}">${e.label}</div>`
-      : `<div class="cal-ev ${e.cls}" title="${escAttr(e.label)}">${e.label}</div>`).join('');
-    const more=list.length>4?`<div style="font-size:10px;color:var(--tx3)">+${list.length-4} รายการ</div>`:'';
-    cells+=`<div class="cal-cell ${isToday?'cal-today':''}">
-      <div class="cal-dnum">${d}</div>${chips}${more}
-    </div>`;
-  }
+  // สร้างแถวสัปดาห์ที่ครอบคลุมเดือนนี้
+  let ws=addD(first,-first.getDay());
+  const weeks=[];
+  while(ws<=last){ weeks.push(ws); ws=addD(ws,7); }
+  const MAXL=8;
+  const weekHtml=weeks.map(w0=>{
+    const w6=addD(w0,6);
+    const bg=Array.from({length:7},(_,k)=>{ const d=addD(w0,k); const out=d.getMonth()!==cur.m; const isT=dkey(d)===tkey;
+      return `<div class="${out?'out':''} ${isT?'today':''}"><div class="cal-dnum">${d.getDate()}</div></div>`; }).join('');
+    const lanes=[]; let hidden=0;
+    const bars=items.filter(it=>it.end>=w0 && it.start<=w6).map(it=>{
+      const s=it.start<w0?w0:it.start, e=it.end>w6?w6:it.end;
+      const c1=Math.round((s-w0)/86400000)+1, c2=Math.round((e-w0)/86400000)+1;
+      let lane=lanes.findIndex(le=>le<c1); if(lane<0){ lane=lanes.length; lanes.push(0); } lanes[lane]=c2;
+      if(lane>=MAXL){ hidden++; return ''; }
+      const isS=it.start>=w0, isE=it.end<=w6;
+      let bgc=BG[it.type];
+      if(it.overFrom && it.overFrom<=e){
+        const of=it.overFrom<s?s:it.overFrom;
+        const pct=Math.round((Math.round((of-s)/86400000))/(c2-c1+1)*100);
+        bgc=pct<=0?BG.over:`linear-gradient(90deg, ${BG[it.type]} 0 ${pct}%, ${BG.over} ${pct}% 100%)`;
+      }
+      const cls=`cw-bar ev-${it.type==='tk'?'tk':it.type} ${isS?'s':'cont'} ${isE?'e':''}`;
+      const click=it.kind==='t'?`onclick="openDet('${it.id}')"`:`onclick="gp('pm')"`;
+      return `<div class="${cls}" ${click} title="${escAttr(it.tip)}" style="grid-column:${c1}/${c2+1};grid-row:${lane+1};background:${bgc}">${isS||c1===1?escHtml(it.label):''}</div>`;
+    }).join('');
+    return `<div class="cw"><div class="cw-bg">${bg}</div><div class="cw-bars">${bars}</div>${hidden?`<div class="cw-more">+${hidden} รายการ</div>`:''}</div>`;
+  }).join('');
 
   const overCard = overdue.length ? `<div class="notice n-red" style="margin-bottom:1rem"><i class="ti ti-alert-triangle ni"></i>
     <div><b>งานเกินกำหนด ${overdue.length} รายการ</b> — ${overdue.slice(0,6).map(o=>`<span class="mono" style="cursor:pointer;text-decoration:underline" onclick="openDet('${o.t.id}')">${o.t.id}</span>`).join(' · ')}${overdue.length>6?' …':''}</div></div>` : '';
@@ -1843,15 +2069,16 @@ function pgCalendar(){
     </div>
     ${overCard}
     <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;margin-bottom:.7rem">
-      <span><span class="cal-dot ev-over"></span> เกิน SLA</span>
-      <span><span class="cal-dot ev-high"></span> เร่งด่วน</span>
       <span><span class="cal-dot ev-tk"></span> งานค้าง</span>
-      <span><span class="cal-dot ev-pend"></span> รออนุมัติ</span>
-      <span><span class="cal-dot ev-pm"></span> PM ถึงรอบ</span>
+      <span><span class="cal-dot ev-high"></span> เร่งด่วน</span>
+      <span><span class="cal-dot ev-pend"></span> รออนุมัติ (ถึงวันนี้)</span>
+      <span><span class="cal-dot ev-over"></span> ส่วนที่เลยกำหนด</span>
+      <span><span class="cal-dot ev-pm"></span> PM</span>
+      <span style="color:var(--tx3)">แถบ = วันแจ้ง → วันคาดว่าเสร็จ · กดที่แถบเพื่อดูรายละเอียด</span>
     </div>
     <div class="card" style="padding:.6rem">
       <div class="cal-grid cal-head">${['อา','จ','อ','พ','พฤ','ศ','ส'].map(d=>`<div class="cal-dow">${d}</div>`).join('')}</div>
-      <div class="cal-grid">${cells}</div>
+      ${weekHtml}
     </div>
   </div>`;
 }
@@ -1875,9 +2102,18 @@ function pgDashboard() {
   const totalSpent=budgetData.reduce((s,b)=>s+b.spent,0);
   const hotspot=BUILDINGS.map(b=>({...b,count:tickets.filter(t=>t.building===b.id).length,active:tickets.filter(t=>t.building===b.id&&!CLOSED_STATUS.includes(t.status)).length}));
   const maxHs=Math.max(...hotspot.map(h=>h.count),1);
-  const techLoad=Object.entries(USERS).map(([u,v2])=>{
+  // v12: เฉพาะคนที่รับงานซ่อมได้ (บริหารไม่ขึ้น) + วิศวกรมีภาระงานบริหารจัดการแยกป้าย
+  const pmDueN=(PM_LIST||[]).filter(p=>{const s=pmDue(p);return s&&s.due;}).length;
+  const techLoad=assignableEntries().map(([u,v2])=>{
     const tw=tickets.filter(t=>(t.assignees||[]).includes(u));
-    return{u,v:v2,active:tw.filter(t=>!CLOSED_STATUS.includes(t.status)).length,done:tw.filter(t=>t.status==='done').length,overSla:tw.filter(t=>isOverSLA(t)).length};
+    const own=tw.filter(t=>!CLOSED_STATUS.includes(t.status)).length;
+    const r={u,v:v2,own,active:own,done:tw.filter(t=>t.status==='done').length,overSla:tw.filter(t=>isOverSLA(t)).length,adm:null};
+    if(v2.isEngineer){
+      const mine=tickets.filter(t=>t.approvedBy===u);
+      r.adm={pending:pending.length, assigned:mine.length, oversee:mine.filter(t=>!CLOSED_STATUS.includes(t.status)).length, pm:pmDueN};
+      r.active=own+r.adm.pending+r.adm.oversee+r.adm.pm;
+    }
+    return r;
   });
   const maxLoad=Math.max(...techLoad.map(t=>t.active),1);
   const catData=CATS.map(c=>({name:c,count:tickets.filter(t=>t.category===c).length})).sort((a,b)=>b.count-a.count);
@@ -1897,7 +2133,7 @@ function pgDashboard() {
       <div class="stat stat-grad-a"><div class="stat-ic">📋</div><div class="stat-lbl">งานทั้งหมด</div><div class="stat-n">${tickets.length}</div></div>
       <div class="stat stat-grad-b"><div class="stat-ic">🔧</div><div class="stat-lbl">กำลังดำเนินการ</div><div class="stat-n">${active.length}</div><div class="stat-sub">รออนุมัติ ${pending.length}</div></div>
       <div class="stat stat-grad-c"><div class="stat-ic">✅</div><div class="stat-lbl">เสร็จสิ้น</div><div class="stat-n">${done.length}</div><div class="stat-sub">${tickets.length?Math.round(done.length/tickets.length*100):0}%</div></div>
-      <div class="stat stat-grad-e"><div class="stat-ic">⭐</div><div class="stat-lbl">พึงพอใจเฉลี่ย</div><div class="stat-n">${avgRating?avgRating.toFixed(1):'—'}</div><div class="stat-sub">${rated.length?'จาก '+rated.length+' ความเห็น':'ยังไม่มีคะแนน'}</div></div>
+      <div class="stat stat-grad-e"><div class="stat-ic">⭐</div><div class="stat-lbl">พึงพอใจเฉลี่ย</div><div class="stat-n">${avgRating?avgRating.toFixed(1):'—'}</div><div class="stat-sub">${rated.length?'จาก '+rated.length+' ความเห็น · ผู้แจ้ง '+rated.filter(t=>!t.ratedBy).length+' / แทน '+rated.filter(t=>t.ratedBy).length:'ยังไม่มีคะแนน'}</div></div>
       <div class="stat stat-grad-d"><div class="stat-ic">⏰</div><div class="stat-lbl">เกิน SLA</div><div class="stat-n">${overSLA.length}</div></div>
     </div>
     ${statusCounts.length?`<div class="card" style="margin-bottom:1rem">
@@ -1954,10 +2190,16 @@ function pgDashboard() {
               <div class="tech-name">${t.v.name}</div>
               <div style="font-size:11px;color:var(--tx3)">${(t.v.specialty||[]).join(' · ')}</div>
               <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px">
-                <span class="badge b-blue">คงค้าง ${t.active}</span>
+                <span class="badge b-blue">งานซ่อมคงค้าง ${t.own}</span>
                 <span class="badge b-green">เสร็จ ${t.done}</span>
                 ${t.overSla?`<span class="badge b-red">เกิน SLA ${t.overSla}</span>`:''}
               </div>
+              ${t.adm?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px" title="ภาระงานบริหารจัดการ">
+                <span class="badge b-amber">รออนุมัติ ${t.adm.pending}</span>
+                <span class="badge b-purple">มอบหมายแล้ว ${t.adm.assigned}</span>
+                <span class="badge b-teal">กำกับดูแล ${t.adm.oversee}</span>
+                <span class="badge b-gray">PM ถึงรอบ ${t.adm.pm}</span>
+              </div>`:''}
               <div class="wl-track"><div class="wl-fill" style="width:${pct}%;background:${wlColor}"></div></div>
             </div>
             <div style="font-size:20px;font-weight:700;color:${wlColor};font-family:var(--mono);min-width:28px;text-align:right">${t.active}</div>
@@ -2312,6 +2554,14 @@ function renderAdminManage(){
     </div>
     <div style="overflow-x:auto"><table class="tbl xls"><thead><tr><th>วันที่</th><th>ชื่อวันหยุด</th><th>ลบ</th></tr></thead><tbody>${hRows}</tbody></table></div>
     <div style="font-size:11px;color:var(--tx3);margin-top:6px">* ระบบจะข้ามเสาร์–อาทิตย์ให้อยู่แล้ว ใส่เฉพาะวันหยุดนักขัตฤกษ์/วันหยุดพิเศษ · รูปแบบวันที่ ปปปป-ดด-วว (ค.ศ.)</div>
+  </div>
+  <div class="card" style="margin-bottom:1rem">
+    <div class="ctitle"><span><i class="ti ti-mail" style="color:var(--accent)"></i> ลิงก์เว็บระบบ (ใช้ในอีเมลขอประเมินความพึงพอใจ)</span></div>
+    <input value="${escAttr(ensureDraft().siteUrl||'')}" placeholder="${escAttr(location.origin+location.pathname)}" onchange="ensureDraft().siteUrl=this.value.trim()">
+    <div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap">
+      <button class="btn btn-sm" onclick="(()=>{const d=ensureDraft();d.siteUrl=location.origin+location.pathname;rp();})()">ใช้ลิงก์หน้านี้</button>
+      <span style="font-size:11px;color:var(--tx3)">เมื่อปิดงานเป็น "เสร็จเรียบร้อย" ระบบจะส่งอีเมลลิงก์ประเมินถึงผู้แจ้งที่กรอกอีเมลไว้ · ว่าง = ไม่ส่งอีเมล</span>
+    </div>
   </div>
   <div class="card" style="margin-bottom:1rem;text-align:center">
     <button class="btn btn-accent" onclick="saveAdminConfig()"><i class="ti ti-device-floppy"></i> บันทึกการตั้งค่าทั้งหมด</button>
@@ -2754,21 +3004,29 @@ function ratingBlock(t){
   // ให้คะแนนแล้ว → โชว์ผล
   if(t.rating && t.rating>0){
     return `<div class="rate-box rated">
-      <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">⭐ ความพึงพอใจของผู้แจ้ง</div>
+      <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">⭐ ความพึงพอใจ${t.ratedBy?` <span class="badge b-purple nodot" style="font-size:10.5px">ประเมินแทนโดย ${escHtml(t.ratedBy)}</span>`:'ของผู้แจ้ง'}</div>
       <div style="display:flex;align-items:center;gap:8px">
         <div style="display:flex;gap:2px">${[1,2,3,4,5].map(i=>`<span style="opacity:${i<=t.rating?1:.25}">${starSVG(i<=t.rating)}</span>`).join('')}</div>
         <span style="font-weight:700;font-size:16px;color:var(--gold)">${t.rating}.0</span>
       </div>
-      ${t.ratingComment?`<div style="font-size:13px;color:var(--tx2);margin-top:8px;background:var(--surf2);border-radius:8px;padding:.6rem .8rem">“${t.ratingComment}”</div>`:''}
+      ${t.ratingComment?`<div style="font-size:13px;color:var(--tx2);margin-top:8px;background:var(--surf2);border-radius:8px;padding:.6rem .8rem">“${escHtml(t.ratingComment)}”</div>`:''}
     </div>`;
   }
   // ยังไม่ให้คะแนน → ฟอร์มให้ดาว (ใครก็ให้ได้ ไม่ต้อง login)
   pendingRating=0;
+  const proxyOk = rateState(t)==='proxy';
+  const dAt=doneAtOf(t), left=dAt?Math.max(0,Math.ceil((dAt.getTime()+RATE_PROXY_DAYS*86400000-Date.now())/86400000)):0;
   return `<div class="rate-box" id="rateForm">
     <div style="font-size:13px;font-weight:600;margin-bottom:4px">งานนี้เสร็จแล้ว — ให้คะแนนความพึงพอใจ</div>
-    <div style="font-size:12px;color:var(--tx3);margin-bottom:10px">ความเห็นของท่านช่วยให้เราพัฒนาบริการ (ให้คะแนนได้ครั้งเดียว)</div>
+    <div style="font-size:12px;color:var(--tx3);margin-bottom:8px">ความเห็นของท่านช่วยให้เราพัฒนาบริการ (ให้คะแนนได้ครั้งเดียว)</div>
+    <div class="notice ${proxyOk?'n-amber':'n-info'}" style="margin:0 0 10px;font-size:12px;padding:.55rem .75rem"><i class="ti ti-info-circle ni"></i><div>
+      ${proxyOk?`<b>เกิน ${RATE_PROXY_DAYS} วันแล้วยังไม่มีการประเมิน</b> — ผู้เกี่ยวข้องหรือผู้ปฏิบัติงานในชั้นนั้น (${escHtml(ticketFloor(t)||getBI(t.building).short)}) ประเมินแทนได้ เช่น งานที่ช่างหรือแม่บ้านแจ้งเอง หรือผู้แจ้งไม่สะดวกประเมิน`
+      :`หมายเหตุ: หากผู้แจ้งไม่ประเมินภายใน ${RATE_PROXY_DAYS} วัน${left?` (อีก ${left} วัน)`:''} ผู้เกี่ยวข้องหรือผู้ปฏิบัติงานในชั้นนั้นจะประเมินแทนได้ เช่น งานที่ช่างหรือแม่บ้านแจ้งเอง`}
+    </div></div>
     <div class="star-row" id="starRow">${[1,2,3,4,5].map(i=>`<button type="button" class="star-btn" data-v="${i}" onclick="setStars(${i})" onmouseover="hoverStars(${i})" onmouseout="hoverStars(0)">${starSVG(false)}</button>`).join('')}</div>
     <textarea id="rateComment" placeholder="ความเห็นเพิ่มเติม (ไม่บังคับ)" style="margin-top:10px;min-height:60px"></textarea>
+    ${proxyOk?`<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;margin-top:8px;cursor:pointer"><input type="checkbox" id="rateProxy" style="width:auto" onchange="document.getElementById('rateProxyName').style.display=this.checked?'block':'none'"> ประเมินแทนผู้แจ้ง</label>
+    <input id="rateProxyName" placeholder="ชื่อ-นามสกุล ผู้ประเมินแทน (เช่น ผู้ปฏิบัติงานชั้นนั้น)" style="display:none;margin-top:6px" value="${cu?escAttr(cu.name):''}">`:''}
     <div id="rateMsg" style="margin:8px 0"></div>
     <button class="btn btn-accent btn-sm" onclick="submitRating('${t.id}')"><i class="ti ti-send"></i> ส่งคะแนน</button>
   </div>`;
@@ -2786,12 +3044,53 @@ async function submitRating(id){
   if(!pendingRating){ msg.innerHTML='<div class="notice n-amber" style="margin:0;padding:.5rem .7rem">กรุณาเลือกดาวก่อน</div>'; return; }
   if(!GAS_URL){ msg.innerHTML='<div class="notice n-red" style="margin:0;padding:.5rem .7rem">ยังไม่ได้เชื่อมต่อเซิร์ฟเวอร์</div>'; return; }
   const comment=(document.getElementById('rateComment').value||'').trim();
+  const isProxy=!!document.getElementById('rateProxy')?.checked;
+  const ratedBy=isProxy?(document.getElementById('rateProxyName').value||'').trim():'';
+  if(isProxy && !ratedBy){ msg.innerHTML='<div class="notice n-amber" style="margin:0;padding:.5rem .7rem">กรุณาใส่ชื่อผู้ประเมินแทน</div>'; return; }
   showLoader('กำลังส่งคะแนน...');
   try{
-    await api('rateTicket',{id,rating:pendingRating,comment});
-    const t=DB.tickets.find(x=>x.id===id); if(t){ t.rating=pendingRating; t.ratingComment=comment; }
+    await api('rateTicket',{id,rating:pendingRating,comment,ratedBy});
+    const t=DB.tickets.find(x=>x.id===id); if(t){ t.rating=pendingRating; t.ratingComment=comment; t.ratedBy=ratedBy;
+      (t.history=t.history||[]).push({status:'done',date:now(),note:(ratedBy?'ประเมินแทนโดย '+ratedBy:'ผู้แจ้งประเมิน')+' — '+pendingRating+' ดาว',by:ratedBy||'ผู้แจ้ง'}); }
     hideLoader(); openDet(id); showToast('ขอบคุณสำหรับคะแนน '+pendingRating+' ดาว');
   }catch(e){ hideLoader(); msg.innerHTML='<div class="notice n-red" style="margin:0;padding:.5rem .7rem">ส่งไม่สำเร็จ: '+e.message+'</div>'; }
+}
+
+// ─── v12: แอดมินแก้วันคาดว่าเสร็จรายงาน (ต้องใส่เหตุผล บันทึกลงประวัติ) ───
+function openDueEdit(id){
+  const t=DB.tickets.find(x=>x.id===id); if(!t) return;
+  if(!cu||!cu.isEngineer){ showToast('เฉพาะวิศวกร/แอดมิน'); return; }
+  const cur=dueDate(t), auto=(()=>{ const c={...t,dueOverride:''}; return dueDate(c); })();
+  document.getElementById('dueContent').innerHTML=`
+    <div class="modal-title">📅 แก้วันคาดว่าเสร็จ <button class="mc" onclick="cm('dueMd')">✕</button></div>
+    <div style="background:var(--surf2);border-radius:8px;padding:.7rem;margin-bottom:1rem;font-size:13px">
+      <span class="mono">${t.id}</span><br><b>${getBI(t.building).name}</b> — ${escHtml(t.room)}
+      <div style="font-size:12px;color:var(--tx3);margin-top:4px">ตอนนี้: <b>${cur?fdShort(cur):'—'}</b>${t.dueOverride?' (กำหนดเอง)':''} · ตาม SLA: ${auto?fdShort(auto):'ยังไม่อนุมัติ'}</div>
+    </div>
+    <div class="ff"><label>วันคาดว่าเสร็จใหม่</label><input id="dueNew" type="date" value="${cur?ymd(cur):''}"></div>
+    <div class="ff"><label>เหตุผล<span class="req">*</span></label><textarea id="dueWhy" placeholder="เช่น รออะไหล่จากผู้ขาย / งานง่ายกว่าที่ประเมิน"></textarea></div>
+    <div id="dueMsg"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-p" style="flex:1" onclick="saveDueEdit('${t.id}')">บันทึก</button>
+      ${t.dueOverride?`<button class="btn" onclick="saveDueEdit('${t.id}',true)">กลับไปใช้ตาม SLA</button>`:''}
+    </div>`;
+  document.getElementById('dueMd').style.display='flex';
+}
+async function saveDueEdit(id, reset){
+  const t=DB.tickets.find(x=>x.id===id); if(!t) return;
+  const nd=reset?'':(document.getElementById('dueNew').value||'');
+  const why=(document.getElementById('dueWhy').value||'').trim();
+  const msg=document.getElementById('dueMsg');
+  if(!reset && !nd){ msg.innerHTML='<div class="notice n-amber" style="margin:0 0 8px">กรุณาเลือกวันที่</div>'; return; }
+  if(!why){ msg.innerHTML='<div class="notice n-amber" style="margin:0 0 8px">กรุณาใส่เหตุผล</div>'; return; }
+  const old=dueDate(t);
+  t.dueOverride=nd;
+  const nw=dueDate(t);
+  const entry={status:t.status,date:now(),by:cu.name,
+    note:`📅 ${reset?'กลับไปใช้วันคาดว่าเสร็จตาม SLA':'เปลี่ยนวันคาดว่าเสร็จ'}: ${old?fdShort(old):'—'} → ${nw?fdShort(nw):'—'} — ${why}`};
+  (t.history=t.history||[]).push(entry);
+  await syncUpdate(id,{dueOverride:nd},entry);
+  cm('dueMd'); openDet(id); rp(); showToast('บันทึกวันคาดว่าเสร็จแล้ว');
 }
 
 function openDet(id) {
@@ -2807,9 +3106,9 @@ function openDet(id) {
     ${statusPipe(t.status)}
     <table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:1rem">
     ${[['อาคาร',b.icon+' '+b.name],['ห้อง',t.room],['ประเภท',t.category],['ผู้แจ้ง',t.name],
-       ['โทร',t.phone],['หน่วยงาน',t.dept],['วันที่แจ้ง',fd(t.createdAt)],
+       ...(cu?[['โทร',escHtml(t.phone)]]:[]),['หน่วยงาน',escHtml(t.dept)],['วันที่แจ้ง',fd(t.createdAt)],
        ...(cu?[['วันที่อนุมัติ',t.approvedAt?fd(t.approvedAt):'ยังไม่อนุมัติ'],
-              ['คาดว่าเสร็จ',(()=>{const di=dueInfo(t);return `<span class="badge ${di.cls}">${di.text}</span>${di.sub?` <span style="font-size:11px;color:var(--tx3)">${di.sub}</span>`:''}`;})()]]:[]),
+              ['คาดว่าเสร็จ',(()=>{const di=dueInfo(t);return `<span class="badge ${di.cls}">${di.text}</span>${di.sub?` <span style="font-size:11px;color:var(--tx3)">${di.sub}</span>`:''}${cu.isEngineer&&!CLOSED_STATUS.includes(t.status)?` <button class="btn btn-sm" style="margin-left:4px;padding:2px 8px" onclick="openDueEdit('${t.id}')">📅 แก้วันคาดว่าเสร็จ</button>`:''}`;})()]]:[]),
        ['ผู้รับผิดชอบ',assigneeChips(t.assignees)],
        ['ประมาณการ',(t.estimatedCost||0).toLocaleString()+' บาท'],
        ['ค่าใช้จ่ายจริง',(t.actualCost||0).toLocaleString()+' บาท'],
@@ -2881,8 +3180,14 @@ function toggleTheme(){
 updAuthUI();
 
 // เลือกอาคาร/ชั้นจาก QR param หลังหน้า report พร้อม
+let rateLinkDone=false;
 function applyQrParams(){
   const params=new URLSearchParams(window.location.search);
+  // v12: ลิงก์ประเมินจากอีเมล ?rate=REP-xxx → เปิดใบนั้นพร้อมฟอร์มให้ดาว
+  const rid=params.get('rate');
+  if(rid && !rateLinkDone && DB.tickets.find(t=>t.id===rid)){
+    rateLinkDone=true; gp('status'); setTimeout(()=>{ openDet(rid); const f=document.getElementById('rateForm'); if(f) f.scrollIntoView({behavior:'smooth',block:'center'}); },60);
+  }
   const bParam=params.get('b'), fParam=params.get('f');
   if(bParam){ const el=document.getElementById('fB'); if(el){ el.value=bParam; updFloorOptions(fParam||undefined); } }
 }
