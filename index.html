@@ -685,6 +685,11 @@ async function syncUpdate(id, fields, histEntry) {
   if (!GAS_URL) return;
   SYNC_Q.push({ op:'upd', id, fields, entry:histEntry||null }); qSave(); flushQ();
 }
+let LEGACY_API=false;
+async function legacyUpd(j){
+  await api('update', { id:j.id, fields:j.fields, token:AUTH_TOKEN });
+  if (j.entry) await api('addHistory', { ticketId:j.id, entry:j.entry });
+}
 async function flushQ(){
   if (flushing || !SYNC_Q.length || !GAS_URL) return;
   flushing = true;
@@ -692,12 +697,23 @@ async function flushQ(){
     while (SYNC_Q.length){
       const j = SYNC_Q[0];
       try{
-        if (j.op==='add') await api('add', { ticket:j.ticket, entry:j.entry });
-        else await api('updateWithHistory', { id:j.id, fields:j.fields, entry:j.entry, token:AUTH_TOKEN });
+        if (j.op==='add'){
+          await api('add', { ticket:j.ticket, entry:j.entry });
+          if (LEGACY_API && j.entry) { try{ await api('addHistory', { ticketId:j.ticket.id, entry:j.entry }); }catch(_){} }
+        } else if (LEGACY_API) {
+          await legacyUpd(j);
+        } else {
+          try{ await api('updateWithHistory', { id:j.id, fields:j.fields, entry:j.entry, token:AUTH_TOKEN }); }
+          catch(e1){
+            // เซิร์ฟเวอร์ (Code.gs) รุ่นเก่ายังไม่รู้จักคำสั่งรวม → ส่งแบบเดิม 2 ครั้งแทน ข้อมูลไม่หาย
+            if (/Unknown action/i.test(e1.message||'')){ LEGACY_API=true; await legacyUpd(j); }
+            else throw e1;
+          }
+        }
         SYNC_Q.shift(); qSave();
       }catch(e){
         if (handleAuthError(e)) break;                                   // รอล็อกอินใหม่แล้วค่อยส่งต่อ
-        if (/not found|Unknown action/i.test(e.message||'')){ SYNC_Q.shift(); qSave(); showToast('⚠ '+e.message,3000); continue; }
+        if (/not found/i.test(e.message||'')){ SYNC_Q.shift(); qSave(); showToast('⚠ '+e.message,3000); continue; }
         showToast('⚠ บันทึกยังไม่สำเร็จ — ระบบจะลองใหม่อัตโนมัติ', 2500);
         setTimeout(flushQ, 8000); break;
       }
