@@ -1,0 +1,2830 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ระบบแจ้งซ่อมออนไลน์ — คณะการแพทย์แผนไทย</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.31.0/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  /* ── ธีมไทย: เขียวสมุนไพร-ทอง ── */
+  --bg:#f6f4ec;--surf:#fffdf7;--surf2:#f1eee2;--surf3:#e7e2d2;
+  --bd:rgba(46,38,20,0.10);--bd2:rgba(46,38,20,0.18);
+  --tx:#211d12;--tx2:#5e5844;--tx3:#9c9578;
+  --navy:#1d4632;
+  --navy2:#2a5c42;
+  --gold:#b8893a;--gold-lt:#d8ad5a;--gold-soft:#f6ecd4;
+  --blue:#1f6f94;--blue-bg:#e2f0f5;--blue-tx:#0e4a66;
+  --green:#4a7c1e;--green-bg:#ecf5dc;--green-tx:#325610;
+  --amber:#a86412;--amber-bg:#fbeed5;--amber-tx:#6e3f05;
+  --red:#b23636;--red-bg:#fceaea;--red-tx:#7e2020;
+  --purple:#6a4bb0;--purple-bg:#efe9fb;--purple-tx:#432f83;
+  --teal:#137a5e;--teal-bg:#dcf3ea;--teal-tx:#0a5341;
+  --accent:#137a5e;--accent-soft:#dcf3ea;
+  --r:10px;--rl:15px;--rx:22px;
+  --sh1:0 1px 2px rgba(46,38,20,.05),0 1px 3px rgba(46,38,20,.04);
+  --sh2:0 2px 6px rgba(46,38,20,.07),0 4px 14px rgba(46,38,20,.05);
+  --sh3:0 10px 34px rgba(29,70,50,.16);
+  --font:'IBM Plex Sans Thai','Sarabun',sans-serif;
+  --mono:'IBM Plex Mono',monospace;
+  --pattern-op:0.08;
+}
+[data-theme="dark"]{
+  --bg:#14170f;--surf:#1c2016;--surf2:#232719;--surf3:#2e3320;
+  --bd:rgba(255,250,235,0.10);--bd2:rgba(255,250,235,0.18);
+  --tx:#eae6d6;--tx2:#b3ad97;--tx3:#7c765f;
+  --navy:#14311f;--navy2:#1d4632;
+  --gold:#d8ad5a;--gold-lt:#e6c47e;--gold-soft:#332a12;
+  --blue:#5ba7c9;--blue-bg:#16323d;--blue-tx:#a9d6e8;
+  --green:#8fc65a;--green-bg:#24350f;--green-tx:#c3e39a;
+  --amber:#e0a94b;--amber-bg:#3a2c0f;--amber-tx:#f2cd88;
+  --red:#e08585;--red-bg:#3a1a1a;--red-tx:#f0b8b8;
+  --purple:#a996e0;--purple-bg:#28214a;--purple-tx:#cdc2f0;
+  --teal:#4fc0a0;--teal-bg:#123329;--teal-tx:#8fdcc6;
+  --accent:#4fc0a0;--accent-soft:#123329;
+  --sh1:0 1px 2px rgba(0,0,0,.3);
+  --sh2:0 2px 8px rgba(0,0,0,.35);
+  --sh3:0 10px 34px rgba(0,0,0,.5);
+  --pattern-op:0.10;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--tx);font-size:14px;line-height:1.55;min-height:100vh;-webkit-font-smoothing:antialiased;transition:background .3s,color .3s}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opacity:var(--pattern-op);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Cg fill='none' stroke='%23137a5e' stroke-width='1.1'%3E%3Cpath d='M100 20c22 16 22 44 0 60-22-16-22-44 0-60z'/%3E%3Cpath d='M100 120c22 16 22 44 0 60-22-16-22-44 0-60z'/%3E%3Cpath d='M20 100c16-22 44-22 60 0-16 22-44 22-60 0z'/%3E%3Cpath d='M120 100c16-22 44-22 60 0-16 22-44 22-60 0z'/%3E%3Ccircle cx='100' cy='100' r='9'/%3E%3Ccircle cx='100' cy='100' r='16'/%3E%3Cpath d='M100 50c6 6 6 14 0 20-6-6-6-14 0-20z' fill='%23b8893a' fill-opacity='.5' stroke='none'/%3E%3Cpath d='M100 130c6 6 6 14 0 20-6-6-6-14 0-20z' fill='%23b8893a' fill-opacity='.5' stroke='none'/%3E%3Cpath d='M50 100c6-6 14-6 20 0-6 6-14 6-20 0z' fill='%23b8893a' fill-opacity='.5' stroke='none'/%3E%3Cpath d='M130 100c6-6 14-6 20 0-6 6-14 6-20 0z' fill='%23b8893a' fill-opacity='.5' stroke='none'/%3E%3Cg opacity='.6'%3E%3Cpath d='M100 4c3 8-3 14-3 14s-6-6-3-14z'/%3E%3Cpath d='M4 100c8 3 14-3 14-3s-6-6-14-3z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  background-size:230px 230px}
+/* แถบลายกระหนกทอง (ใช้ประดับหัวเมนู/ท้ายการ์ด) */
+.thai-border{height:6px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='6' viewBox='0 0 48 6'%3E%3Cg fill='none' stroke='%23b8893a' stroke-width='1'%3E%3Cpath d='M0 3h6c2 0 3-2 6-2s4 2 6 2 3-2 6-2 4 2 6 2 3-2 6-2 4 2 6 2'/%3E%3C/g%3E%3C/svg%3E");background-repeat:repeat-x;background-size:24px 6px;opacity:.55}
+#pg,.nav,.modal-bg{position:relative;z-index:1}
+::selection{background:var(--accent-soft);color:var(--teal-tx)}
+
+/* NAV */
+.nav{background:linear-gradient(120deg,var(--navy) 0%,var(--navy2) 100%);color:#fff;display:flex;align-items:center;height:58px;padding:0 1.1rem;gap:3px;position:sticky;top:0;z-index:100;box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 4px 20px rgba(29,70,50,.28);border-bottom:2px solid var(--gold)}
+.nav-logo{font-weight:700;font-size:14px;color:#fff;padding-right:14px;border-right:1px solid rgba(216,173,90,0.35);margin-right:8px;white-space:nowrap;flex-shrink:0;line-height:1.25;display:flex;flex-direction:column;justify-content:center}
+.nav-logo b{display:flex;align-items:center;gap:6px}
+.nav-logo b::before{content:'🌿';font-size:15px}
+.nav-logo small{color:var(--gold-lt);font-size:10px;font-weight:400;letter-spacing:.2px}
+.ntab{padding:7px 13px;font-size:12.5px;font-weight:500;color:rgba(255,255,255,0.58);cursor:pointer;border-radius:8px;border:none;background:transparent;font-family:var(--font);white-space:nowrap;transition:all .16s;flex-shrink:0;position:relative}
+.ntab:hover{color:#fff;background:rgba(255,255,255,0.09)}
+.ntab.on{color:var(--navy);background:linear-gradient(135deg,var(--gold-lt),var(--gold));font-weight:600;box-shadow:0 2px 8px rgba(184,137,58,.4)}
+.nav-tabs{display:flex;align-items:center;gap:3px;flex:1;overflow:visible}
+.nav-r{margin-left:auto;display:flex;align-items:center;gap:9px;flex-shrink:0}
+.theme-toggle{padding:6px 10px !important;font-size:15px;line-height:1}
+.nav-burger{display:none;background:transparent;border:none;color:#fff;font-size:22px;cursor:pointer;padding:4px 6px;margin-left:auto;line-height:1}
+/* MOBILE DRAWER */
+.mnav-backdrop{display:none;position:fixed;inset:0;background:rgba(18,20,24,.5);backdrop-filter:blur(2px);z-index:200}
+.mnav-backdrop.open{display:block;animation:fadeIn .18s ease}
+.mnav{display:none;position:fixed;top:0;right:0;bottom:0;width:270px;max-width:82vw;background:var(--navy);z-index:201;flex-direction:column;transform:translateX(100%);transition:transform .24s cubic-bezier(.2,.8,.3,1);box-shadow:-8px 0 30px rgba(0,0,0,.3)}
+.mnav.open{display:flex;transform:none}
+.mnav-head{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.1rem;border-bottom:1px solid rgba(255,255,255,.12);color:#fff;min-height:56px}
+.mnav-head .mc{background:rgba(255,255,255,.12);color:#fff}
+.mnav-items{padding:.75rem;display:flex;flex-direction:column;gap:3px;overflow-y:auto}
+.mnav-item{display:flex;align-items:center;gap:10px;padding:13px 14px;border-radius:10px;font-size:14px;font-weight:500;color:rgba(255,255,255,.72);background:transparent;border:none;cursor:pointer;font-family:var(--font);text-align:left;transition:all .15s}
+.mnav-item:hover{background:rgba(255,255,255,.09);color:#fff}
+.mnav-item.on{background:#6fd6b6;color:var(--navy)}
+.mnav-item .mi{font-size:19px;width:22px;text-align:center;flex-shrink:0}
+.mnav-item .badge-n{margin-left:auto;background:#e35b5b;color:#fff;border-radius:11px;padding:1px 8px;font-size:11px;font-weight:600}
+.mnav-sep{height:1px;background:rgba(255,255,255,.1);margin:.5rem .25rem}
+.mnav-auth{margin-top:auto;padding:.9rem;border-top:1px solid rgba(255,255,255,.12)}
+.ubadge{font-size:11px;padding:4px 11px;border-radius:20px;font-weight:500;display:inline-flex;align-items:center;gap:5px}
+.ubadge::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.9}
+.ua{background:rgba(111,214,182,0.2);color:#6fd6b6}
+.ut{background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.82)}
+.nbtn{font-size:12px;padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.72);cursor:pointer;font-family:var(--font);transition:all .16s;font-weight:500}
+.nbtn:hover{background:rgba(255,255,255,0.12);color:#fff;border-color:rgba(255,255,255,0.3)}
+
+/* LAYOUT */
+.pg{padding:1.5rem 1.25rem;max-width:1080px;margin:0 auto;width:100%;animation:fadeUp .4s cubic-bezier(.22,1,.36,1)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+/* การ์ดเด้งเข้าตอนโหลด (ไล่ทีละใบ) */
+.pg .card,.pg .stat{animation:cardIn .5s cubic-bezier(.22,1,.36,1) backwards}
+.pg .card:nth-child(1),.pg .stat:nth-child(1){animation-delay:.02s}
+.pg .card:nth-child(2),.pg .stat:nth-child(2){animation-delay:.07s}
+.pg .card:nth-child(3),.pg .stat:nth-child(3){animation-delay:.12s}
+.pg .card:nth-child(4),.pg .stat:nth-child(4){animation-delay:.17s}
+.pg .card:nth-child(5){animation-delay:.22s}
+.pg .card:nth-child(6){animation-delay:.27s}
+@keyframes cardIn{from{opacity:0;transform:translateY(14px) scale(.99)}to{opacity:1;transform:none}}
+/* hover การ์ดลื่นขึ้น */
+.card{transition:box-shadow .25s,transform .25s}
+.card-int:hover,.card.card-int:hover{transform:translateY(-3px)}
+/* donut วาดแบบ animate */
+.donut-svg circle{animation:donutDraw 1s cubic-bezier(.22,1,.36,1) backwards}
+@keyframes donutDraw{from{stroke-dasharray:0 999 !important}}
+@media(prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
+
+/* PAGE HEADER */
+.ph{margin-bottom:1.25rem}
+.ph-title{font-size:20px;font-weight:700;letter-spacing:-.3px;display:flex;align-items:center;gap:9px}
+.ph-sub{font-size:13px;color:var(--tx2);margin-top:2px}
+
+/* CARDS */
+.card{background:var(--surf);border:0.5px solid var(--bd);border-radius:var(--rl);padding:1.25rem;box-shadow:var(--sh1);position:relative;overflow:hidden}
+/* มุมการ์ดประดับลายทอง */
+.card::before{content:'';position:absolute;top:0;left:0;width:40px;height:40px;pointer-events:none;opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='none' stroke='%23b8893a' stroke-width='1.2'%3E%3Cpath d='M2 14C2 6 6 2 14 2'/%3E%3Cpath d='M2 20c4-6 10-4 10-4s2-6-4-10'/%3E%3Ccircle cx='6' cy='6' r='1.5' fill='%23b8893a' stroke='none'/%3E%3C/g%3E%3C/svg%3E")}
+.card::after{content:'';position:absolute;top:0;right:0;width:40px;height:40px;pointer-events:none;opacity:.5;transform:scaleX(-1);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='none' stroke='%23b8893a' stroke-width='1.2'%3E%3Cpath d='M2 14C2 6 6 2 14 2'/%3E%3Cpath d='M2 20c4-6 10-4 10-4s2-6-4-10'/%3E%3Ccircle cx='6' cy='6' r='1.5' fill='%23b8893a' stroke='none'/%3E%3C/g%3E%3C/svg%3E")}
+.card>*{position:relative;z-index:1}
+.card-sm{padding:1rem;transition:box-shadow .18s,transform .18s,border-color .18s}
+.card-int{cursor:pointer}
+.card-int:hover{box-shadow:var(--sh2);border-color:var(--bd2)}
+.ctitle{font-size:14px;font-weight:600;margin-bottom:1rem;display:flex;align-items:center;gap:7px;padding-bottom:.6rem;border-bottom:1.5px solid transparent;border-image:linear-gradient(90deg,var(--gold) 0%,var(--gold-lt) 30%,transparent 70%) 1}
+
+/* GRID */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem}
+.g5{display:grid;grid-template-columns:repeat(5,1fr);gap:.75rem}
+
+/* STAT */
+.stat{background:var(--surf2);border-radius:var(--r);padding:1rem 1.1rem;position:relative;overflow:hidden}
+/* การ์ดสถิติแบบไล่สีสดใส */
+.dash-stats .stat{color:#fff;border:none}
+.dash-stats .stat .stat-lbl{color:rgba(255,255,255,.85)}
+.dash-stats .stat .stat-n{color:#fff}
+.dash-stats .stat .stat-sub{color:rgba(255,255,255,.8)}
+.stat-ic{position:absolute;top:8px;right:10px;font-size:26px;opacity:.55}
+.stat-grad-a{background:linear-gradient(135deg,#137a5e,#1fa87e)}
+.stat-grad-b{background:linear-gradient(135deg,#2f80b5,#4aa8d8)}
+.stat-grad-c{background:linear-gradient(135deg,#4a9c2e,#78c73f)}
+.stat-grad-d{background:linear-gradient(135deg,#c9603a,#e0894b)}
+.stat-grad-e{background:linear-gradient(135deg,#b8893a,#d8ad5a)}
+/* Donut */
+.donut-wrap{display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;justify-content:center}
+.donut-svg{flex-shrink:0}
+.donut-legend{display:flex;flex-direction:column;gap:7px;flex:1;min-width:200px}
+.donut-leg-item{display:flex;align-items:center;gap:9px;font-size:13px}
+.donut-dot{width:12px;height:12px;border-radius:4px;flex-shrink:0}
+.donut-leg-lbl{flex:1;color:var(--tx2)}
+.donut-leg-val{font-weight:600;font-family:var(--mono);font-size:12px}
+/* ความพึงพอใจ (ดาว) */
+.rate-box{border:1px dashed var(--gold);background:var(--gold-soft);border-radius:var(--r);padding:1rem;margin-bottom:1rem}
+.rate-box.rated{border-style:solid}
+.star-row{display:flex;gap:4px}
+.star-btn{background:none;border:none;cursor:pointer;padding:2px;border-radius:6px;transition:transform .12s}
+.star-btn:hover{transform:scale(1.18)}
+.star-btn:active{transform:scale(.95)}
+/* กราฟแนวโน้มรายเดือน */
+.mt-chart{display:flex;align-items:flex-end;gap:10px;height:180px;padding-top:10px}
+.mt-col{flex:1;display:flex;flex-direction:column;align-items:center;height:100%}
+.mt-bars{flex:1;display:flex;align-items:flex-end;justify-content:center;gap:4px;width:100%}
+.mt-bar{width:26px;border-radius:6px 6px 0 0;position:relative;height:0;animation:mtGrow .8s cubic-bezier(.22,1,.36,1) forwards}
+.mt-bar-in{background:linear-gradient(180deg,#5bbce5,#3ba7d6)}
+.mt-bar-done{background:linear-gradient(180deg,#78d94f,#5cc93f)}
+.mt-val{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:600;color:var(--tx2)}
+.mt-lbl{font-size:10.5px;color:var(--tx3);margin-top:6px;white-space:nowrap}
+@keyframes mtGrow{to{height:var(--h)}}
+.stat-lbl{font-size:10px;color:var(--tx3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.stat-n{font-size:28px;font-weight:700;line-height:1;letter-spacing:-.5px}
+.stat-sub{font-size:11px;color:var(--tx3);margin-top:5px}
+
+/* BADGE */
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap;line-height:1.3}
+.badge::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
+.badge.nodot::before{display:none}
+.b-blue{background:var(--blue-bg);color:var(--blue-tx)}
+.b-green{background:var(--green-bg);color:var(--green-tx)}
+.b-amber{background:var(--amber-bg);color:var(--amber-tx)}
+.b-red{background:var(--red-bg);color:var(--red-tx)}
+.b-purple{background:var(--purple-bg);color:var(--purple-tx)}
+.b-teal{background:var(--teal-bg);color:var(--teal-tx)}
+.b-gray{background:var(--surf3);color:var(--tx2)}
+
+/* BUTTONS */
+.btn{font-family:var(--font);font-size:13px;font-weight:500;padding:8px 17px;border-radius:var(--r);border:.5px solid var(--bd2);cursor:pointer;transition:all .16s;display:inline-flex;align-items:center;gap:6px;background:var(--surf);color:var(--tx2)}
+.btn:hover{background:var(--surf2);border-color:var(--bd2)}
+.btn:active{transform:scale(.97)}
+.btn-p{background:var(--navy);color:#fff;border-color:var(--navy)}.btn-p:hover{background:var(--navy2);color:#fff}
+.btn-accent{background:linear-gradient(135deg,var(--accent),var(--teal));color:#fff;border-color:var(--accent);box-shadow:0 2px 8px rgba(19,122,94,.3)}.btn-accent:hover{filter:brightness(1.08);color:#fff}
+.btn-green{background:var(--green-bg);color:var(--green-tx);border-color:rgba(59,109,17,.28)}.btn-green:hover{background:#c0dd97}
+.btn-red{background:var(--red-bg);color:var(--red-tx);border-color:rgba(163,45,45,.28)}.btn-red:hover{background:#f7c1c1}
+.btn-sm{font-size:11.5px;padding:5px 11px;border-radius:7px}
+.btn-block{width:100%;justify-content:center}
+
+/* FORM */
+label{font-size:12px;font-weight:500;color:var(--tx2);display:block;margin-bottom:4px}
+label .req{color:var(--red);margin-left:2px}
+input,select,textarea{width:100%;font-family:var(--font);font-size:13px;color:var(--tx);background:var(--surf);border:.5px solid var(--bd2);border-radius:var(--r);padding:9px 12px;outline:none;transition:border .16s,box-shadow .16s}
+input::placeholder,textarea::placeholder{color:var(--tx3)}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(15,110,86,.12)}
+input.err,select.err,textarea.err{border-color:var(--red);box-shadow:0 0 0 3px rgba(163,45,45,.1)}
+.fld-err{font-size:11px;color:var(--red);margin-top:3px;display:none}
+.fld-err.show{display:block}
+textarea{resize:vertical;min-height:76px}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:.9rem;margin-bottom:.9rem}
+.ff{margin-bottom:.9rem}
+.fsec{font-size:11px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin:1.25rem 0 .625rem;display:flex;align-items:center;gap:8px}
+.fsec::after{content:'';flex:1;height:1px;background:var(--bd)}
+.fsec:first-child{margin-top:0}
+
+/* CHECKBOX MULTI-SELECT */
+.checkbox-group{display:flex;flex-direction:column;gap:7px;margin-top:5px}
+.cb-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border:.5px solid var(--bd2);border-radius:var(--r);cursor:pointer;transition:all .16s}
+.cb-item:hover{background:var(--surf2);border-color:var(--bd2)}
+.cb-item.selected{border-color:var(--accent);background:var(--accent-soft)}
+.cb-item input[type=checkbox]{width:auto;margin:0;accent-color:var(--accent)}
+.cb-label{font-size:13px;flex:1}
+.cb-sub{font-size:11px;color:var(--tx3)}
+
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{text-align:left;font-size:11px;font-weight:600;color:var(--tx3);padding:8px 10px;border-bottom:.5px solid var(--bd);text-transform:uppercase;letter-spacing:.3px}
+.tbl td{padding:10px;border-bottom:.5px solid var(--bd);font-size:13px;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+/* EXCEL-STYLE TABLE */
+.tbl.xls{font-size:12.5px}
+.tbl.xls th{background:var(--surf2);position:sticky;top:0;white-space:nowrap;padding:9px 10px;border:.5px solid var(--bd);color:var(--tx2)}
+.tbl.xls th:hover{background:var(--surf3)}
+.tbl.xls td{border:.5px solid var(--bd);padding:8px 10px;white-space:nowrap}
+.tbl.xls tbody tr:nth-child(even) td{background:var(--surf2)}
+.tbl.xls tbody tr:hover td{background:var(--accent-soft)}
+
+/* ROW CARD (list items) */
+.rowc{background:var(--surf);border:.5px solid var(--bd);border-left:3px solid var(--bd2);border-radius:var(--r);padding:.9rem 1rem;box-shadow:var(--sh1);transition:box-shadow .18s,transform .18s;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:.6rem}
+.rowc:hover{box-shadow:var(--sh2)}
+.rowc.pe-high{border-left-color:#e35b5b}
+.rowc.pe-med{border-left-color:#e0a94b}
+.rowc.pe-low{border-left-color:#9fbf6a}
+.rowc.pe-over{border-left-color:#e35b5b}
+
+/* NOTICE */
+.notice{border-radius:var(--r);padding:.9rem 1.05rem;font-size:13px;line-height:1.6;display:flex;gap:9px;align-items:flex-start}
+.notice .ni{flex-shrink:0;margin-top:1px}
+.n-warn{background:var(--amber-bg);color:var(--amber-tx);border-left:3px solid #e0a94b}
+.n-info{background:var(--blue-bg);color:var(--blue-tx);border-left:3px solid var(--blue)}
+.n-red{background:var(--red-bg);color:var(--red-tx);border-left:3px solid #e35b5b}
+.n-green{background:var(--green-bg);color:var(--green-tx);border-left:3px solid #639922}
+.n-purple{background:var(--purple-bg);color:var(--purple-tx);border-left:3px solid var(--purple)}
+
+/* BAR */
+.bar-wrap{display:flex;flex-direction:column;gap:9px}
+.bar-row{display:grid;grid-template-columns:104px 1fr 46px;gap:9px;align-items:center}
+.bar-lbl{font-size:12px;color:var(--tx2);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{background:var(--surf3);border-radius:5px;height:9px;overflow:hidden}
+.bar-fill{height:100%;border-radius:5px;transition:width .7s cubic-bezier(.4,0,.2,1)}
+.bar-val{font-size:12px;font-weight:600;font-family:var(--mono)}
+
+/* HOTSPOT */
+.hs-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem}
+.hs-card{border-radius:var(--r);padding:1rem .75rem;text-align:center;border:.5px solid var(--bd);background:var(--surf);box-shadow:var(--sh1)}
+.hs-icon{font-size:23px;margin-bottom:6px}
+.hs-name{font-size:11px;font-weight:600;margin-bottom:4px;color:var(--tx2)}
+.hs-count{font-size:24px;font-weight:700;line-height:1;letter-spacing:-.5px}
+.hs-bar{height:4px;border-radius:2px;margin:7px 0 4px}
+
+/* TECH CARD */
+.tech-card{display:flex;align-items:center;gap:13px;padding:.95rem;border:.5px solid var(--bd);border-radius:var(--r);background:var(--surf);margin-bottom:.6rem;box-shadow:var(--sh1)}
+.tech-av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
+.tech-info{flex:1;min-width:0}
+.tech-name{font-size:13px;font-weight:600}
+.wl-track{background:var(--surf3);border-radius:3px;height:6px;margin-top:8px}
+.wl-fill{height:100%;border-radius:3px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+
+/* STATUS PIPELINE STEPPER */
+.pipe{display:flex;align-items:center;gap:0;margin:2px 0 4px;overflow-x:auto;padding-bottom:2px}
+.pipe-step{display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;min-width:52px;position:relative}
+.pipe-dot{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;z-index:1;background:var(--surf3);color:var(--tx3);border:2px solid var(--surf3)}
+.pipe-dot.done{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pipe-dot.now{background:#fff;color:var(--accent);border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.pipe-lbl{font-size:9px;color:var(--tx3);text-align:center;line-height:1.2;max-width:56px}
+.pipe-lbl.act{color:var(--tx);font-weight:500}
+.pipe-line{position:absolute;top:11px;left:50%;width:100%;height:2px;background:var(--surf3);z-index:0}
+.pipe-line.done{background:var(--accent)}
+
+/* TIMELINE */
+.tl-item{display:flex;gap:11px}
+/* Timeline แนวนอน */
+.htl{display:flex;overflow-x:auto;padding:8px 2px 4px;gap:0}
+.htl-seg{display:flex;flex-direction:column;align-items:center;position:relative;min-width:90px;flex:1}
+.htl-node{width:16px;height:16px;border-radius:50%;z-index:2;border:2px solid var(--surf)}
+.htl-line{position:absolute;top:7px;left:50%;width:100%;height:3px;z-index:1;border-radius:2px}
+.htl-lbl{font-size:11px;font-weight:600;color:var(--tx);margin-top:7px;text-align:center;line-height:1.25;max-width:88px}
+.htl-days{font-size:10.5px;color:var(--tx3);margin-top:3px;text-align:center}
+.htl-stuck{color:var(--red);font-weight:700}
+@keyframes htlPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+.tl-rail{display:flex;flex-direction:column;align-items:center}
+.tl-dot{width:9px;height:9px;border-radius:50%;background:var(--accent);margin-top:4px;flex-shrink:0}
+.tl-ln{width:1.5px;background:var(--bd);flex:1;min-height:22px}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(18,20,24,.5);backdrop-filter:blur(3px);z-index:500;display:flex;align-items:center;justify-content:center;padding:1rem;animation:fadeIn .18s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{background:var(--surf);border-radius:var(--rl);padding:1.5rem;max-width:500px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:var(--sh3);animation:modalUp .22s cubic-bezier(.2,.8,.3,1)}
+@keyframes modalUp{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:1.25rem;display:flex;justify-content:space-between;align-items:center;letter-spacing:-.2px}
+.mc{background:var(--surf2);border:none;font-size:15px;cursor:pointer;color:var(--tx2);line-height:1;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.mc:hover{background:var(--surf3);color:var(--tx)}
+
+/* MISC */
+.divider{border:none;border-top:.5px solid var(--bd);margin:1rem 0}
+.mono{font-family:var(--mono);font-size:12px;letter-spacing:-.3px}
+.empty{text-align:center;padding:3rem 1.5rem;color:var(--tx3)}
+.empty-ic{font-size:40px;margin-bottom:12px;opacity:.85}
+.empty-ttl{font-size:14px;font-weight:600;color:var(--tx2);margin-bottom:5px}
+.empty-sub{font-size:12.5px;color:var(--tx3);max-width:300px;margin:0 auto 14px;line-height:1.6}
+.pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:.9rem}
+.pill{padding:5px 13px;border-radius:20px;font-size:12px;font-weight:500;border:.5px solid var(--bd2);cursor:pointer;background:var(--surf);color:var(--tx2);font-family:var(--font);transition:all .16s}
+.pill:hover{border-color:var(--bd2);background:var(--surf2)}
+.pill.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+/* SKELETON */
+.skel{background:linear-gradient(90deg,var(--surf2) 25%,var(--surf3) 37%,var(--surf2) 63%);background-size:400% 100%;animation:shimmer 1.3s ease infinite;border-radius:var(--r)}
+@keyframes shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+.skel-row{height:78px;margin-bottom:.5rem}
+
+/* LOADER */
+.loader-overlay{position:fixed;inset:0;background:color-mix(in srgb, var(--bg) 82%, transparent);backdrop-filter:blur(2px);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.spinner{width:38px;height:38px;border:3px solid var(--surf3);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--navy);color:#fff;padding:11px 20px;border-radius:11px;font-size:13px;font-weight:500;z-index:600;opacity:0;transition:all .28s cubic-bezier(.2,.8,.3,1);pointer-events:none;box-shadow:var(--sh3);max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ASSIGN AVATARS */
+.assignees-list{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.av-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:12px;font-weight:500}
+
+/* PHOTO */
+.ph-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:7px}
+.ph-thumb{position:relative;border-radius:8px;overflow:hidden;border:.5px solid var(--bd);background:var(--surf2);aspect-ratio:1}
+.ph-thumb img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s}
+.ph-thumb:hover img{transform:scale(1.05)}
+.ph-del{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;border:none;cursor:pointer;
+  background:rgba(18,20,24,.62);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;padding:0;line-height:1}
+.ph-del:hover{background:var(--red)}
+.ph-pick{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* CONFIG BOX */
+.config-box{background:var(--surf3);border-radius:var(--r);padding:1rem;font-size:12px;font-family:var(--mono);color:var(--tx2);line-height:1.7}
+.config-box input{font-family:var(--mono);font-size:12px;margin-top:4px}
+
+/* SEARCH BAR */
+.searchbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.searchbar .grow{flex:1;min-width:180px}
+
+@media(max-width:820px){
+  .nav-tabs,.nav-r{display:none}
+  .nav-burger{display:block}
+  .nav-logo{border-right:none;margin-right:0}
+}
+@media(max-width:640px){
+  .g2,.g3,.g4,.hs-grid,.frow{grid-template-columns:1fr}
+  .g5{grid-template-columns:1fr 1fr}
+  .hs-grid{grid-template-columns:1fr 1fr}
+  .bar-row{grid-template-columns:72px 1fr 36px}
+  .nav-logo small{display:block}
+  .nav{padding:0 1rem}
+  .nav-logo{font-size:13px}
+  .pg{padding:1rem .85rem 3rem}
+  .modal{padding:1.25rem;border-radius:16px 16px 0 0;max-height:92vh}
+  .modal-bg{align-items:flex-end;padding:0}
+  .btn{padding:10px 18px}
+  .btn-sm{padding:7px 12px}
+  input,select,textarea{font-size:16px;padding:11px 13px}
+  .rowc{padding:1rem}
+  .searchbar .grow{min-width:100%}
+  .cal-cell{min-height:64px}
+  .cal-ev{font-size:9px}
+}
+/* ปฏิทิน (ข้อ 2) */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-head{margin-bottom:4px}
+.cal-dow{text-align:center;font-size:11px;font-weight:600;color:var(--tx3);padding:4px 0}
+.cal-cell{min-height:92px;background:var(--surf2);border:.5px solid var(--bd);border-radius:8px;padding:4px;overflow:hidden;display:flex;flex-direction:column;gap:2px}
+.cal-cell.cal-empty{background:transparent;border:none}
+.cal-cell.cal-today{border:1.5px solid var(--accent);background:var(--accent-soft)}
+.cal-dnum{font-size:11px;font-weight:600;color:var(--tx2);text-align:right;line-height:1}
+.cal-ev{font-size:10px;line-height:1.3;padding:2px 5px;border-radius:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.cal-dot{display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:-1px;margin-right:2px}
+.ev-over{background:var(--red-bg);color:var(--red-tx)}
+.ev-high{background:#fbe7d6;color:#9a4b09}
+.ev-tk{background:var(--blue-bg);color:var(--blue-tx)}
+.ev-pend{background:var(--amber-bg);color:var(--amber-tx)}
+.ev-pm{background:var(--teal-bg);color:var(--teal-tx)}
+</style>
+
+</head>
+<body>
+
+<!-- LOADER -->
+<div class="loader-overlay" id="loader">
+  <div class="spinner"></div>
+  <div style="font-size:13px;color:var(--tx2)" id="loaderMsg">กำลังโหลดข้อมูล...</div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-logo"><b>คณะการแพทย์แผนไทย</b><small>ระบบแจ้งซ่อมออนไลน์</small></div>
+  <div class="nav-tabs" id="navTabs">
+    <button class="ntab on" onclick="gp('report')">แจ้งซ่อม</button>
+    <button class="ntab" onclick="gp('status')">ติดตามงาน</button>
+    <button class="ntab" onclick="gp('qr')">QR Code</button>
+    <button class="ntab" id="nt-approve" style="display:none" onclick="gp('approve')">
+      อนุมัติ <span id="apv-cnt" style="background:rgba(226,75,74,.3);color:#f09595;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:2px">0</span>
+    </button>
+    <button class="ntab" id="nt-manage" style="display:none" onclick="gp('manage')">จัดการงาน</button>
+    <button class="ntab" id="nt-pm" style="display:none" onclick="gp('pm')">🛠 PM</button>
+    <button class="ntab" id="nt-cal" style="display:none" onclick="gp('calendar')">📅 ปฏิทิน</button>
+    <button class="ntab" id="nt-dash" onclick="gp('dashboard')">Dashboard</button>
+    <button class="ntab" id="nt-cfg" style="display:none" onclick="gp('config')"><i class="ti ti-settings" style="vertical-align:-1px"></i> ตั้งค่า</button>
+  </div>
+  <div class="nav-r">
+    <button class="nbtn theme-toggle" id="themeBtn" onclick="toggleTheme()" title="สลับโหมดสว่าง/มืด">🌙</button>
+    <span class="ubadge" id="ubadge" style="display:none"></span>
+    <button class="nbtn" id="lbtn" onclick="oLogin()">เข้าสู่ระบบ</button>
+    <button class="nbtn" id="lobtn" style="display:none" onclick="doOut()">ออก</button>
+  </div>
+  <button class="nav-burger" id="navBurger" onclick="toggleMenu()" aria-label="เมนู"><i class="ti ti-menu-2"></i></button>
+</nav>
+<!-- MOBILE MENU DRAWER -->
+<div class="mnav-backdrop" id="mnavBd" onclick="toggleMenu()"></div>
+<div class="mnav" id="mnav">
+  <div class="mnav-head">
+    <span id="mnav-user" style="font-size:13px;font-weight:600"></span>
+    <button class="mc" onclick="toggleMenu()"><i class="ti ti-x"></i></button>
+  </div>
+  <div class="mnav-items" id="mnavItems"></div>
+</div>
+
+<!-- MAIN -->
+<div id="pg" class="pg"></div>
+
+<!-- MODALS -->
+<div class="modal-bg" id="loginMd" style="display:none">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-title">เข้าสู่ระบบ <button class="mc" onclick="cm('loginMd')">✕</button></div>
+    <div class="ff"><label>ชื่อผู้ใช้</label><input id="lu" placeholder="username" autocomplete="username"></div>
+    <div class="ff"><label>รหัสผ่าน</label><input id="lp" type="password" placeholder="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doIn()"></div>
+    <div style="background:var(--surf2);border-radius:var(--r);padding:10px 12px;font-size:12px;color:var(--tx2);margin-bottom:.875rem;line-height:1.7">
+      <span style="color:var(--tx3)">สำหรับเจ้าหน้าที่ — รหัสผ่านติดต่อผู้ดูแลระบบ (วิศวกร) ระบบตรวจสอบรหัสผ่านที่เซิร์ฟเวอร์</span>
+    </div>
+    <div id="lerr" style="color:var(--red-tx);font-size:12px;margin-bottom:.5rem;display:none"></div>
+    <button class="btn btn-p" style="width:100%" onclick="doIn()">เข้าสู่ระบบ</button>
+  </div>
+</div>
+<div class="modal-bg" id="detMd" style="display:none"><div class="modal" id="detContent"></div></div>
+<div class="modal-bg" id="assignMd" style="display:none"><div class="modal" id="assignContent"></div></div>
+<div class="modal-bg" id="statusMd" style="display:none"><div class="modal" id="statusContent"></div></div>
+<div class="modal-bg" id="editMd" style="display:none"><div class="modal" id="editContent"></div></div>
+<div class="modal-bg" id="userMd" style="display:none"><div class="modal" id="userContent"></div></div>
+
+<script>
+// ═══════════════════════════════════════════
+// CONFIG — แก้ GAS_URL หลัง Deploy Apps Script
+// ═══════════════════════════════════════════
+// URL ของ Google Apps Script ฝังไว้ในโปรแกรม (แก้ได้ที่หน้า ⚙ ตั้งค่า)
+const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbyOsSEC8KI1bmWJpWoCXC18XEWRqNTyzN4sRQwc4UV_GAWOUlvnzTzaUCwVId-FmaY2/exec';
+// ถ้า URL ที่ฝังมาใหม่ไม่ตรงกับที่เคยบันทึกไว้ ให้ยึดตัวใหม่ (กันเครื่องเก่าค้าง URL เดิม)
+(function(){
+  const savedDefault = localStorage.getItem('gas_default');
+  if (savedDefault !== DEFAULT_GAS_URL) {
+    localStorage.removeItem('gas_url');           // ล้างค่าที่ผู้ใช้เคยบันทึกไว้
+    localStorage.setItem('gas_default', DEFAULT_GAS_URL);
+  }
+})();
+let GAS_URL = localStorage.getItem('gas_url') || DEFAULT_GAS_URL;
+
+// ข้อมูลผู้ใช้สำหรับ "แสดงผล" เท่านั้น (ชื่อ สี อักษรย่อ ความเชี่ยวชาญ)
+// ไม่มีรหัสผ่านในไฟล์นี้ — การตรวจรหัสผ่านทำที่ Google Apps Script ฝั่งเซิร์ฟเวอร์
+// ค่าด้านล่างเป็นค่าสำรอง จะถูกแทนที่ด้วยข้อมูลจริงจากแท็บ Users เมื่อโหลดสำเร็จ
+let USERS = {
+  admin: { name:'ผู้ดูแลระบบ', role:'admin', isEngineer:true, color:'#7ecbb4', initials:'A' },
+  tech1: { name:'ผู้ใช้งาน 1',   role:'admin', color:'#b5d4f4', initials:'U1', specialty:['ระบบไฟฟ้า','ระบบสื่อสาร/เครือข่าย IT'] },
+  tech2: { name:'ผู้ใช้งาน 2', role:'admin', color:'#f5c4b3', initials:'U2', specialty:['ระบบประปา/สุขาภิบาล','ระบบปรับอากาศ'] },
+};
+let AUTH_TOKEN = localStorage.getItem('vr3_token') || '';
+let BUILDINGS = [
+  {id:'b1',name:'อาคารสหเวชศาสตร์',icon:'🏛',short:'สหเวชศาสตร์',budget:150000},
+];
+let FLOORS = [
+  {building:'b1',floor:'ชั้น B',hidden:false},
+  {building:'b1',floor:'ชั้น 1',hidden:false},{building:'b1',floor:'ชั้น 2',hidden:false},
+  {building:'b1',floor:'ชั้น 3',hidden:false},{building:'b1',floor:'ชั้น 4',hidden:false},
+  {building:'b1',floor:'ชั้น 5',hidden:false},{building:'b1',floor:'ชั้น 6',hidden:false},
+  {building:'b1',floor:'ชั้น 7',hidden:false},{building:'b1',floor:'ชั้นดาดฟ้า',hidden:false},
+];
+let PM_LIST = [];  // รายการ PM (ซ่อมบำรุงเชิงป้องกัน)
+let CATS = ['ระบบไฟฟ้า','ระบบประปา/สุขาภิบาล','ระบบปรับอากาศ','งานโครงสร้างอาคาร','ระบบสื่อสาร/เครือข่าย IT','งานครุภัณฑ์/เฟอร์นิเจอร์','อื่นๆ'];
+let STATUSES = [
+  {id:'pending_approval',label:'รอวิศวกรอนุมัติ',   cls:'b-amber'},
+  {id:'assigned',        label:'มอบหมายแล้ว',       cls:'b-purple'},
+  {id:'survey',          label:'กำลังสำรวจหน้างาน', cls:'b-amber'},
+  {id:'purchase',        label:'อยู่ระหว่างจัดซื้อ', cls:'b-purple'},
+  {id:'working',         label:'กำลังดำเนินการซ่อม', cls:'b-blue'},
+  {id:'insurance',       label:'ส่งประกันเคลม',      cls:'b-teal'},
+  {id:'contractor',      label:'ส่งผู้รับเหมา',       cls:'b-teal'},
+  {id:'done',            label:'เสร็จเรียบร้อย',     cls:'b-green'},
+  {id:'cannot',          label:'ซ่อมไม่ได้',         cls:'b-red'},
+  {id:'cancelled',       label:'ยกเลิกใบแจ้ง',       cls:'b-gray'},
+];
+// สถานะที่ส่งงานออกภายนอก — หยุดนับ SLA ชั่วคราว แต่ยังไม่ถือว่าจบงาน
+let SLA_PAUSED = ['insurance','contractor'];
+let CLOSED_STATUS = ['done','cannot','cancelled'];
+let SLA = {'ระบบไฟฟ้า':5,'ระบบประปา/สุขาภิบาล':5,'ระบบปรับอากาศ':7,'งานโครงสร้างอาคาร':30,'ระบบสื่อสาร/เครือข่าย IT':7,'งานครุภัณฑ์/เฟอร์นิเจอร์':14,'อื่นๆ':14};
+
+// ─── STATE ───
+let cu = null, curPage = 'report';
+let DB = { tickets: [], history: {} }; // local cache
+let CFG_RAW = null; // เก็บ config ดิบไว้แก้ในหน้าจัดการระบบ
+let HOLIDAYS = []; // วันหยุดราชการ รูปแบบ 'YYYY-MM-DD'
+// นำ config จาก Sheet มาแทนค่าเริ่มต้น (กรองรายการที่ซ่อนออกจากการใช้งานทั่วไป)
+function applyConfig(cfg){
+  CFG_RAW = cfg;
+  if (cfg.buildings && cfg.buildings.length)
+    BUILDINGS = cfg.buildings.filter(b=>!b.hidden).map(b=>({id:b.id,name:b.name,short:b.short||b.name,icon:b.icon||'🏢',budget:Number(b.budget)||0}));
+  if (cfg.statuses && cfg.statuses.length){
+    STATUSES = cfg.statuses.filter(s=>!s.hidden).map(s=>({id:s.id,label:s.label,cls:s.cls||'b-gray'}));
+    SLA_PAUSED = cfg.statuses.filter(s=>s.paused).map(s=>s.id);
+    CLOSED_STATUS = cfg.statuses.filter(s=>s.closed).map(s=>s.id);
+  }
+  if (cfg.categories && cfg.categories.length){
+    CATS = cfg.categories.filter(c=>!c.hidden).map(c=>c.name);
+    SLA = {}; cfg.categories.forEach(c=>{ SLA[c.name]=Number(c.sla)||14; });
+  }
+  HOLIDAYS = (cfg.holidays||[]).map(h=>h.date).filter(Boolean);
+  FLOORS = (cfg.floors||[]).filter(f=>!f.hidden);
+}
+// ชั้นของอาคารที่เลือก (ไว้ทำ dropdown ตาม)
+function floorsOf(buildingId){ return FLOORS.filter(f=>f.building===buildingId).map(f=>f.floor); }
+
+// ─── API ───
+async function api(action, body={}) {
+  if (!GAS_URL) throw new Error('ยังไม่ได้ตั้งค่า URL ของ Apps Script');
+  const res = await fetch(GAS_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action, ...body })
+  });
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error || 'API error');
+  return json.data;
+}
+
+// นำข้อมูลชุดหนึ่ง (จาก bootstrap หรือจากแคช) มาใส่ใน state
+function applyBundle(d){
+  if(d.tickets){ DB.tickets = d.tickets; DB.history = d.history||{}; DB.tickets.forEach(t=>{ t.history = DB.history[t.id] || t.history || []; if(!t.assignees) t.assignees=[]; }); }
+  if(d.config) applyConfig(d.config);
+  if(d.photos) PHOTOS = d.photos;
+  if(d.users && d.users.length){ const m={}; d.users.filter(u=>u.active!==false).forEach(u=>{ m[u.username]=u; }); USERS=m; }
+  if(d.users) ALL_USERS = d.users;   // รวมที่ปิดใช้งาน ไว้หน้าจัดการผู้ใช้
+  if(d.roles) ROLES = d.roles;
+  if(d.routing) ROUTING = d.routing;
+  if(d.inventory) INVENTORY = d.inventory;
+  if(d.flags) FLAGS = Object.assign(FLAGS, d.flags);
+  if(d.pm) PM_LIST = d.pm;
+  updApvCnt();
+}
+let ROUTING = [];     // ข้อ 5 [{category,autoAssign,approverRoles:[]}]
+let INVENTORY = [];   // ข้อ 3 [{id,name,unit,stock,hidden}]
+let FLAGS = { inventory:false };  // ธงเปิด/ปิดฟีเจอร์
+function routeOf(cat){ return ROUTING.find(r=>r.category===cat) || null; }
+
+// ─── บทบาท/สิทธิ์ (ข้อ 4) ───
+let ROLES = [];        // [{role,label,isEngineer,caps:[]}]
+let ALL_USERS = [];    // รายชื่อผู้ใช้ทั้งหมด (รวมที่ปิดใช้งาน) จาก bootstrap
+const CAP_LABELS = {
+  dashboard:'ดู Dashboard/รายงาน', approve_ticket:'อนุมัติใบแจ้งซ่อม', approve_purchase:'อนุมัติจัดซื้อ/ใช้เงิน',
+  manage_tickets:'จัดการ/อัปเดตงาน', assignable:'รับมอบหมายงานได้', manage_pm:'จัดการแผน PM',
+  manage_config:'ตั้งค่าระบบ', manage_users:'จัดการผู้ใช้', manage_routing:'ตั้งกติกาการวิ่งงาน', manage_inventory:'ระบบเบิกอุปกรณ์'
+};
+const ALL_CAPS_FE = Object.keys(CAP_LABELS);
+function roleOf(roleId){ return ROLES.find(r=>r.role===roleId) || null; }
+function roleLabel(roleId){ const r=roleOf(roleId); return r?r.label:(roleId||'-'); }
+// สิทธิ์ของผู้ใช้ปัจจุบัน — วิศวกร (isEngineer) ได้ทุกสิทธิ์เสมอ
+function can(cap){
+  if(!cu) return false;
+  if(cu.isEngineer) return true;
+  const r=roleOf(cu.role);
+  if(r) return (r.caps||[]).includes(cap);
+  return false;
+}
+// เก็บแคชรวมไว้แสดงทันทีรอบหน้า (stale-while-revalidate)
+function cacheBundle(d){
+  try{
+    localStorage.setItem('vr3_t', JSON.stringify(d.tickets||[]));
+    localStorage.setItem('vr3_hist', JSON.stringify(d.history||{}));
+    if(d.config) localStorage.setItem('vr3_cfg', JSON.stringify(d.config));
+    if(d.photos) localStorage.setItem('vr3_photos', JSON.stringify(d.photos));
+    if(d.users)  localStorage.setItem('vr3_users', JSON.stringify(d.users));
+    if(d.pm)     localStorage.setItem('vr3_pm', JSON.stringify(d.pm));
+    localStorage.setItem('vr3_cache_at', String(Date.now()));
+  }catch{}
+}
+// อ่านแคชรวมกลับมา (คืน null ถ้าไม่มี)
+function readCache(){
+  try{
+    const t=JSON.parse(localStorage.getItem('vr3_t')||'null');
+    if(!t) return null;
+    return {
+      tickets:t,
+      history:JSON.parse(localStorage.getItem('vr3_hist')||'{}'),
+      config:JSON.parse(localStorage.getItem('vr3_cfg')||'null')||undefined,
+      photos:JSON.parse(localStorage.getItem('vr3_photos')||'{}'),
+      users:JSON.parse(localStorage.getItem('vr3_users')||'null')||undefined,
+      pm:JSON.parse(localStorage.getItem('vr3_pm')||'[]'),
+    };
+  }catch{ return null; }
+}
+
+let bootstrapped=false;  // โหลดจากเซิร์ฟเวอร์สำเร็จแล้วอย่างน้อยหนึ่งครั้ง
+async function loadAll(opts={}){
+  const silent=opts.silent;   // ไม่โชว์ loader (ใช้ตอน revalidate เบื้องหลัง)
+  if(!silent) showLoader('กำลังโหลดข้อมูล...');
+  try{
+    // เรียกครั้งเดียวได้ครบ (tickets+config+photos+users)
+    const d = await api('bootstrap');
+    applyBundle(d);
+    cacheBundle(d);
+    bootstrapped=true;
+  }catch(e){
+    console.warn('bootstrap ไม่สำเร็จ ใช้แคช/ค่าเริ่มต้น:', e.message);
+    const c=readCache();
+    if(c) applyBundle(c);   // มีแคช → ใช้ของเก่าไปก่อน
+  }
+  if(!silent) hideLoader();
+}
+
+function saveLocal() {
+  localStorage.setItem('vr3_t', JSON.stringify(DB.tickets));
+}
+
+async function syncAdd(ticket) {
+  if (GAS_URL) {
+    try {
+      await api('add', { ticket });
+      await api('addHistory', { ticketId: ticket.id, entry: ticket.history[0] });
+    } catch(e) { showToast('⚠ บันทึก Sheet ไม่สำเร็จ: ' + e.message, 3000); }
+  }
+  saveLocal();
+}
+
+async function syncUpdate(id, fields, histEntry) {
+  if (GAS_URL) {
+    try {
+      await api('update', { id, fields, token: AUTH_TOKEN });
+      if (histEntry) await api('addHistory', { ticketId: id, entry: histEntry });
+    } catch(e) {
+      if(handleAuthError(e)) return;
+      showToast('⚠ อัปเดต Sheet ไม่สำเร็จ: ' + e.message, 3000);
+    }
+  }
+  saveLocal();
+}
+// session หมดอายุ → ให้ล็อกอินใหม่
+function handleAuthError(e){
+  if(e && /AUTH_REQUIRED|session/i.test(e.message||'')){
+    cu=null; AUTH_TOKEN='';
+    localStorage.removeItem('vr3_token'); localStorage.removeItem('vr3_user');
+    updAuthUI(); rp();
+    showToast('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่', 3500);
+    oLogin();
+    return true;
+  }
+  return false;
+}
+
+// ─── HELPERS ───
+function genId() { return 'REP-'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).substr(2,4).toUpperCase(); }
+function now() { return new Date().toISOString(); }
+function fd(iso) { if(!iso) return '-'; return new Date(iso).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); }
+// ป้ายสถานะครบทุกตัว (ไม่ถูกกรอง) เผื่อ config ซ่อนบางสถานะแต่ใบเก่ายังใช้อยู่
+const STATUS_FALLBACK={pending_approval:'รอวิศวกรอนุมัติ',assigned:'มอบหมายแล้ว',survey:'กำลังสำรวจหน้างาน',purchase:'อยู่ระหว่างจัดซื้อ',working:'กำลังดำเนินการซ่อม',insurance:'ส่งประกันเคลม',contractor:'ส่งผู้รับเหมา',done:'เสร็จเรียบร้อย',cannot:'ซ่อมไม่ได้',cancelled:'ยกเลิกใบแจ้ง'};
+function getSI(id) { return STATUSES.find(s=>s.id===id) || {id,label:STATUS_FALLBACK[id]||id,cls:'b-gray'}; }
+function getBI(id) { return BUILDINGS.find(b=>b.id===id)||BUILDINGS[0]; }
+function elapsed(iso) { return Math.floor((Date.now()-new Date(iso))/86400000); }
+function getSLA(cat) { return SLA[cat]||14; }
+// จำนวนวันที่งานถูกพัก (ส่งประกัน/ผู้รับเหมา) — คำนวณจากช่วงเวลาในประวัติ
+function pausedDays(t){
+  const h=(t.history||[]).slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
+  let ms=0;
+  for(let i=0;i<h.length;i++){
+    if(SLA_PAUSED.includes(h[i].status)){
+      const start=new Date(h[i].date);
+      const end=(i+1<h.length)?new Date(h[i+1].date):new Date(); // ถ้ายังพักอยู่ นับถึงตอนนี้
+      ms+=Math.max(0,end-start);
+    }
+  }
+  return Math.floor(ms/86400000);
+}
+// จำนวนวันที่นับ SLA จริง = วันทั้งหมด - วันที่พัก
+function effElapsed(t){ return Math.max(0, elapsed(t.createdAt) - pausedDays(t)); }
+function isOverSLA(t){ if(CLOSED_STATUS.includes(t.status)||SLA_PAUSED.includes(t.status)) return false; return effElapsed(t)>getSLA(t.category); }
+
+// ─── วันที่คาดว่าจะเสร็จ ───
+// แปลงวันที่เป็น 'YYYY-MM-DD' ตามเวลาท้องถิ่น (กัน off-by-one จาก timezone)
+function ymd(d){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+function isHoliday(d){ return HOLIDAYS.includes(ymd(d)); }
+// บวกวันทำการ (ข้ามเสาร์-อาทิตย์ และวันหยุดราชการ)
+function addWorkingDays(date, n){
+  const d = new Date(date);
+  let left = Math.max(0, Math.round(n));
+  while (left > 0){
+    d.setDate(d.getDate()+1);
+    const w = d.getDay();
+    if (w !== 0 && w !== 6 && !isHoliday(d)) left--;   // 0=อาทิตย์ 6=เสาร์
+  }
+  return d;
+}
+// วันที่คาดว่าจะเสร็จ = วันอนุมัติ + SLA (วันทำการ) + วันที่พัก
+function dueDate(t){
+  if(!t || !t.approvedAt) return null;              // ยังไม่อนุมัติ = คาดการณ์ไม่ได้
+  const base = addWorkingDays(new Date(t.approvedAt), getSLA(t.category));
+  const pd = pausedDays(t);
+  return pd > 0 ? addWorkingDays(base, pd) : base;  // เลื่อนออกตามวันที่พักจริง
+}
+function fdShort(d){ if(!d) return '-'; return new Date(d).toLocaleDateString('th-TH',{year:'2-digit',month:'short',day:'numeric'}); }
+// ข้อมูลสำหรับแสดงผล { text, sub, cls }
+function dueInfo(t){
+  if(t.status==='cancelled') return {text:'—', sub:'', cls:'b-gray'};
+  if(t.status==='done')   return {text:t.completedAt?fdShort(t.completedAt):'เสร็จแล้ว', sub:'เสร็จจริง', cls:'b-green'};
+  if(t.status==='cannot') return {text:'—', sub:'ซ่อมไม่ได้', cls:'b-red'};
+  const d = dueDate(t);
+  if(!d) return {text:'รออนุมัติ', sub:'', cls:'b-amber'};
+  const diff = Math.ceil((d - new Date())/86400000);
+  if(SLA_PAUSED.includes(t.status)) return {text:fdShort(d), sub:'พักชั่วคราว', cls:'b-teal'};
+  if(diff < 0)  return {text:fdShort(d), sub:`เกิน ${Math.abs(diff)} วัน`, cls:'b-red'};
+  if(diff === 0)return {text:fdShort(d), sub:'ครบกำหนดวันนี้', cls:'b-red'};
+  if(diff <= 3) return {text:fdShort(d), sub:`เหลือ ${diff} วัน`, cls:'b-amber'};
+  return {text:fdShort(d), sub:`เหลือ ${diff} วัน`, cls:'b-green'};
+}
+function getUserColor(u) { return USERS[u]?.color||'#ccc'; }
+function getUserInitials(u) { return USERS[u]?.initials||'?'; }
+function getUserName(u) { return USERS[u]?.name||u||'—'; }
+
+function assigneeChips(assignees) {
+  if (!assignees || !assignees.length) return '<span style="color:var(--tx3);font-size:12px">ยังไม่มอบหมาย</span>';
+  return assignees.map(u => {
+    const usr = USERS[u];
+    if (!usr) return '';
+    return `<span class="av-chip" style="background:${usr.color}22;color:${usr.color}">${usr.initials} ${usr.name.split(' ')[0]}</span>`;
+  }).join('');
+}
+
+function suggestAssignees(cat) {
+  const active = DB.tickets.filter(t=>!CLOSED_STATUS.includes(t.status));
+  let list = Object.entries(USERS)
+    .map(([u,v]) => {
+      const wl = active.filter(t=>(t.assignees||[]).includes(u)).length;
+      const sp = v.specialty||[];
+      const match = sp.some(s=>cat.includes(s.replace('งาน',''))||s.includes(cat.replace('งาน','')))?0:2;
+      return { u, score: wl+match, wl };
+    })
+    .sort((a,b)=>a.score-b.score)
+    .map(x=>x.u);
+  // ข้อ 5: ถ้ามีกติกาวิ่งงานตามประเภท ให้ช่างที่กำหนดขึ้นเป็นอันดับแรก (ออโต้ แก้ไขได้)
+  const rule = routeOf(cat);
+  if(rule && rule.autoAssign && USERS[rule.autoAssign]) list = [rule.autoAssign, ...list.filter(u=>u!==rule.autoAssign)];
+  return list;
+}
+// ข้อ 5: ผู้ใช้ปัจจุบันมีสิทธิ์อนุมัติใบประเภทนี้ไหม (ตามกติกา approverRoles)
+function canApproveCat(cat){
+  if(!can('approve_ticket')) return false;
+  if(cu && cu.isEngineer) return true;
+  const rule = routeOf(cat);
+  if(!rule || !rule.approverRoles || !rule.approverRoles.length) return true; // ไม่ได้จำกัด = ใครมีสิทธิ์อนุมัติก็ได้
+  return rule.approverRoles.includes(cu && cu.role);
+}
+
+// ─── UI HELPERS ───
+function showLoader(msg='') { document.getElementById('loader').style.display='flex'; document.getElementById('loaderMsg').textContent=msg||'กำลังโหลด...'; }
+function hideLoader() { document.getElementById('loader').style.display='none'; }
+let toastTimer;
+function showToast(msg, ms=2500) {
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),ms);
+}
+function cm(id) { document.getElementById(id).style.display='none'; }
+window.addEventListener('click', e => {
+  ['loginMd','detMd','assignMd','statusMd','editMd','userMd'].forEach(id=>{ const el=document.getElementById(id); if(el&&e.target===el) el.style.display='none'; });
+});
+function updApvCnt() { const c=DB.tickets.filter(t=>t.status==='pending_approval').length; const el=document.getElementById('apv-cnt'); if(el) el.textContent=c; }
+
+// ─── AUTH ───
+async function doIn() {
+  const u=document.getElementById('lu').value.trim(), p=document.getElementById('lp').value;
+  const err=document.getElementById('lerr');
+  err.style.display='none';
+  if(!u||!p){ err.style.display='block'; err.textContent='กรุณากรอกชื่อผู้ใช้และรหัสผ่าน'; return; }
+  if(!GAS_URL){ err.style.display='block'; err.textContent='ยังไม่ได้เชื่อมต่อเซิร์ฟเวอร์ ไม่สามารถเข้าสู่ระบบได้'; return; }
+  showLoader('กำลังตรวจสอบ...');
+  try{
+    const r = await api('login',{username:u,password:p});
+    hideLoader();
+    if(!r || !r.token){ err.style.display='block'; err.textContent=(r&&r.error)||'เข้าสู่ระบบไม่สำเร็จ'; return; }
+    AUTH_TOKEN = r.token;
+    localStorage.setItem('vr3_token', AUTH_TOKEN);
+    localStorage.setItem('vr3_user', JSON.stringify(r.user));
+    cu = r.user;
+    if(USERS[cu.username]) USERS[cu.username] = {...USERS[cu.username], ...cu};
+    document.getElementById('lp').value='';
+    cm('loginMd'); updAuthUI(); rp();
+    showToast('เข้าสู่ระบบสำเร็จ');
+  }catch(e){
+    hideLoader();
+    err.style.display='block';
+    err.textContent = e.message || 'เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ';
+  }
+}
+function doOut() {
+  const t=AUTH_TOKEN;
+  cu=null; AUTH_TOKEN='';
+  localStorage.removeItem('vr3_token'); localStorage.removeItem('vr3_user');
+  if(t && GAS_URL){ api('logout',{token:t}).catch(()=>{}); }
+  updAuthUI(); gp('report');
+}
+function oLogin() { document.getElementById('loginMd').style.display='flex'; }
+function updAuthUI() {
+  const b=document.getElementById('ubadge');
+  document.getElementById('lbtn').style.display=cu?'none':'';
+  document.getElementById('lobtn').style.display=cu?'':'none';
+  ['nt-approve','nt-manage','nt-pm','nt-cfg'].forEach(id=>document.getElementById(id).style.display='none');
+  if (cu) {
+    b.style.display='inline-block'; b.textContent=cu.name;
+    b.className='ubadge '+(cu.isEngineer?'ua':'ut');
+    // แสดงเมนูตามสิทธิ์ของบทบาท (วิศวกรเห็นทุกเมนู)
+    if(can('approve_ticket')||can('approve_purchase')) document.getElementById('nt-approve').style.display='';
+    if(can('manage_tickets')) document.getElementById('nt-manage').style.display='';
+    if(can('manage_pm'))      document.getElementById('nt-pm').style.display='';
+    if(can('manage_tickets')) document.getElementById('nt-cal').style.display='';
+    if(can('manage_config')||can('manage_users')||can('manage_routing')) document.getElementById('nt-cfg').style.display='';
+    updApvCnt();
+  } else { b.style.display='none'; }
+  buildMobileMenu();
+}
+
+// ─── MOBILE MENU ───
+const NAV_ITEMS = [
+  {p:'report',   label:'แจ้งซ่อม',    icon:'ti-clipboard-plus', pub:true},
+  {p:'status',   label:'ติดตามงาน',   icon:'ti-list-search',    pub:true},
+  {p:'qr',       label:'QR Code',     icon:'ti-qrcode',         pub:true},
+  {p:'approve',  label:'อนุมัติ',      icon:'ti-circle-check',   pub:false},
+  {p:'manage',   label:'จัดการงาน',    icon:'ti-tool',           pub:false},
+  {p:'pm',       label:'PM ซ่อมบำรุง',  icon:'ti-calendar-cog',   pub:false},
+  {p:'calendar', label:'ปฏิทินงาน',    icon:'ti-calendar-event', pub:false},
+  {p:'dashboard',label:'Dashboard',   icon:'ti-chart-bar',      pub:true},
+  {p:'config',   label:'ตั้งค่า',      icon:'ti-settings',       pub:false},
+];
+function buildMobileMenu() {
+  const box=document.getElementById('mnavItems'); if(!box) return;
+  const apv=DB.tickets.filter(t=>t.status==='pending_approval').length;
+  let html='';
+  NAV_ITEMS.forEach(it=>{
+    if(!it.pub && !cu) return;
+    if(!it.pub && cu && !navAllowed(it.p)) return;   // กรองตามสิทธิ์
+    const badge=(it.p==='approve'&&apv>0)?`<span class="badge-n">${apv}</span>`:'';
+    html+=`<button class="mnav-item ${curPage===it.p?'on':''}" onclick="mNav('${it.p}')"><i class="ti ${it.icon} mi"></i> ${it.label} ${badge}</button>`;
+  });
+  html+='<div class="mnav-sep"></div>';
+  if(cu) html+=`<button class="mnav-item" onclick="doOut();toggleMenu()"><i class="ti ti-logout mi"></i> ออกจากระบบ</button>`;
+  else   html+=`<button class="mnav-item" onclick="toggleMenu();oLogin()"><i class="ti ti-login mi"></i> เข้าสู่ระบบ</button>`;
+  box.innerHTML=html;
+  const u=document.getElementById('mnav-user');
+  if(u) u.innerHTML = cu ? `<i class="ti ti-user-circle" style="vertical-align:-2px;color:#6fd6b6"></i> ${cu.name}` : 'เมนู';
+}
+function toggleMenu() {
+  const bd=document.getElementById('mnavBd'), mn=document.getElementById('mnav');
+  const open=mn.classList.contains('open');
+  if(open){ mn.classList.remove('open'); bd.classList.remove('open'); }
+  else{ buildMobileMenu(); mn.classList.add('open'); bd.classList.add('open'); }
+}
+function mNav(p){ toggleMenu(); gp(p); }
+
+// สิทธิ์เข้าหน้าแต่ละเมนู (ตามบทบาท)
+function navAllowed(p){
+  if(p==='approve') return can('approve_ticket')||can('approve_purchase');
+  if(p==='manage')  return can('manage_tickets');
+  if(p==='pm')      return can('manage_pm');
+  if(p==='calendar')return can('manage_tickets');
+  if(p==='config')  return can('manage_config')||can('manage_users')||can('manage_routing');
+  return true;
+}
+// ─── ROUTER ───
+function gp(p) {
+  if (['approve','manage','pm','calendar','config'].includes(p) && !cu) { oLogin(); return; }
+  if (['approve','manage','pm','calendar','config'].includes(p) && cu && !navAllowed(p)) { showToast('บทบาทของคุณไม่มีสิทธิ์เข้าหน้านี้'); return; }
+  curPage=p;
+  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('on'));
+  const map={report:0,status:1,qr:2,approve:3,manage:4,pm:5,calendar:6,dashboard:7,config:8};
+  document.querySelectorAll('.ntab')[map[p]]?.classList.add('on');
+  buildMobileMenu();
+  rp();
+}
+function rp() {
+  const c=document.getElementById('pg');
+  if(curPage==='report')    c.innerHTML=pgReport();
+  else if(curPage==='status')    c.innerHTML=pgStatus();
+  else if(curPage==='qr')        c.innerHTML=pgQR();
+  else if(curPage==='approve')   c.innerHTML=pgApprove();
+  else if(curPage==='manage')    c.innerHTML=pgManage();
+  else if(curPage==='pm')        c.innerHTML=pgPM();
+  else if(curPage==='calendar')  c.innerHTML=pgCalendar();
+  else if(curPage==='dashboard') { c.innerHTML=pgDashboard(); setTimeout(runCountUp,60); }
+  else if(curPage==='config')    c.innerHTML=pgConfig();
+  if(curPage==='qr') setTimeout(renderQRs,100);
+}
+// ตัวเลขนับขึ้น (count-up) สำหรับการ์ดสถิติ Dashboard
+function runCountUp(){
+  document.querySelectorAll('.dash-stats .stat-n').forEach(el=>{
+    const raw=(el.textContent||'').trim();
+    if(!/^\d+$/.test(raw)) return;   // นับเฉพาะจำนวนเต็ม (ข้ามค่าทศนิยม เช่น พึงพอใจ 4.6 และ "—")
+    const target=parseInt(raw,10);
+    const dur=650, t0=performance.now();
+    function step(t){
+      const p=Math.min(1,(t-t0)/dur);
+      const val=Math.round(target*(1-Math.pow(1-p,3)));  // ease-out cubic
+      el.textContent=val;
+      if(p<1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  });
+}
+
+// ════════════════════════ PAGE: REPORT ════════════════════════
+function pgReport() {
+  return `
+  <div style="max-width:640px;margin:0 auto">
+    <div class="notice n-warn" style="margin-bottom:1rem;font-size:12px">
+      <b>เงื่อนไข SLA:</b> ระยะเวลาดำเนินการเริ่มนับหลังวิศวกร<b>อนุมัติ</b>เท่านั้น ไม่ใช่วันที่แจ้ง
+    </div>
+    <div class="card">
+      <div class="ctitle"><i class="ti ti-clipboard-plus" style="color:var(--accent)"></i> แบบฟอร์มแจ้งซ่อม</div>
+      <div class="fsec">ข้อมูลผู้แจ้ง</div>
+      <div class="frow">
+        <div class="ff" style="margin:0"><label>ชื่อ-นามสกุล<span class="req">*</span></label><input id="fN" placeholder="ชื่อ นามสกุล" oninput="clrErr('fN')"><div class="fld-err" id="e_fN">กรุณากรอกชื่อ</div></div>
+        <div class="ff" style="margin:0"><label>โทรศัพท์<span class="req">*</span></label><input id="fP" type="tel" placeholder="08x-xxx-xxxx" oninput="clrErr('fP')"><div class="fld-err" id="e_fP">กรุณากรอกเบอร์โทร</div></div>
+      </div>
+      <div class="frow" style="margin-top:.75rem">
+        <div class="ff" style="margin:0"><label>ตำแหน่ง/หน่วยงาน<span class="req">*</span></label><input id="fD" placeholder="อาจารย์ / เจ้าหน้าที่ / นักศึกษา" oninput="clrErr('fD')"><div class="fld-err" id="e_fD">กรุณากรอกหน่วยงาน</div></div>
+        <div class="ff" style="margin:0"><label>อีเมล</label><input id="fE" type="email" placeholder="@psu.ac.th"></div>
+      </div>
+      <div class="fsec">สถานที่</div>
+      <div class="frow">
+        <div class="ff" style="margin:0"><label>อาคาร<span class="req">*</span></label>
+          <select id="fB" onchange="clrErr('fB');updFloorOptions()"><option value="">-- เลือกอาคาร --</option>${BUILDINGS.map(b=>`<option value="${b.id}">${b.icon} ${b.name}</option>`).join('')}</select>
+          <div class="fld-err" id="e_fB">กรุณาเลือกอาคาร</div>
+        </div>
+        <div class="ff" style="margin:0"><label>ชั้น<span class="req">*</span></label>
+          <select id="fFloor" onchange="clrErr('fFloor');checkDuplicate()" disabled><option value="">-- เลือกอาคารก่อน --</option></select>
+          <div class="fld-err" id="e_fFloor">กรุณาเลือกชั้น</div>
+        </div>
+      </div>
+      <div class="ff"><label>ห้อง / จุดที่ต้องการซ่อม<span class="req">*</span></label><input id="fR" placeholder="เช่น ห้อง 201 ห้องปฏิบัติการนวด หน้าลิฟต์" oninput="clrErr('fR');checkDuplicate()"><div class="fld-err" id="e_fR">กรุณาระบุห้องหรือจุดที่ต้องการซ่อม</div></div>
+      <div id="dupWarn"></div>
+      <div class="fsec">รายละเอียดงาน</div>
+      <div class="frow">
+        <div class="ff" style="margin:0"><label>ประเภทงาน<span class="req">*</span></label>
+          <select id="fC" onchange="clrErr('fC')"><option value="">-- เลือกประเภท --</option>${CATS.map(c=>`<option>${c}</option>`).join('')}</select>
+          <div class="fld-err" id="e_fC">กรุณาเลือกประเภท</div>
+        </div>
+        <div class="ff" style="margin:0"><label>ความเร่งด่วน<span class="req">*</span></label>
+          <select id="fPr"><option value="low">ปกติ — ไม่เร่งด่วน</option><option value="med">ปานกลาง — กระทบการทำงาน</option><option value="high">เร่งด่วน — กระทบความปลอดภัย</option></select>
+        </div>
+      </div>
+      <div class="ff" style="margin-top:.25rem"><label>ค่าใช้จ่ายประมาณการ (บาท)</label><input id="fCost" type="number" placeholder="0" min="0"></div>
+      <div class="ff"><label>รายละเอียดปัญหา<span class="req">*</span></label><textarea id="fDesc" placeholder="อธิบายปัญหาให้ละเอียด เช่น ไฟดับ ท่อรั่ว แอร์ไม่เย็น เพื่อให้วิศวกรอนุมัติได้รวดเร็ว" oninput="clrErr('fDesc')"></textarea><div class="fld-err" id="e_fDesc">กรุณากรอกรายละเอียด</div></div>
+      <div class="ff">
+        <label>แนบรูปภาพ (ไม่บังคับ — ช่วยให้ช่างประเมินได้เร็วขึ้น)</label>
+        <div class="ph-pick">
+          <label class="btn btn-sm" style="cursor:pointer;margin:0">
+            <i class="ti ti-camera"></i> เลือกรูป / ถ่ายภาพ
+            <input type="file" accept="image/*" multiple style="display:none" onchange="onPickReportPhotos(this)">
+          </label>
+          <span id="photoCount" style="font-size:12px;color:var(--tx3)"></span>
+        </div>
+        <div id="photoPreview" class="ph-grid" style="margin-top:8px"></div>
+      </div>
+      <div id="rmsg" style="margin-bottom:.75rem"></div>
+      <button class="btn btn-accent btn-block" onclick="submitR()"><i class="ti ti-send"></i> ส่งแจ้งซ่อม</button>
+    </div>
+  </div>`;
+}
+
+async function submitR() {
+  const n=v('fN'),ph=v('fP'),d=v('fD'),b=v('fB'),fl=v('fFloor'),r=v('fR'),c=v('fC'),desc=v('fDesc');
+  const msg=document.getElementById('rmsg');
+  const checks=[['fN',n],['fP',ph],['fD',d],['fB',b],['fFloor',fl],['fR',r],['fC',c],['fDesc',desc]];
+  let firstBad=null;
+  checks.forEach(([id,val])=>{
+    const el=document.getElementById(id), er=document.getElementById('e_'+id);
+    if(!val){ el.classList.add('err'); if(er)er.classList.add('show'); if(!firstBad)firstBad=el; }
+    else { el.classList.remove('err'); if(er)er.classList.remove('show'); }
+  });
+  if(firstBad){ msg.innerHTML='<div class="notice n-red" style="margin:0"><i class="ti ti-alert-circle ni"></i><div>ยังกรอกข้อมูลไม่ครบ กรุณาตรวจช่องที่ทำเครื่องหมายสีแดง</div></div>'; firstBad.focus(); firstBad.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+  const roomFull = fl ? (fl + ' — ' + r) : r;   // รวมชั้น + ห้องเข้าด้วยกัน
+  const ticket = {
+    id:genId(), createdAt:now(), name:n, phone:ph, dept:d,
+    email:v('fE'), building:b, room:roomFull, floor:fl, category:c,
+    priority:v('fPr'), estimatedCost:parseFloat(v('fCost'))||0,
+    actualCost:0, desc, status:'pending_approval',
+    assignees:[], approvedAt:null, approvedBy:null, approvedBudget:0,
+    history:[{status:'pending_approval',date:now(),note:'รับแจ้งซ่อมเข้าระบบ',by:'ระบบ'}]
+  };
+  DB.tickets.push(ticket);
+  showLoader(pendingPhotos.length ? 'กำลังบันทึกและอัปโหลดรูป...' : 'กำลังบันทึก...');
+  await syncAdd(ticket);
+  let photoN = 0;
+  if (pendingPhotos.length) {
+    photoN = await uploadPendingPhotos(ticket.id, n, 'report');
+    pendingPhotos = []; renderPendingPhotos();
+  }
+  hideLoader(); updApvCnt();
+  msg.innerHTML=`<div class="notice n-green" style="margin:0"><i class="ti ti-circle-check ni"></i><div><b>ส่งแจ้งซ่อมสำเร็จ</b><br>รหัสใบแจ้งซ่อม: <span class="mono">${ticket.id}</span> — จดรหัสนี้ไว้ติดตามสถานะ<br>สถานะ: รอวิศวกรตรวจสอบและอนุมัติ${photoN?`<br>แนบรูปแล้ว ${photoN} รูป`:''}</div></div>`;
+  ['fN','fP','fD','fE','fR','fDesc','fCost'].forEach(f=>{const el=document.getElementById(f);if(el)el.value='';});
+  document.getElementById('fB').value=''; document.getElementById('fC').value='';
+  updFloorOptions();
+  showToast('บันทึกลง Google Sheet แล้ว');
+}
+function v(id) { const el=document.getElementById(id); return el?el.value.trim():''; }
+function clrErr(id){ const el=document.getElementById(id),er=document.getElementById('e_'+id); if(el)el.classList.remove('err'); if(er)er.classList.remove('show'); }
+// อัปเดต dropdown ชั้นตามอาคารที่เลือก
+function updFloorOptions(preselect){
+  const bSel=document.getElementById('fB'), fSel=document.getElementById('fFloor');
+  if(!bSel||!fSel) return;
+  const fls=floorsOf(bSel.value);
+  if(!bSel.value){ fSel.innerHTML='<option value="">-- เลือกอาคารก่อน --</option>'; fSel.disabled=true; return; }
+  if(!fls.length){ fSel.innerHTML='<option value="">(อาคารนี้ยังไม่ได้กำหนดชั้น)</option>'; fSel.disabled=true; return; }
+  fSel.disabled=false;
+  fSel.innerHTML='<option value="">-- เลือกชั้น --</option>'+fls.map(f=>`<option value="${f}" ${preselect===f?'selected':''}>${f}</option>`).join('');
+  checkDuplicate();
+}
+
+// เตือนถ้าอาคาร+ชั้นเดียวกันมีใบที่ยังไม่ปิด (กันแจ้งซ้ำ)
+function checkDuplicate(){
+  const box=document.getElementById('dupWarn');
+  if(!box) return;
+  const b=document.getElementById('fB').value;
+  const fl=document.getElementById('fFloor').value;
+  const room=(document.getElementById('fR').value||'').trim().toLowerCase();
+  if(!b || !fl){ box.innerHTML=''; return; }
+  // ใบที่ยังไม่ปิด ในอาคาร+ชั้นเดียวกัน
+  const openOnes=DB.tickets.filter(t=>t.building===b && (t.floor===fl || (t.room||'').includes(fl)) && !CLOSED_STATUS.includes(t.status));
+  if(!openOnes.length){ box.innerHTML=''; return; }
+  // ถ้าพิมพ์ห้องแล้ว เน้นที่ตรงห้องด้วย
+  const sameRoom = room ? openOnes.filter(t=>(t.room||'').toLowerCase().includes(room)) : [];
+  const list = (sameRoom.length?sameRoom:openOnes).slice(0,5);
+  box.innerHTML=`<div class="notice n-amber" style="margin-bottom:.9rem">
+    <i class="ti ti-alert-triangle ni"></i>
+    <div>
+      <b>⚠️ จุดนี้มีใบที่ยังดำเนินการอยู่ ${openOnes.length} ใบ</b> — ตรวจก่อนว่าเป็นเรื่องเดียวกันไหม จะได้ไม่แจ้งซ้ำ
+      <div style="margin-top:6px;display:flex;flex-direction:column;gap:4px">
+        ${list.map(t=>{const s=getSI(t.status);return `<div style="font-size:12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="mono">${t.id}</span><span class="badge ${s.cls}" style="font-size:10px">${s.label}</span><span style="color:var(--tx2)">${t.room||''} · ${t.category}</span></div>`;}).join('')}
+      </div>
+      <div style="font-size:11.5px;color:var(--tx3);margin-top:6px">ถ้าเป็นคนละปัญหา แจ้งต่อได้ตามปกติ</div>
+    </div>
+  </div>`;
+}
+
+// ════════════════════════ PAGE: STATUS ════════════════════════
+// ─── Export Excel / PDF ───
+function exportRows(){
+  const pLbl={high:'เร่งด่วน',med:'ปานกลาง',low:'ปกติ'};
+  return DB.tickets.filter(t=>t.status!=='cancelled')
+    .slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))
+    .map(t=>({
+      'รหัส':t.id,
+      'วันที่แจ้ง':fd(t.createdAt),
+      'อาคาร':getBI(t.building).name,
+      'ห้อง/ชั้น':t.room,
+      'ประเภทงาน':t.category,
+      'ความเร่งด่วน':pLbl[t.priority]||t.priority,
+      'สถานะ':getSI(t.status).label,
+      'ผู้แจ้ง':t.name,
+      'โทรศัพท์':t.phone,
+      'หน่วยงาน':t.dept,
+      'รายละเอียด':t.desc,
+      'ผู้รับผิดชอบ':(t.assignees||[]).map(getUserName).join(', '),
+      'ประมาณการ(บาท)':t.estimatedCost||0,
+      'ค่าใช้จ่ายจริง(บาท)':t.actualCost||0,
+      'นับ SLA(วัน)':CLOSED_STATUS.includes(t.status)?'-':effElapsed(t),
+      'SLA(วัน)':getSLA(t.category),
+      'วันที่อนุมัติ':t.approvedAt?fd(t.approvedAt):'',
+      'คาดว่าเสร็จ':(()=>{const d=dueDate(t);return d?fdShort(d):'รออนุมัติ';})(),
+      'สถานะกำหนดส่ง':dueInfo(t).sub||'',
+      'เกิน SLA':isOverSLA(t)?'เกิน':'',
+      'วันเสร็จจริง':t.completedAt?fd(t.completedAt):''
+    }));
+}
+function exportExcel(){
+  if(typeof XLSX==='undefined'){ showToast('กำลังโหลดตัวช่วย ลองอีกครั้ง'); return; }
+  const rows=exportRows();
+  if(!rows.length){ showToast('ไม่มีข้อมูลให้ส่งออก'); return; }
+  const ws=XLSX.utils.json_to_sheet(rows);
+  ws['!cols']=Object.keys(rows[0]).map(k=>({wch:k==='รายละเอียด'?40:k==='อาคาร'?24:14}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'รายงานแจ้งซ่อม');
+  const d=new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb,`รายงานแจ้งซ่อม_${d}.xlsx`);
+  showToast('ดาวน์โหลด Excel แล้ว');
+}
+function exportPDF(){
+  const rows=exportRows();
+  if(!rows.length){ showToast('ไม่มีข้อมูลให้ส่งออก'); return; }
+  const cols=Object.keys(rows[0]).filter(c=>!['โทรศัพท์','หน่วยงาน','อีเมล','วันที่อนุมัติ','สถานะกำหนดส่ง','นับ SLA(วัน)'].includes(c));
+  const d=new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
+  const head=cols.map(c=>`<th>${c}</th>`).join('');
+  const body=rows.map(r=>`<tr>${cols.map(c=>`<td>${(r[c]===0?'0':(r[c]||''))}</td>`).join('')}</tr>`).join('');
+  const w=window.open('','_blank');
+  w.document.write(`<html><head><meta charset="utf-8"><title>รายงานแจ้งซ่อม</title>
+  <style>
+    @page{size:A4 landscape;margin:12mm}
+    body{font-family:'Sarabun','TH SarabunPSK',sans-serif;font-size:11px;color:#111}
+    h2{margin:0 0 2px} .sub{color:#666;font-size:12px;margin-bottom:12px}
+    table{width:100%;border-collapse:collapse}
+    th,td{border:0.5px solid #999;padding:4px 6px;text-align:left;vertical-align:top}
+    th{background:#12233b;color:#fff;font-size:10px}
+    tr:nth-child(even) td{background:#f4f4f0}
+  </style></head><body>
+  <h2>รายงานการแจ้งซ่อม — คณะสัตวแพทยศาสตร์ มหาวิทยาลัยสงขลานครินทร์</h2>
+  <div class="sub">พิมพ์เมื่อ ${d} · รวม ${rows.length} รายการ</div>
+  <table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
+  <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`);
+  w.document.close();
+  showToast('เปิดหน้าพิมพ์ — เลือก "บันทึกเป็น PDF"');
+}
+
+function pgStatus() {
+  const tickets=DB.tickets.filter(t=>t.status!=='cancelled').slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  return `<div>
+    <div class="card" style="margin-bottom:1rem">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="sq" placeholder="🔍 ค้นหารหัส / ชื่อ / อาคาร / ห้อง / รายละเอียด..." style="flex:1;min-width:200px" oninput="filterStatus()">
+        <button class="btn btn-sm" onclick="loadAll().then(rp)">🔄 รีเฟรช</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
+        <select id="sbld" onchange="filterStatus()" style="width:auto">
+          <option value="">🏢 ทุกอาคาร</option>${BUILDINGS.map(b=>`<option value="${b.id}">${b.icon} ${b.short}</option>`).join('')}
+        </select>
+        <select id="ssta" onchange="filterStatus()" style="width:auto">
+          <option value="">📋 ทุกสถานะ</option>${STATUSES.map(s=>`<option value="${s.id}">${s.label}</option>`).join('')}
+        </select>
+        <select id="scat" onchange="filterStatus()" style="width:auto">
+          <option value="">🔧 ทุกประเภท</option>${CATS.map(c=>`<option value="${c}">${c}</option>`).join('')}
+        </select>
+        <select id="spri" onchange="filterStatus()" style="width:auto">
+          <option value="">⚡ ทุกความเร่งด่วน</option>
+          <option value="high">🔴 เร่งด่วน</option>
+          <option value="med">🟡 ปานกลาง</option>
+          <option value="low">🟢 ปกติ</option>
+        </select>
+        ${cu?`<select id="sover" onchange="filterStatus()" style="width:auto">
+          <option value="">⏱ ทั้งหมด (SLA)</option>
+          <option value="over">เกิน SLA เท่านั้น</option>
+        </select>`:''}
+        <button class="btn btn-sm" onclick="clearFilters()" style="margin-left:auto">✕ ล้างตัวกรอง</button>
+      </div>
+      <div id="filterCount" style="font-size:11.5px;color:var(--tx3);margin-top:8px"></div>
+    </div>
+    <div id="stlist">${renderStatusList(tickets)}</div>
+    <div class="card" style="margin-top:1.25rem">
+      <div class="ctitle" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <span><i class="ti ti-table" style="color:var(--accent)"></i> ตารางสรุปสถานะ (คลิกหัวคอลัมน์เพื่อเรียง)</span>
+        <span style="display:flex;gap:6px;align-items:center">
+          ${cu?`<button class="btn btn-sm btn-green" onclick="exportExcel()"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+          <button class="btn btn-sm" onclick="exportPDF()"><i class="ti ti-file-type-pdf"></i> PDF</button>`:''}
+          <span style="font-size:11px;font-weight:400;color:var(--tx3)">${tickets.length} รายการ</span>
+        </span>
+      </div>
+      <div style="overflow-x:auto" id="sttable">${renderStatusTable(tickets)}</div>
+    </div>
+  </div>`;
+}
+
+let tblSort={key:'createdAt',dir:-1};
+function renderStatusTable(tickets){
+  if(!tickets.length) return `<div class="empty" style="padding:1.5rem"><div class="empty-sub">ไม่มีข้อมูล</div></div>`;
+  const cols=[
+    {k:'id',       label:'รหัส',      w:'110px'},
+    {k:'createdAt',label:'วันที่แจ้ง', w:'130px'},
+    {k:'building', label:'อาคาร',      w:'150px'},
+    {k:'room',     label:'ห้อง',       w:'150px'},
+    {k:'category', label:'ประเภท',     w:'150px'},
+    {k:'priority', label:'เร่งด่วน',    w:'90px'},
+    {k:'status',   label:'สถานะ',      w:'150px'},
+  ];
+  if(cu) cols.push({k:'due', label:'คาดว่าเสร็จ', w:'150px'});   // เฉพาะเจ้าหน้าที่
+  const prioRank={high:3,med:2,low:1};
+  const arr=tickets.slice().sort((a,b)=>{
+    let x,y; const k=tblSort.key;
+    if(k==='due'){x=dueDate(a)?new Date(dueDate(a)).getTime():Infinity;y=dueDate(b)?new Date(dueDate(b)).getTime():Infinity;}
+    else if(k==='priority'){x=prioRank[a.priority]||0;y=prioRank[b.priority]||0;}
+    else if(k==='createdAt'){x=new Date(a.createdAt);y=new Date(b.createdAt);}
+    else if(k==='building'){x=getBI(a.building).short;y=getBI(b.building).short;}
+    else if(k==='status'){x=STATUSES.findIndex(s=>s.id===a.status);y=STATUSES.findIndex(s=>s.id===b.status);}
+    else{x=(a[k]||'').toString();y=(b[k]||'').toString();}
+    if(x<y)return -1*tblSort.dir; if(x>y)return 1*tblSort.dir; return 0;
+  });
+  const arrow=k=>tblSort.key===k?(tblSort.dir===1?' ▲':' ▼'):'';
+  const pLbl={high:'เร่งด่วน',med:'ปานกลาง',low:'ปกติ'};
+  const pCls={high:'b-red',med:'b-amber',low:'b-gray'};
+  return `<table class="tbl xls">
+    <thead><tr>${cols.map(c=>`<th style="min-width:${c.w};cursor:pointer;user-select:none" onclick="sortTable('${c.k}')">${c.label}${arrow(c.k)}</th>`).join('')}</tr></thead>
+    <tbody>${arr.map(t=>{
+      const s=getSI(t.status),b=getBI(t.building),over=isOverSLA(t);
+      return `<tr onclick="openDet('${t.id}')" style="cursor:pointer">
+        <td class="mono">${t.id}</td>
+        <td style="white-space:nowrap">${fd(t.createdAt)}</td>
+        <td>${b.icon} ${b.short}</td>
+        <td>${t.room}</td>
+        <td>${t.category}</td>
+        <td><span class="badge ${pCls[t.priority]} nodot">${pLbl[t.priority]}</span></td>
+        <td><span class="badge ${s.cls}">${s.label}</span>${over?' <span class="badge b-red">เกิน SLA</span>':''}</td>
+        ${cu?(()=>{const di=dueInfo(t);return `<td style="white-space:nowrap"><span class="badge ${di.cls}">${di.text}</span>${di.sub?`<div style="font-size:10.5px;color:var(--tx3);margin-top:2px">${di.sub}</div>`:''}</td>`;})():''}
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+function sortTable(k){
+  if(tblSort.key===k) tblSort.dir*=-1; else { tblSort.key=k; tblSort.dir=1; }
+  // re-render using current filter set
+  filterStatus();
+}
+function renderStatusList(tickets) {
+  if (!tickets.length) return `<div class="empty"><div class="empty-ic"><i class="ti ti-clipboard-search"></i></div><div class="empty-ttl">ยังไม่มีรายการแจ้งซ่อม</div><div class="empty-sub">เมื่อมีการแจ้งซ่อมเข้ามา รายการจะแสดงที่นี่ พร้อมสถานะและผู้รับผิดชอบ</div></div>`;
+  return `<div style="display:flex;flex-direction:column;gap:.5rem">${tickets.map(t=>{
+    const s=getSI(t.status),b=getBI(t.building);
+    const pCls=t.priority==='high'?'b-red':t.priority==='med'?'b-amber':'b-gray';
+    const pLbl={high:'เร่งด่วน',med:'ปานกลาง',low:'ปกติ'}[t.priority];
+    const el=effElapsed(t),sla=getSLA(t.category),over=isOverSLA(t);
+    const peCls=over?'pe-over':t.priority==='high'?'pe-high':t.priority==='med'?'pe-med':'pe-low';
+    return `<div class="rowc ${peCls}">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:5px;align-items:center">
+            <span class="mono">${t.id}</span>
+            <span class="badge ${s.cls}">${s.label}</span>
+            <span class="badge ${pCls} nodot">${pLbl}</span>
+            ${t.source==='PM'?'<span class="badge b-teal nodot">🛠 PM</span>':''}
+            ${over?'<span class="badge b-red">เกิน SLA</span>':''}
+          </div>
+          <div style="font-weight:600;font-size:13.5px;margin-bottom:2px">${b.icon} ${b.name} — ${t.room}</div>
+          <div style="font-size:12px;color:var(--tx2)">${t.category} · ${t.name} · ${fd(t.createdAt)}</div>
+          ${cu?(()=>{const di=dueInfo(t);return `<div style="font-size:12px;margin-top:5px;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+            <span style="color:var(--tx3)">คาดว่าเสร็จ:</span>
+            <span class="badge ${di.cls}">${di.text}${di.sub?' · '+di.sub:''}</span>
+          </div>`;})():''}
+          <div style="font-size:12px;margin-top:5px">${assigneeChips(t.assignees)}</div>
+        </div>
+        <button class="btn btn-sm" onclick="openDet('${t.id}')"><i class="ti ti-eye"></i> รายละเอียด</button>
+    </div>`;
+  }).join('')}</div>`;
+}
+function filterStatus() {
+  const q=(v('sq')||'').toLowerCase(),bl=v('sbld')||'',st2=v('ssta')||'',cat=v('scat')||'',pri=v('spri')||'',over=v('sover')||'';
+  let t=DB.tickets.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  if(st2!=='cancelled') t=t.filter(x=>x.status!=='cancelled'); // ซ่อนใบยกเลิก เว้นแต่เลือกกรองดูโดยตรง
+  if(q) t=t.filter(x=>x.id.toLowerCase().includes(q)||(x.name||'').toLowerCase().includes(q)||getBI(x.building).name.toLowerCase().includes(q)||(x.room||'').toLowerCase().includes(q)||(x.desc||'').toLowerCase().includes(q));
+  if(bl) t=t.filter(x=>x.building===bl);
+  if(st2) t=t.filter(x=>x.status===st2);
+  if(cat) t=t.filter(x=>x.category===cat);
+  if(pri) t=t.filter(x=>x.priority===pri);
+  if(over==='over') t=t.filter(x=>isOverSLA(x));
+  document.getElementById('stlist').innerHTML=renderStatusList(t);
+  const tbl=document.getElementById('sttable'); if(tbl) tbl.innerHTML=renderStatusTable(t);
+  const fc=document.getElementById('filterCount');
+  if(fc){ const active=[q&&'คำค้น',bl&&'อาคาร',st2&&'สถานะ',cat&&'ประเภท',pri&&'ความเร่งด่วน',over&&'SLA'].filter(Boolean);
+    fc.textContent = active.length ? `พบ ${t.length} รายการ · กรองด้วย: ${active.join(', ')}` : `แสดงทั้งหมด ${t.length} รายการ`; }
+}
+function clearFilters(){
+  ['sq','sbld','ssta','scat','spri','sover'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  filterStatus();
+}
+
+// ════════════════════════ PAGE: QR ════════════════════════
+function pgQR() {
+  return `<div style="max-width:780px;margin:0 auto">
+    <div class="notice n-info" style="margin-bottom:1rem">QR Code สำหรับติดป้ายตามอาคาร — สแกนเพื่อเข้าแบบฟอร์มแจ้งซ่อม</div>
+    <div class="g2">${BUILDINGS.map(b=>`
+    <div class="card" style="text-align:center">
+      <div style="font-size:24px;margin-bottom:4px">${b.icon}</div>
+      <div style="font-weight:600;margin-bottom:.75rem;font-size:13px">${b.name}</div>
+      <div id="qr-${b.id}" style="display:flex;justify-content:center;margin-bottom:.75rem"></div>
+      <button class="btn btn-sm" style="margin:0 auto" onclick="pQR('${b.id}','${b.name}')">🖨 พิมพ์ QR</button>
+    </div>`).join('')}</div>
+  </div>`;
+}
+function renderQRs() {
+  if (typeof QRCode==='undefined') return;
+  BUILDINGS.forEach(b=>{
+    const el=document.getElementById('qr-'+b.id);
+    if(el){el.innerHTML='';new QRCode(el,{text:window.location.href+'?b='+b.id,width:140,height:140,colorDark:'#0f1a2e',colorLight:'#fff'});}
+  });
+}
+function pQR(id,name) {
+  const el=document.getElementById('qr-'+id),c=el?.querySelector('canvas');if(!c)return;
+  const w=window.open('','_blank');
+  w.document.write(`<html><body style="text-align:center;font-family:sans-serif;padding:30px"><h2>แจ้งซ่อม — คณะสัตวแพทยศาสตร์ ม.อ.</h2><h3>${name}</h3><img src="${c.toDataURL()}" style="width:180px;margin:16px 0"><p>สแกน QR เพื่อแจ้งซ่อม</p><script>window.print();window.close();<\/script></body></html>`);
+}
+
+// ════════════════════════ PAGE: APPROVE ════════════════════════
+function pgApprove() {
+  if (!cu) return `<div class="empty">กรุณาเข้าสู่ระบบ</div>`;
+  const showTicket = can('approve_ticket');
+  const showPurchase = can('approve_purchase');
+  const pending=(showTicket?DB.tickets.filter(t=>t.status==='pending_approval'&&canApproveCat(t.category)):[]).sort((a,b)=>{
+    if(a.priority==='high'&&b.priority!=='high') return -1;
+    if(b.priority==='high'&&a.priority!=='high') return 1;
+    return new Date(a.createdAt)-new Date(b.createdAt);
+  });
+  const purchaseQ=(showPurchase?DB.tickets.filter(t=>t.status==='pending_purchase'):[]).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+  const purchaseCard = showPurchase ? `
+    <div style="font-size:14px;font-weight:700;margin:.25rem 0 .6rem;display:flex;align-items:center;gap:6px">💰 รออนุมัติจัดซื้อ (บริหาร) <span class="badge b-amber">${purchaseQ.length}</span></div>
+    ${!purchaseQ.length?`<div class="notice n-info" style="margin-bottom:1rem">ไม่มีงานรออนุมัติจัดซื้อ</div>`:`<div style="display:flex;flex-direction:column;gap:.6rem;margin-bottom:1.5rem">${purchaseQ.map(t=>{
+      const b=getBI(t.building);
+      return `<div class="card card-sm" style="border-left:3px solid #e0a94b">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.5rem">
+          <div style="flex:1">
+            <div style="margin-bottom:3px"><span class="mono">${t.id}</span></div>
+            <div style="font-weight:600">${b.icon} ${b.name} — ${t.room}</div>
+            <div style="font-size:12px;color:var(--tx2)">${t.category} · ประมาณการ <b>${(t.approvedBudget||t.estimatedCost||0).toLocaleString()}</b> บาท</div>
+            <div style="font-size:12px;color:var(--tx2);margin-top:2px">ผู้รับผิดชอบ: ${assigneeChips(t.assignees)}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <button class="btn btn-sm btn-green" onclick="doApprovePurchase('${t.id}')">✓ อนุมัติจัดซื้อ</button>
+            <button class="btn btn-sm" onclick="openDet('${t.id}')">ดูรายละเอียด</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('')}</div>`}` : '';
+  return `<div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+      <div><div style="font-size:16px;font-weight:700">คิวอนุมัติ</div>
+      <div style="font-size:12px;color:var(--tx3)">${showTicket?('ใบแจ้งซ่อม '+pending.length):''}${showTicket&&showPurchase?' · ':''}${showPurchase?('จัดซื้อ '+purchaseQ.length):''}</div></div>
+      <button class="btn btn-sm" onclick="loadAll().then(rp)">🔄 รีเฟรช</button>
+    </div>
+    ${purchaseCard}
+    ${showTicket?`<div style="font-size:14px;font-weight:700;margin:.25rem 0 .6rem;display:flex;align-items:center;gap:6px">📝 รออนุมัติใบแจ้งซ่อม <span class="badge b-amber">${pending.length}</span></div>`:''}
+    ${showTicket&&!pending.length?`<div class="empty" style="padding:2rem"><div class="empty-ic" style="color:var(--green)"><i class="ti ti-circle-check"></i></div><div class="empty-ttl">เคลียร์คิวหมดแล้ว</div><div class="empty-sub">ไม่มีใบแจ้งซ่อมรออนุมัติในขณะนี้</div></div>`:''}
+    <div style="display:flex;flex-direction:column;gap:.75rem">
+    ${pending.map(t=>{
+      const b=getBI(t.building),pCls=t.priority==='high'?'b-red':t.priority==='med'?'b-amber':'b-gray';
+      const pLbl={high:'เร่งด่วน',med:'ปานกลาง',low:'ปกติ'}[t.priority];
+      const suggested=suggestAssignees(t.category);
+      return `<div class="card card-sm" style="${t.priority==='high'?'border-left:3px solid #e35b5b':'border-left:3px solid #3ba7d6'}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.5rem">
+          <div style="flex:1">
+            <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:5px">
+              <span class="mono">${t.id}</span><span class="badge ${pCls}">${pLbl}</span>
+            </div>
+            <div style="font-weight:600;margin-bottom:3px">${b.icon} ${b.name} — ${t.room}</div>
+            <div style="font-size:12px;color:var(--tx2)">${t.category} | ผู้แจ้ง: ${t.name} (${t.dept})</div>
+            <div style="font-size:12px;color:var(--tx2);margin:2px 0">${t.desc.substring(0,90)}${t.desc.length>90?'...':''}</div>
+            ${t.estimatedCost?`<div style="font-size:12px">ประมาณการ: <b>${t.estimatedCost.toLocaleString()} บาท</b></div>`:''}
+            <div style="font-size:12px;background:var(--teal-bg);color:var(--teal-tx);padding:4px 8px;border-radius:6px;margin-top:6px;display:inline-block">
+              ระบบแนะนำ: <b>${suggested.map(u=>getUserName(u).split(' ')[0]).join(', ')}</b>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <button class="btn btn-sm btn-green" onclick="openAssign('${t.id}')">✓ อนุมัติ + มอบหมาย</button>
+            <button class="btn btn-sm" onclick="openDet('${t.id}')">ดูรายละเอียด</button>
+            <button class="btn btn-sm btn-red" onclick="doReject('${t.id}')">✕ ส่งกลับ</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('')}
+    </div>
+  </div>`;
+}
+
+function openAssign(id) {
+  const t=DB.tickets.find(t=>t.id===id); if(!t) return;
+  const suggested=suggestAssignees(t.category);
+  const active=DB.tickets.filter(x=>!CLOSED_STATUS.includes(x.status));
+  const techList=Object.entries(USERS).map(([u,usr])=>{
+    const wl=active.filter(x=>(x.assignees||[]).includes(u)).length;
+    const isSugg=suggested.indexOf(u);
+    const sugg=isSugg===0?'⭐ แนะนำ':isSugg===1?'✓ รอง':'';
+    return `<div class="cb-item ${(t.assignees||[]).includes(u)?'selected':''}" onclick="toggleCb(this,'${u}')">
+      <input type="checkbox" id="cb_${u}" ${(t.assignees||[]).includes(u)?'checked':''} style="pointer-events:none">
+      <div class="tech-av" style="background:${usr.color}22;color:${usr.color};width:28px;height:28px;font-size:11px">${usr.initials}</div>
+      <div class="cb-label"><b>${usr.name}</b>${sugg?` <span class="badge b-teal" style="font-size:10px">${sugg}</span>`:''}</div>
+      <div class="cb-sub">งานคงค้าง: ${wl}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('assignContent').innerHTML=`
+    <div class="modal-title">อนุมัติและมอบหมายงาน <button class="mc" onclick="cm('assignMd')">✕</button></div>
+    <div style="background:var(--surf2);border-radius:8px;padding:.75rem;margin-bottom:1rem;font-size:13px">
+      <b>${getBI(t.building).name}</b> — ${t.room}<br><span style="color:var(--tx2)">${t.category}</span>
+    </div>
+    <div class="ff">
+      <label>เลือกผู้รับผิดชอบ (เลือกได้ 1–3 คน ทำงานพร้อมกันได้)</label>
+      <div class="checkbox-group" id="assignees-group">${techList}</div>
+    </div>
+    <div class="ff"><label>หมายเหตุจากผู้อนุมัติ</label><textarea id="asNote" placeholder="คำแนะนำสำหรับช่าง..."></textarea></div>
+    <div class="ff"><label>งบประมาณที่อนุมัติ (บาท)</label><input id="asBudget" type="number" value="${t.estimatedCost||0}"></div>
+    <label class="cb-item" style="cursor:pointer"><input type="checkbox" id="asNeedBuy" ${t.needsPurchase?'checked':''} style="width:auto"> <span class="cb-label">งานนี้ต้องจัดซื้อ/ใช้เงิน (ต้องให้บริหารอนุมัติก่อนจัดซื้อ)</span></label>
+    <button class="btn btn-p" style="width:100%;margin-top:.75rem" onclick="confirmAssign('${id}')">ยืนยันอนุมัติและมอบหมาย</button>`;
+  document.getElementById('assignMd').style.display='flex';
+}
+
+function toggleCb(el, u) {
+  el.classList.toggle('selected');
+  const cb=document.getElementById('cb_'+u);
+  if(cb) cb.checked=!cb.checked;
+}
+
+async function confirmAssign(id) {
+  const selected=[...document.querySelectorAll('#assignees-group .cb-item.selected')].map(el=>{
+    const cb=el.querySelector('input[type=checkbox]'); return cb?.id.replace('cb_','');
+  }).filter(Boolean);
+  if(!selected.length){alert('กรุณาเลือกผู้รับผิดชอบอย่างน้อย 1 คน');return;}
+  const note=v('asNote'),budget=parseFloat(document.getElementById('asBudget').value)||0;
+  const needBuy=!!document.getElementById('asNeedBuy')?.checked;
+  const t=DB.tickets.find(t=>t.id===id);if(!t)return;
+  t.status='assigned'; t.assignees=selected; t.approvedAt=now(); t.approvedBy=cu.username; t.approvedBudget=budget; t.needsPurchase=needBuy;
+  const entry={status:'assigned',date:now(),note:`อนุมัติโดย ${cu.name} → มอบหมาย: ${selected.map(getUserName).join(', ')}${needBuy?' (ต้องจัดซื้อ)':''}${note?' — '+note:''}`,by:cu.name};
+  if(!t.history)t.history=[];
+  t.history.push(entry);
+  showLoader('กำลังบันทึก...');
+  await syncUpdate(id,{status:'assigned',assignees:selected,approvedAt:t.approvedAt,approvedBy:t.approvedBy,approvedBudget:budget,needsPurchase:needBuy},entry);
+  hideLoader(); cm('assignMd'); updApvCnt(); rp();
+  showToast(`มอบหมายงานให้ ${selected.map(u=>getUserName(u).split(' ')[0]).join(' + ')} แล้ว`);
+}
+
+async function doReject(id) {
+  const reason=prompt('เหตุผลที่ส่งกลับ:'); if(reason===null) return;
+  const t=DB.tickets.find(t=>t.id===id);if(!t)return;
+  t.status='cannot';
+  const entry={status:'cannot',date:now(),note:'ส่งกลับ: '+reason,by:cu.name};
+  if(!t.history)t.history=[];
+  t.history.push(entry);
+  showLoader('กำลังบันทึก...');
+  await syncUpdate(id,{status:'cannot'},entry);
+  hideLoader(); updApvCnt(); rp();
+}
+
+// ข้อ 6: บริหารอนุมัติจัดซื้อ → ปลดล็อกให้เริ่มจัดซื้อได้
+async function doApprovePurchase(id){
+  const note=prompt('อนุมัติจัดซื้อ (ใส่หมายเหตุได้ หรือเว้นว่าง):'); if(note===null) return;
+  showLoader('กำลังอนุมัติจัดซื้อ...');
+  try{
+    await api('approvePurchase',{id,note,token:AUTH_TOKEN});
+    const t=DB.tickets.find(x=>x.id===id);
+    if(t){ t.status='purchase'; t.purchaseApprovedBy=cu.username; t.purchaseApprovedAt=now();
+      (t.history=t.history||[]).push({status:'purchase',date:now(),note:'อนุมัติจัดซื้อโดย '+cu.name+(note?' — '+note:''),by:cu.name}); }
+    hideLoader(); updApvCnt(); rp(); showToast('อนุมัติจัดซื้อแล้ว — เริ่มจัดซื้อได้');
+  }catch(e){ hideLoader(); showToast('ไม่สำเร็จ: '+e.message,3000); }
+}
+
+// ════════════════════════ PAGE: MANAGE ════════════════════════
+function pgManage() {
+  if (!cu) return `<div class="empty">กรุณาเข้าสู่ระบบ</div>`;
+  // ทุกคน role=admin เห็นทั้งหมด
+  let tickets=DB.tickets.filter(t=>t.status!=='cancelled').slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+  const active=tickets.filter(t=>!['done','cannot','pending_approval'].includes(t.status));
+  const done=tickets.filter(t=>CLOSED_STATUS.includes(t.status));
+  return `<div>
+    <div class="notice n-info" style="margin-bottom:1rem;font-size:12px">
+      ผู้ใช้: <b>${cu.name}</b> — เห็นและจัดการงานได้ทุกรายการ
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+      <div style="font-size:13px;font-weight:600">กำลังดำเนินการ (${active.length})</div>
+      <button class="btn btn-sm" onclick="loadAll().then(rp)">🔄 รีเฟรช</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:1.5rem">
+    ${!active.length?`<div class="empty" style="padding:2rem"><div class="empty-ic"><i class="ti ti-checklist"></i></div><div class="empty-ttl">ไม่มีงานที่กำลังดำเนินการ</div><div class="empty-sub">งานที่ได้รับอนุมัติและมอบหมายแล้วจะแสดงที่นี่</div></div>`:''}
+    ${active.map(t=>{
+      const s=getSI(t.status),b=getBI(t.building),el=effElapsed(t),pd=pausedDays(t),sla=getSLA(t.category),over=isOverSLA(t);
+      return `<div class="card card-sm" style="${over?'border-left:3px solid #e35b5b':''}">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:.5rem">
+          <div style="flex:1">
+            <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:3px">
+              <span class="mono">${t.id}</span>
+              <span class="badge ${s.cls}">${s.label}</span>
+              ${over?'<span class="badge b-red">เกิน SLA</span>':''}
+            </div>
+            <div style="font-weight:600;font-size:13px">${b.icon} ${b.name} — ${t.room}</div>
+            <div style="font-size:12px;color:var(--tx2)">${t.category} | ${t.name} | นับ SLA ${el} วัน / ${sla} วัน${pd>0?` <span style="color:var(--purple-tx)">(พัก ${pd} วัน)</span>`:''}</div>
+            ${(()=>{const di=dueInfo(t);return `<div style="font-size:12px;margin-top:4px;display:flex;align-items:center;gap:5px;flex-wrap:wrap"><span style="color:var(--tx3)">คาดว่าเสร็จ:</span><span class="badge ${di.cls}">${di.text}${di.sub?' · '+di.sub:''}</span></div>`;})()}
+            <div style="margin-top:4px">${assigneeChips(t.assignees)}</div>
+          </div>
+          <div style="display:flex;gap:5px">
+            <button class="btn btn-sm" onclick="openDet('${t.id}')">ดู</button>
+            <button class="btn btn-sm btn-p" onclick="openStatusUpdate('${t.id}')">อัปเดต</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('')}
+    </div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:.75rem;color:var(--tx2)">งานสิ้นสุด (${done.length})</div>
+    <div style="display:flex;flex-direction:column;gap:.5rem">
+    ${done.slice(0,10).map(t=>{
+      const s=getSI(t.status),b=getBI(t.building);
+      return `<div class="card card-sm" style="opacity:.75">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem">
+          <div>
+            <span class="mono">${t.id}</span> <span class="badge ${s.cls}">${s.label}</span>
+            <div style="font-size:12px;color:var(--tx2);margin-top:2px">${b.icon} ${b.short} — ${t.category} | ${t.name}</div>
+            <div style="margin-top:3px">${assigneeChips(t.assignees)}</div>
+          </div>
+          <button class="btn btn-sm" onclick="openDet('${t.id}')">ดู</button>
+        </div>
+      </div>`;
+    }).join('')}
+    </div>
+  </div>`;
+}
+
+function openStatusUpdate(id) {
+  const t=DB.tickets.find(t=>t.id===id);if(!t)return;
+  const avail=STATUSES.filter(s=>!['pending_approval'].includes(s.id));
+  document.getElementById('statusContent').innerHTML=`
+    <div class="modal-title">อัปเดตสถานะ <button class="mc" onclick="cm('statusMd')">✕</button></div>
+    <div style="background:var(--surf2);padding:.75rem;border-radius:8px;margin-bottom:1rem;font-size:13px">
+      <b>${getBI(t.building).name}</b> — ${t.room}<br>${t.category}
+    </div>
+    ${t.needsPurchase?`<div class="notice ${t.purchaseApprovedBy?'n-green':'n-warn'}" style="margin-bottom:1rem;font-size:12px"><i class="ti ti-shopping-cart ni"></i><div>${t.purchaseApprovedBy?'บริหารอนุมัติจัดซื้อแล้ว — เริ่มจัดซื้อได้':'งานนี้ต้องจัดซื้อ — ต้องให้บริหารอนุมัติก่อน (เลือก “รออนุมัติจัดซื้อ” เพื่อส่งให้บริหาร)'}</div></div>`:''}
+    <div class="ff"><label>สถานะใหม่</label>
+      <select id="updSt">${avail.map(s=>`<option value="${s.id}" ${t.status===s.id?'selected':''}>${s.label}</option>`).join('')}</select>
+    </div>
+    <div class="ff"><label>ค่าใช้จ่ายจริง (บาท)</label><input id="updCost" type="number" value="${t.actualCost||0}"></div>
+    ${FLAGS.inventory&&(INVENTORY||[]).filter(x=>!x.hidden).length?`<div class="fsec">เบิกอุปกรณ์ (ตัดสต็อก)</div>
+      <div id="wdBox">${INVENTORY.filter(x=>!x.hidden).map(it=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="flex:1;font-size:13px">${escAttr(it.name)} <span style="color:var(--tx3)">(เหลือ ${it.stock} ${escAttr(it.unit)})</span></span>
+        <input type="number" min="0" max="${it.stock}" value="0" data-inv="${escAttr(it.id)}" style="width:72px">
+      </div>`).join('')}</div>`:''}
+    <div class="ff"><label>หมายเหตุ</label><textarea id="updNote" placeholder="รายละเอียดการดำเนินงาน..."></textarea></div>
+    <button class="btn btn-p" style="width:100%" onclick="saveStatusUpdate('${id}')">บันทึก</button>`;
+  document.getElementById('statusMd').style.display='flex';
+}
+
+async function saveStatusUpdate(id) {
+  const ns=document.getElementById('updSt').value;
+  const note=v('updNote'), cost=parseFloat(document.getElementById('updCost').value)||0;
+  const t=DB.tickets.find(t=>t.id===id);if(!t)return;
+  // ข้อ 6: งานที่ต้องจัดซื้อ ต้องให้บริหารอนุมัติก่อนถึงจะเป็น "อยู่ระหว่างจัดซื้อ" ได้
+  if(ns==='purchase' && t.needsPurchase && !t.purchaseApprovedBy){
+    showToast('งานนี้ต้องให้บริหารอนุมัติจัดซื้อก่อน — กรุณาเลือกสถานะ "รออนุมัติจัดซื้อ"',3500);
+    return;
+  }
+  t.status=ns; t.actualCost=cost;
+  if(ns==='done') t.completedAt=now();
+  const entry={status:ns,date:now(),note:note||'-',by:cu.name};
+  if(!t.history)t.history=[];
+  t.history.push(entry);
+  showLoader('กำลังบันทึก...');
+  await syncUpdate(id,{status:ns,actualCost:cost,...(ns==='done'?{completedAt:t.completedAt}:{})},entry);
+  // ข้อ 3: เบิกอุปกรณ์ (ถ้าเปิดระบบและมีการกรอกจำนวน)
+  if(FLAGS.inventory){
+    const items=[...document.querySelectorAll('#wdBox input[data-inv]')].map(el=>({id:el.getAttribute('data-inv'),qty:Number(el.value)||0})).filter(x=>x.qty>0);
+    if(items.length){
+      try{ const r=await api('withdrawItems',{ticketId:id,items,by:cu.name,token:AUTH_TOKEN}); if(r&&r.inventory) INVENTORY=r.inventory; showToast('เบิกอุปกรณ์แล้ว '+items.length+' รายการ'); }
+      catch(e){ showToast('เบิกอุปกรณ์ไม่สำเร็จ: '+e.message,3000); }
+    }
+  }
+  hideLoader(); cm('statusMd'); rp();
+  showToast('อัปเดตสถานะแล้ว');
+}
+
+// ════════════════════════ PAGE: DASHBOARD ════════════════════════
+// สร้าง donut chart เป็น SVG (ไล่สีตามสถานะ)
+function donutSVG(segments, total){
+  const R=52, C=2*Math.PI*R, cx=64, cy=64;
+  let offset=0;
+  const arcs=segments.map(s=>{
+    const frac=s.count/total;
+    const len=frac*C;
+    const dash=`${len} ${C-len}`;
+    const el=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${s.color}" stroke-width="20" stroke-dasharray="${dash}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${cx} ${cy})"><title>${s.label}: ${s.count}</title></circle>`;
+    offset+=len;
+    return el;
+  }).join('');
+  return `<svg viewBox="0 0 128 128" class="donut-svg" width="150" height="150">
+    ${arcs}
+    <text x="64" y="60" text-anchor="middle" font-size="26" font-weight="700" fill="var(--tx)">${total}</text>
+    <text x="64" y="78" text-anchor="middle" font-size="11" fill="var(--tx3)">รายการ</text>
+  </svg>`;
+}
+
+// การ์ดสรุปรายเดือน — กราฟแท่งงานเข้า/เสร็จ 6 เดือนล่าสุด
+// ════════════════════════ PAGE: PM (ซ่อมบำรุงเชิงป้องกัน) ════════════════════════
+let pmDraft=null;
+function ensurePMDraft(){ if(!pmDraft) pmDraft=JSON.parse(JSON.stringify(PM_LIST||[])); return pmDraft; }
+function pmDue(p){
+  if(p.active===false) return null;
+  const iv=Number(p.intervalDays)||180;
+  if(!p.lastDone) return {due:true,days:null};
+  const d=Math.floor((Date.now()-new Date(p.lastDone))/86400000);
+  return {due:d>=iv, days:iv-d};
+}
+function pgPM(){
+  if(!cu) return `<div class="empty">กรุณาเข้าสู่ระบบ</div>`;
+  const d=ensurePMDraft();
+  const catOpts=CATS.map(c=>`<option value="${c}">${c}</option>`).join('');
+  const rows=d.map((p,i)=>{
+    const st=pmDue(p);
+    const statusBadge = p.active===false ? '<span class="badge b-gray">ปิดอยู่</span>'
+      : st&&st.due ? '<span class="badge b-red">ถึงรอบแล้ว</span>'
+      : st&&st.days!=null ? `<span class="badge b-green">อีก ${st.days} วัน</span>`
+      : '<span class="badge b-amber">ยังไม่เคยทำ</span>';
+    const fls=floorsOf(p.building);
+    return `<tr>
+      <td><input value="${escAttr(p.name||'')}" placeholder="เช่น ล้างแอร์ชั้น 3" onchange="pmEdit(${i},'name',this.value)" style="min-width:150px"></td>
+      <td><select onchange="pmEdit(${i},'floor',this.value)">${fls.length?fls.map(f=>`<option value="${f}" ${p.floor===f?'selected':''}>${f}</option>`).join(''):'<option value="">-</option>'}</select></td>
+      <td><select onchange="pmEdit(${i},'category',this.value)">${CATS.map(c=>`<option value="${c}" ${p.category===c?'selected':''}>${c}</option>`).join('')}</select></td>
+      <td><input type="number" value="${p.intervalDays||180}" min="1" style="width:70px" onchange="pmEdit(${i},'intervalDays',this.value)"> วัน</td>
+      <td style="font-size:12px;white-space:nowrap">${p.lastDone?fdShort(p.lastDone):'—'}</td>
+      <td style="text-align:center">${statusBadge}</td>
+      <td style="text-align:center"><label style="cursor:pointer"><input type="checkbox" ${p.active!==false?'checked':''} onchange="pmEdit(${i},'active',this.checked)" style="width:auto;accent-color:var(--accent)"></label></td>
+      <td style="text-align:center"><button class="btn btn-sm btn-red" onclick="pmRemove(${i})"><i class="ti ti-trash"></i></button></td>
+    </tr>`;
+  }).join('');
+  const dueCount=d.filter(p=>{const s=pmDue(p);return s&&s.due;}).length;
+  return `<div>
+    <div class="ph" style="margin-bottom:1rem">
+      <div class="ph-title">🛠 แผนซ่อมบำรุงเชิงป้องกัน (PM)</div>
+      <div class="ph-sub">ตั้งงานบำรุงรักษาตามรอบ (เป็นจำนวนวัน) — เมื่อถึงรอบ ระบบจะสร้างใบแจ้งซ่อมให้อัตโนมัติตอนมีคนเปิดเว็บ</div>
+    </div>
+    <div class="notice n-info" style="margin-bottom:1rem"><i class="ti ti-info-circle ni"></i><div>รอบนับจาก “วันทำล่าสุด” + จำนวนวัน · ถ้ายังไม่เคยทำ (วันทำล่าสุด —) ถือว่าถึงรอบทันที · เมื่อสร้างใบแล้วระบบจะอัปเดตวันทำล่าสุดให้เอง</div></div>
+    ${dueCount?`<div class="notice n-amber" style="margin-bottom:1rem"><i class="ti ti-bell ni"></i><div>มี <b>${dueCount}</b> รายการถึงรอบแล้ว — จะสร้างใบแจ้งซ่อมอัตโนมัติเมื่อบันทึก/เปิดเว็บครั้งถัดไป</div></div>`:''}
+    <div class="card">
+      <div class="ctitle" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <span>รายการ PM (${d.length})</span>
+        <button class="btn btn-sm" onclick="pmAdd()"><i class="ti ti-plus"></i> เพิ่มรายการ</button>
+      </div>
+      <div style="overflow-x:auto"><table class="tbl xls">
+        <thead><tr><th>ชื่องาน</th><th>ชั้น</th><th>ประเภท</th><th>รอบ</th><th>ทำล่าสุด</th><th>สถานะ</th><th>เปิด</th><th>ลบ</th></tr></thead>
+        <tbody>${rows||'<tr><td colspan="8" style="text-align:center;color:var(--tx3);padding:16px">ยังไม่มีรายการ PM — กด “เพิ่มรายการ”</td></tr>'}</tbody>
+      </table></div>
+      <div id="pmMsg" style="margin-top:.9rem"></div>
+      <button class="btn btn-accent" style="margin-top:.5rem" onclick="savePMList()"><i class="ti ti-device-floppy"></i> บันทึกแผน PM</button>
+    </div>
+  </div>`;
+}
+function pmAdd(){
+  const d=ensurePMDraft();
+  d.push({id:'',name:'',building:BUILDINGS[0]?BUILDINGS[0].id:'b1',floor:(floorsOf(BUILDINGS[0]?BUILDINGS[0].id:'b1')[0]||''),category:CATS[0]||'อื่นๆ',priority:'low',intervalDays:180,lastDone:'',desc:'',active:true});
+  rp();
+}
+function pmEdit(i,field,val){
+  const d=ensurePMDraft();
+  if(field==='intervalDays') val=Number(val)||180;
+  d[i][field]=val; 
+  // แก้ชั้น/สถานะ ต้องวาดใหม่เพื่ออัปเดต badge
+  if(field==='active'||field==='intervalDays') rp();
+}
+function pmRemove(i){ const d=ensurePMDraft(); d.splice(i,1); rp(); }
+async function savePMList(){
+  const d=ensurePMDraft();
+  const msg=document.getElementById('pmMsg');
+  for(const p of d){ if(!p.name||!p.name.trim()){ msg.innerHTML='<div class="notice n-red" style="margin:0">ชื่องาน PM ห้ามว่าง</div>'; return; } }
+  showLoader('กำลังบันทึกแผน PM...');
+  try{
+    if(GAS_URL) await api('savePM',{list:d,token:AUTH_TOKEN});
+    PM_LIST=JSON.parse(JSON.stringify(d));
+    localStorage.setItem('vr3_pm',JSON.stringify(PM_LIST));
+    pmDraft=null;
+    // bootstrap รอบถัดไปจะ runDuePM ให้ — ดึงใหม่เพื่อเห็นใบที่อาจถูกสร้าง
+    await loadAll({silent:true});
+    pmDraft=null;
+    hideLoader(); rp(); showToast('บันทึกแผน PM แล้ว');
+  }catch(e){ hideLoader(); if(!handleAuthError(e)) document.getElementById('pmMsg').innerHTML='<div class="notice n-red" style="margin:0">บันทึกไม่สำเร็จ: '+e.message+'</div>'; }
+}
+
+function monthlyTrendCard(allTickets){
+  const TH=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const now=new Date();
+  const months=[];
+  for(let i=5;i>=0;i--){ const d=new Date(now.getFullYear(),now.getMonth()-i,1); months.push({y:d.getFullYear(),m:d.getMonth()}); }
+  const data=months.map(mo=>{
+    const created=allTickets.filter(t=>{const d=new Date(t.createdAt);return d.getFullYear()===mo.y&&d.getMonth()===mo.m;}).length;
+    const done=allTickets.filter(t=>t.completedAt&&(()=>{const d=new Date(t.completedAt);return d.getFullYear()===mo.y&&d.getMonth()===mo.m;})()).length;
+    return {label:TH[mo.m]+' '+String((mo.y+543)%100).padStart(2,'0'),created,done};
+  });
+  const maxV=Math.max(1,...data.map(d=>Math.max(d.created,d.done)));
+  const bars=data.map(d=>{
+    const hc=Math.round(d.created/maxV*100), hd=Math.round(d.done/maxV*100);
+    return `<div class="mt-col">
+      <div class="mt-bars">
+        <div class="mt-bar mt-bar-in" style="--h:${hc}%" title="งานเข้า ${d.created}"><span class="mt-val">${d.created||''}</span></div>
+        <div class="mt-bar mt-bar-done" style="--h:${hd}%" title="เสร็จ ${d.done}"><span class="mt-val">${d.done||''}</span></div>
+      </div>
+      <div class="mt-lbl">${d.label}</div>
+    </div>`;
+  }).join('');
+  return `<div class="card" style="margin-bottom:1rem">
+    <div class="ctitle" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span>📈 แนวโน้มรายเดือน (6 เดือนล่าสุด)</span>
+      <span style="display:flex;gap:14px;font-size:11.5px;font-weight:400">
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:3px;background:#3ba7d6;display:inline-block"></span>งานเข้า</span>
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:3px;background:#5cc93f;display:inline-block"></span>เสร็จ</span>
+      </span>
+    </div>
+    <div class="mt-chart">${bars}</div>
+  </div>`;
+}
+
+// ════════════════════════ PAGE: CALENDAR (ข้อ 2) ════════════════════════
+let calCursor = null;  // {y,m} เดือนที่กำลังดู
+function dkey(d){ const x=new Date(d); return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0'); }
+function pmNextDue(p){
+  const iv=Number(p.intervalDays)||180;
+  if(!p.lastDone) return new Date();                 // ยังไม่เคยทำ = ถึงรอบแล้ว
+  return new Date(new Date(p.lastDone).getTime()+iv*86400000);
+}
+function calShift(n){ const c=calCursor||(()=>{const d=new Date();return{y:d.getFullYear(),m:d.getMonth()};})(); let m=c.m+n,y=c.y; if(m<0){m=11;y--;} if(m>11){m=0;y++;} calCursor={y,m}; rp(); }
+function calToday(){ calCursor=null; rp(); }
+function pgCalendar(){
+  const today=new Date(); const tkey=dkey(today);
+  const cur = calCursor || {y:today.getFullYear(), m:today.getMonth()};
+  const first=new Date(cur.y,cur.m,1), startDow=first.getDay(), days=new Date(cur.y,cur.m+1,0).getDate();
+  const THm=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+
+  // รวม event ต่อวัน
+  const ev={};  // key -> [{type,label,cls,id}]
+  const push=(k,e)=>{ (ev[k]=ev[k]||[]).push(e); };
+  const open=DB.tickets.filter(t=>!CLOSED_STATUS.includes(t.status));
+  let overdue=[];
+  open.forEach(t=>{
+    const dd=dueDate(t);
+    const b=getBI(t.building);
+    const over=isOverSLA(t);
+    const e={type:'ticket', id:t.id, over, label:`${b.icon} ${t.room||b.short}`, cls:over?'ev-over':(t.priority==='high'?'ev-high':'ev-tk')};
+    if(dd){ push(dkey(dd), e); if(over) overdue.push({t,dd}); }
+    else  { push(dkey(t.createdAt), {...e, cls:'ev-pend', label:'⏳ '+e.label}); }  // ยังไม่อนุมัติ
+  });
+  (PM_LIST||[]).filter(p=>p.active!==false).forEach(p=>{
+    const nd=pmNextDue(p); const b=getBI(p.building);
+    push(dkey(nd), {type:'pm', label:'🛠 '+(p.name||'PM'), cls:'ev-pm'});
+  });
+
+  // ตารางปฏิทิน
+  let cells='';
+  for(let i=0;i<startDow;i++) cells+=`<div class="cal-cell cal-empty"></div>`;
+  for(let d=1; d<=days; d++){
+    const k=cur.y+'-'+String(cur.m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const list=ev[k]||[];
+    const isToday=(k===tkey);
+    const chips=list.slice(0,4).map(e=> e.type==='ticket'
+      ? `<div class="cal-ev ${e.cls}" onclick="openDet('${e.id}')" title="${escAttr(e.label)}">${e.label}</div>`
+      : `<div class="cal-ev ${e.cls}" title="${escAttr(e.label)}">${e.label}</div>`).join('');
+    const more=list.length>4?`<div style="font-size:10px;color:var(--tx3)">+${list.length-4} รายการ</div>`:'';
+    cells+=`<div class="cal-cell ${isToday?'cal-today':''}">
+      <div class="cal-dnum">${d}</div>${chips}${more}
+    </div>`;
+  }
+
+  const overCard = overdue.length ? `<div class="notice n-red" style="margin-bottom:1rem"><i class="ti ti-alert-triangle ni"></i>
+    <div><b>งานเกินกำหนด ${overdue.length} รายการ</b> — ${overdue.slice(0,6).map(o=>`<span class="mono" style="cursor:pointer;text-decoration:underline" onclick="openDet('${o.t.id}')">${o.t.id}</span>`).join(' · ')}${overdue.length>6?' …':''}</div></div>` : '';
+
+  return `<div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:1rem">
+      <div class="ph-title" style="font-size:18px">📅 ปฏิทินงานค้าง + PM</div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button class="btn btn-sm" onclick="calShift(-1)"><i class="ti ti-chevron-left"></i></button>
+        <span style="font-weight:700;min-width:140px;text-align:center">${THm[cur.m]} ${cur.y+543}</span>
+        <button class="btn btn-sm" onclick="calShift(1)"><i class="ti ti-chevron-right"></i></button>
+        <button class="btn btn-sm btn-accent" onclick="calToday()">วันนี้</button>
+      </div>
+    </div>
+    ${overCard}
+    <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;margin-bottom:.7rem">
+      <span><span class="cal-dot ev-over"></span> เกิน SLA</span>
+      <span><span class="cal-dot ev-high"></span> เร่งด่วน</span>
+      <span><span class="cal-dot ev-tk"></span> งานค้าง</span>
+      <span><span class="cal-dot ev-pend"></span> รออนุมัติ</span>
+      <span><span class="cal-dot ev-pm"></span> PM ถึงรอบ</span>
+    </div>
+    <div class="card" style="padding:.6rem">
+      <div class="cal-grid cal-head">${['อา','จ','อ','พ','พฤ','ศ','ส'].map(d=>`<div class="cal-dow">${d}</div>`).join('')}</div>
+      <div class="cal-grid">${cells}</div>
+    </div>
+  </div>`;
+}
+
+function pgDashboard() {
+  const pub=!cu;  // คนทั่วไป (ไม่ login) เห็นเฉพาะภาพรวม ซ่อนงบ/ชื่อช่าง
+  const tickets=DB.tickets.filter(t=>t.status!=='cancelled');  // ไม่นับใบที่ยกเลิก
+  const active=tickets.filter(t=>!CLOSED_STATUS.includes(t.status));
+  const done=tickets.filter(t=>t.status==='done');
+  const pending=tickets.filter(t=>t.status==='pending_approval');
+  const overSLA=active.filter(t=>isOverSLA(t));
+  // ความพึงพอใจเฉลี่ย (จากงานที่ให้คะแนนแล้ว)
+  const rated=tickets.filter(t=>t.rating&&t.rating>0);
+  const avgRating=rated.length?(rated.reduce((s,t)=>s+t.rating,0)/rated.length):0;
+  const budgetData=BUILDINGS.map(b=>{
+    const bt=tickets.filter(t=>t.building===b.id);
+    const spent=bt.reduce((s,t)=>s+(t.actualCost||0),0);
+    return{...b,spent,pct:Math.min(100,Math.round(spent/b.budget*100))};
+  });
+  const totalBudget=BUILDINGS.reduce((s,b)=>s+b.budget,0);
+  const totalSpent=budgetData.reduce((s,b)=>s+b.spent,0);
+  const hotspot=BUILDINGS.map(b=>({...b,count:tickets.filter(t=>t.building===b.id).length,active:tickets.filter(t=>t.building===b.id&&!CLOSED_STATUS.includes(t.status)).length}));
+  const maxHs=Math.max(...hotspot.map(h=>h.count),1);
+  const techLoad=Object.entries(USERS).map(([u,v2])=>{
+    const tw=tickets.filter(t=>(t.assignees||[]).includes(u));
+    return{u,v:v2,active:tw.filter(t=>!CLOSED_STATUS.includes(t.status)).length,done:tw.filter(t=>t.status==='done').length,overSla:tw.filter(t=>isOverSLA(t)).length};
+  });
+  const maxLoad=Math.max(...techLoad.map(t=>t.active),1);
+  const catData=CATS.map(c=>({name:c,count:tickets.filter(t=>t.category===c).length})).sort((a,b)=>b.count-a.count);
+  const maxCat=Math.max(...catData.map(c=>c.count),1);
+  const recurring=[];
+  BUILDINGS.forEach(b=>{CATS.forEach(c=>{const cnt=tickets.filter(t=>t.building===b.id&&t.category===c).length;if(cnt>=2)recurring.push({building:b,cat:c,count:cnt});});});
+  recurring.sort((a,b)=>b.count-a.count);
+
+  // สัดส่วนตามสถานะ (สำหรับ donut chart)
+  const statusColorMap={pending_approval:'#e0a94b',assigned:'#8b6ff0',survey:'#e0a94b',purchase:'#8b6ff0',working:'#3ba7d6',insurance:'#22c19a',contractor:'#22c19a',done:'#5cc93f',cannot:'#e35b5b',cancelled:'#a8a08a'};
+  const statusCounts=STATUSES.map(s=>({...s,count:tickets.filter(t=>t.status===s.id).length,color:statusColorMap[s.id]||'#888'})).filter(s=>s.count>0);
+  const totalForDonut=statusCounts.reduce((a,s)=>a+s.count,0)||1;
+
+  return `<div>
+    ${pub?`<div class="notice n-info" style="margin-bottom:1rem"><i class="ti ti-info-circle ni"></i><div>ภาพรวมสถิติการแจ้งซ่อม (ข้อมูลสาธารณะ) — เจ้าหน้าที่เข้าสู่ระบบเพื่อดูงบประมาณและรายละเอียดเพิ่มเติม</div></div>`:''}
+    <div class="g5 dash-stats" style="margin-bottom:1rem">
+      <div class="stat stat-grad-a"><div class="stat-ic">📋</div><div class="stat-lbl">งานทั้งหมด</div><div class="stat-n">${tickets.length}</div></div>
+      <div class="stat stat-grad-b"><div class="stat-ic">🔧</div><div class="stat-lbl">กำลังดำเนินการ</div><div class="stat-n">${active.length}</div><div class="stat-sub">รออนุมัติ ${pending.length}</div></div>
+      <div class="stat stat-grad-c"><div class="stat-ic">✅</div><div class="stat-lbl">เสร็จสิ้น</div><div class="stat-n">${done.length}</div><div class="stat-sub">${tickets.length?Math.round(done.length/tickets.length*100):0}%</div></div>
+      <div class="stat stat-grad-e"><div class="stat-ic">⭐</div><div class="stat-lbl">พึงพอใจเฉลี่ย</div><div class="stat-n">${avgRating?avgRating.toFixed(1):'—'}</div><div class="stat-sub">${rated.length?'จาก '+rated.length+' ความเห็น':'ยังไม่มีคะแนน'}</div></div>
+      <div class="stat stat-grad-d"><div class="stat-ic">⏰</div><div class="stat-lbl">เกิน SLA</div><div class="stat-n">${overSLA.length}</div></div>
+    </div>
+    ${statusCounts.length?`<div class="card" style="margin-bottom:1rem">
+      <div class="ctitle">🍩 สัดส่วนงานตามสถานะ</div>
+      <div class="donut-wrap">
+        ${donutSVG(statusCounts,totalForDonut)}
+        <div class="donut-legend">
+          ${statusCounts.map(s=>`<div class="donut-leg-item">
+            <span class="donut-dot" style="background:${s.color}"></span>
+            <span class="donut-leg-lbl">${s.label}</span>
+            <span class="donut-leg-val">${s.count} <span style="color:var(--tx3)">(${Math.round(s.count/totalForDonut*100)}%)</span></span>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>`:''}
+    ${monthlyTrendCard(tickets)}
+    <div class="${pub?'':'g2'}" style="margin-bottom:1rem">
+      ${pub?'':`<div class="card">
+        <div class="ctitle">💰 งบประมาณรายอาคาร</div>
+        <div class="stat" style="margin-bottom:.75rem">
+          <div class="stat-lbl">ใช้จ่ายรวม</div>
+          <div class="stat-n">${totalSpent.toLocaleString()} <span style="font-size:14px;font-weight:400;color:var(--tx2)">/ ${totalBudget.toLocaleString()} บาท</span></div>
+          <div style="height:6px;background:var(--surf3);border-radius:3px;margin-top:8px">
+            <div style="height:100%;border-radius:3px;background:${totalSpent/totalBudget>.8?'#e35b5b':'#5cc93f'};width:${Math.min(100,Math.round(totalSpent/totalBudget*100))}%"></div>
+          </div>
+        </div>
+        <div class="bar-wrap">${budgetData.map(b=>`<div class="bar-row">
+          <div class="bar-lbl">${b.icon} ${b.short}</div>
+          <div><div class="bar-track"><div class="bar-fill" style="width:${b.pct}%;background:${b.pct>80?'#e35b5b':b.pct>50?'#e0a94b':'#5cc93f'}"></div></div>
+          <div style="font-size:10px;color:var(--tx3);margin-top:2px">${b.spent.toLocaleString()} / ${b.budget.toLocaleString()} บาท</div></div>
+          <div class="bar-val">${b.pct}%</div>
+        </div>`).join('')}</div>
+      </div>`}
+      <div class="card">
+        <div class="ctitle">🔥 Hotspot รายอาคาร</div>
+        <div class="hs-grid" style="margin-bottom:.75rem">${hotspot.map(h=>{
+          const pct=Math.round(h.count/maxHs*100),col=pct>75?'#e35b5b':pct>50?'#e0a94b':pct>25?'#3ba7d6':'#5cc93f';
+          return `<div class="hs-card"><div class="hs-icon">${h.icon}</div><div class="hs-name">${h.short}</div>
+            <div class="hs-count" style="color:${col}">${h.count}</div>
+            <div class="hs-bar" style="background:${col}33"><div style="height:100%;border-radius:2px;background:${col};width:${pct}%"></div></div>
+            <div style="font-size:11px;color:var(--tx3)">คงค้าง ${h.active}</div></div>`;
+        }).join('')}</div>
+        ${recurring.length?`<div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">ปัญหาซ้ำซาก</div>${recurring.slice(0,3).map(r=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:.5px solid var(--bd);font-size:12px"><span>${r.building.icon} ${r.building.short} — ${r.cat}</span><span class="badge b-red">${r.count} ครั้ง</span></div>`).join('')}`:''}
+      </div>
+    </div>
+    <div class="${pub?'':'g2'}">
+      ${pub?'':`<div class="card">
+        <div class="ctitle">👷 ภาระงานแต่ละคน</div>
+        ${techLoad.map(t=>{
+          const pct=maxLoad?Math.round(t.active/maxLoad*100):0,wlColor=pct>80?'#e35b5b':pct>50?'#e0a94b':'#5cc93f';
+          return `<div class="tech-card">
+            <div class="tech-av" style="background:${t.v.color}33;color:${t.v.color}">${t.v.initials}</div>
+            <div class="tech-info">
+              <div class="tech-name">${t.v.name}</div>
+              <div style="font-size:11px;color:var(--tx3)">${(t.v.specialty||[]).join(' · ')}</div>
+              <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px">
+                <span class="badge b-blue">คงค้าง ${t.active}</span>
+                <span class="badge b-green">เสร็จ ${t.done}</span>
+                ${t.overSla?`<span class="badge b-red">เกิน SLA ${t.overSla}</span>`:''}
+              </div>
+              <div class="wl-track"><div class="wl-fill" style="width:${pct}%;background:${wlColor}"></div></div>
+            </div>
+            <div style="font-size:20px;font-weight:700;color:${wlColor};font-family:var(--mono);min-width:28px;text-align:right">${t.active}</div>
+          </div>`;
+        }).join('')}
+      </div>`}
+      <div class="card">
+        <div class="ctitle">📊 งานแยกตามประเภท</div>
+        <div class="bar-wrap">${catData.map(c=>{const pct=Math.round(c.count/maxCat*100);return `<div class="bar-row"><div class="bar-lbl">${c.name.replace('งาน','').replace('ระบบ','')}</div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:#3ba7d6"></div></div><div class="bar-val">${c.count}</div></div>`;}).join('')}</div>
+        <hr class="divider" style="margin:.875rem 0">
+        <div style="font-size:13px;font-weight:600;margin-bottom:6px">ภาระงานรายอาคาร</div>
+        ${hotspot.map(h=>{const ratio=tickets.length?Math.round(h.count/tickets.length*100):0,cls=ratio>35?'b-red':ratio>20?'b-amber':'b-green',msg=ratio>35?'ภาระสูง':ratio>20?'ปานกลาง':'ต่ำ';
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:.5px solid var(--bd);font-size:12px"><span>${h.icon} ${h.name}</span><span class="badge ${cls}">${ratio}% — ${msg}</span></div>`;
+        }).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ════════════════════════ PAGE: CONFIG ════════════════════════
+function pgConfig() {
+  return `<div style="max-width:640px;margin:0 auto">
+    <div class="card" style="margin-bottom:1rem">
+      <div class="ctitle">⚙ ตั้งค่าเชื่อมต่อ Google Apps Script</div>
+      <div class="notice n-info" style="margin-bottom:1rem;font-size:12px">
+        <b>วิธีตั้งค่า:</b><br>
+        1. เปิด Google Sheet ใหม่ → Extensions → Apps Script<br>
+        2. วาง Code จาก <code>Code.gs</code> แล้วกด Save<br>
+        3. Deploy → New Deployment → Web App<br>
+        4. Execute as: <b>Me</b> | Who has access: <b>Anyone</b><br>
+        5. Copy URL แล้ววางด้านล่าง<br>
+        6. กด "เริ่มใช้งาน" เพื่อสร้าง Sheet อัตโนมัติ
+      </div>
+      <div class="ff">
+        <label>Google Apps Script Web App URL</label>
+        <input id="gasUrl" placeholder="https://script.google.com/macros/s/xxxxxxx/exec" value="${GAS_URL}">
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-p" onclick="saveGasUrl()">💾 บันทึก URL</button>
+        <button class="btn btn-green" onclick="initSheet()">🚀 เริ่มใช้งาน (สร้าง Sheet)</button>
+        <button class="btn" onclick="testConnection()">🔗 ทดสอบการเชื่อมต่อ</button>
+      </div>
+      <div id="cfgMsg" style="margin-top:.75rem"></div>
+    </div>
+    ${cu&&cu.isEngineer?renderUserManage():''}
+    ${cu&&(cu.isEngineer||can('manage_routing'))?renderRouting():''}
+    ${cu&&cu.isEngineer?renderInventoryConfig():''}
+    ${cu&&cu.isEngineer?renderAdminManage():`<div class="notice n-info" style="margin-bottom:1rem"><i class="ti ti-lock ni"></i><div>การจัดการอาคาร/สถานะ/ประเภทงาน สงวนสำหรับวิศวกรเท่านั้น</div></div>`}
+    <div class="card">
+      <div class="ctitle">ข้อมูลระบบ</div>
+      <div style="font-size:13px;color:var(--tx2);line-height:2">
+        งานในระบบ: <b>${DB.tickets.length}</b><br>
+        ข้อมูลใน localStorage: <b>${JSON.parse(localStorage.getItem('vr3_t')||'[]').length}</b> รายการ<br>
+        URL ปัจจุบัน: <span class="mono" style="font-size:11px">${GAS_URL||'ยังไม่ได้ตั้งค่า'}</span>
+      </div>
+      <hr class="divider">
+      <button class="btn btn-sm btn-red" onclick="if(confirm('ล้างข้อมูลทั้งหมดใน localStorage?')){localStorage.removeItem('vr3_t');DB.tickets=[];rp();}">🗑 ล้างข้อมูล localStorage</button>
+    </div>
+  </div>`;
+}
+
+// ═══════════ ข้อ 4: จัดการผู้ใช้ + บทบาท/สิทธิ์ (เฉพาะวิศวกร) ═══════════
+function usersForManage(){
+  if(ALL_USERS && ALL_USERS.length) return ALL_USERS.slice();
+  return Object.values(USERS);
+}
+function renderUserManage(){
+  const users = usersForManage();
+  const roleOpts = ROLES.length ? ROLES : [{role:'admin',label:'วิศวกร/แอดมิน'}];
+  const uRows = users.map(u=>{
+    const act = u.active!==false;
+    return `<tr>
+      <td><span class="av-chip" style="background:${(u.color||'#ccc')}22;color:${u.color||'#777'}">${u.initials||'?'}</span> <b>${escAttr(u.name||u.username)}</b></td>
+      <td class="mono" style="font-size:12px">${escAttr(u.username)}</td>
+      <td><span class="badge ${u.isEngineer?'b-teal':'b-gray'} nodot">${roleLabel(u.role)}</span></td>
+      <td style="text-align:center"><span class="badge ${act?'b-green':'b-red'} nodot">${act?'ใช้งาน':'ปิด'}</span></td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="btn btn-sm" onclick="openUserForm('${escAttr(u.username)}')"><i class="ti ti-edit"></i></button>
+        <button class="btn btn-sm" title="รีเซ็ตรหัสผ่าน" onclick="resetUserPw('${escAttr(u.username)}')"><i class="ti ti-key"></i></button>
+        <button class="btn btn-sm" title="${act?'ปิดการใช้งาน':'เปิดใช้งาน'}" onclick="toggleUserActive('${escAttr(u.username)}',${act?'false':'true'})"><i class="ti ti-${act?'user-off':'user-check'}"></i></button>
+        <button class="btn btn-sm btn-red" onclick="delUser('${escAttr(u.username)}')"><i class="ti ti-trash"></i></button>
+      </td>
+    </tr>`;
+  }).join('');
+  return `<div class="card" style="margin-bottom:1rem">
+    <div class="ctitle" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span>👥 จัดการผู้ใช้</span>
+      <button class="btn btn-sm btn-accent" onclick="openUserForm()"><i class="ti ti-user-plus"></i> เพิ่มผู้ใช้</button>
+    </div>
+    <div style="overflow-x:auto"><table class="tbl" style="min-width:520px">
+      <thead><tr><th>ชื่อ</th><th>Username</th><th>บทบาท</th><th style="text-align:center">สถานะ</th><th></th></tr></thead>
+      <tbody>${uRows||'<tr><td colspan="5" style="text-align:center;color:var(--tx3);padding:14px">ยังไม่มีผู้ใช้</td></tr>'}</tbody>
+    </table></div>
+    <div id="userMsg" style="margin-top:.6rem"></div>
+  </div>
+  <div class="card" style="margin-bottom:1rem">
+    <div class="ctitle" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span>🔑 บทบาทและสิทธิ์</span>
+      <span style="font-size:11px;color:var(--tx3)">ติ๊กเพื่อเปิด/ปิดสิทธิ์ของแต่ละบทบาท</span>
+    </div>
+    <div id="roleMatrixBox">${renderRoleMatrix()}</div>
+  </div>`;
+}
+
+let roleDraft=null;
+function ensureRoleDraft(){ if(!roleDraft) roleDraft=JSON.parse(JSON.stringify(ROLES.length?ROLES:[])); return roleDraft; }
+function renderRoleMatrix(){
+  const roles=ensureRoleDraft();
+  if(!roles.length) return '<div style="color:var(--tx3);font-size:13px">ยังไม่มีข้อมูลบทบาท (จะถูกสร้างอัตโนมัติเมื่อเชื่อมต่อเซิร์ฟเวอร์)</div>';
+  const head=`<th style="text-align:left">สิทธิ์ \\ บทบาท</th>`+roles.map(r=>`<th style="text-align:center;font-size:11.5px">${escAttr(r.label)}${r.isEngineer?' ★':''}</th>`).join('');
+  const rows=ALL_CAPS_FE.map(cap=>`<tr>
+    <td style="font-size:12.5px;color:var(--tx2)">${CAP_LABELS[cap]}</td>
+    ${roles.map((r,ri)=>{
+      const on=(r.caps||[]).includes(cap);
+      const locked=r.isEngineer; // วิศวกรได้ทุกสิทธิ์เสมอ
+      return `<td style="text-align:center"><input type="checkbox" ${on||locked?'checked':''} ${locked?'disabled':''} style="width:auto;accent-color:var(--accent)" onchange="toggleCap(${ri},'${cap}',this.checked)"></td>`;
+    }).join('')}
+  </tr>`).join('');
+  return `<div style="overflow-x:auto"><table class="tbl" style="min-width:${120+roles.length*90}px">
+    <thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div>
+    <div style="font-size:11px;color:var(--tx3);margin:8px 0">★ = บทบาทวิศวกร/แอดมิน (ได้ทุกสิทธิ์โดยอัตโนมัติ)</div>
+    <button class="btn btn-accent btn-sm" onclick="saveRoleMatrix()"><i class="ti ti-device-floppy"></i> บันทึกสิทธิ์</button>`;
+}
+function toggleCap(ri,cap,on){
+  const roles=ensureRoleDraft(); const r=roles[ri]; if(!r) return;
+  r.caps=r.caps||[];
+  if(on){ if(!r.caps.includes(cap)) r.caps.push(cap); }
+  else  { r.caps=r.caps.filter(c=>c!==cap); }
+}
+async function saveRoleMatrix(){
+  const roles=ensureRoleDraft();
+  showLoader('กำลังบันทึกสิทธิ์...');
+  try{
+    await api('saveRoles',{roles,token:AUTH_TOKEN});
+    ROLES=JSON.parse(JSON.stringify(roles)); roleDraft=null;
+    hideLoader(); showToast('บันทึกสิทธิ์แล้ว'); updAuthUI(); rp();
+  }catch(e){ hideLoader(); showToast('บันทึกไม่สำเร็จ: '+e.message,3000); }
+}
+
+function openUserForm(username){
+  const isEdit=!!username;
+  const u=isEdit?(usersForManage().find(x=>x.username===username)||{}):{};
+  const roleOpts=(ROLES.length?ROLES:[{role:'admin',label:'วิศวกร/แอดมิน'}]).map(r=>`<option value="${r.role}" ${u.role===r.role?'selected':''}>${escAttr(r.label)}</option>`).join('');
+  document.getElementById('userContent').innerHTML=`
+    <div class="modal-title">${isEdit?'แก้ไขผู้ใช้':'เพิ่มผู้ใช้'} <button class="mc" onclick="cm('userMd')"><i class="ti ti-x"></i></button></div>
+    <div class="frow"><div class="ff" style="margin:0"><label>Username${isEdit?'':' *'}</label>
+      <input id="uUser" value="${escAttr(u.username||'')}" ${isEdit?'disabled':''} placeholder="เช่น tech2"></div>
+      <div class="ff" style="margin:0"><label>ชื่อ-สกุล</label><input id="uName" value="${escAttr(u.name||'')}" placeholder="นาย..."></div>
+    </div>
+    ${isEdit?'':`<div class="ff" style="margin-top:.6rem"><label>รหัสผ่านเริ่มต้น *</label><input id="uPass" placeholder="อย่างน้อย 4 ตัว"></div>`}
+    <div class="frow" style="margin-top:.6rem">
+      <div class="ff" style="margin:0"><label>บทบาท</label><select id="uRole">${roleOpts}</select></div>
+      <div class="ff" style="margin:0"><label>ความเชี่ยวชาญ (คั่นด้วย ,)</label><input id="uSpec" value="${escAttr(Array.isArray(u.specialty)?u.specialty.join(', '):(u.specialty||''))}" placeholder="ระบบไฟฟ้า, ปรับอากาศ"></div>
+    </div>
+    <div class="frow" style="margin-top:.6rem">
+      <div class="ff" style="margin:0"><label>สีประจำตัว</label><input id="uColor" type="color" value="${escAttr(u.color||'#9fb4cc')}" style="height:38px;padding:3px"></div>
+      <div class="ff" style="margin:0"><label>อักษรย่อ</label><input id="uInit" value="${escAttr(u.initials||'')}" maxlength="3" placeholder="เช่น ธร"></div>
+    </div>
+    <div id="uErr" style="color:var(--red-tx);font-size:12px;margin:.5rem 0;display:none"></div>
+    <button class="btn btn-accent" style="width:100%;margin-top:.5rem" onclick="saveUser(${isEdit?`'${escAttr(username)}'`:'null'})"><i class="ti ti-device-floppy"></i> บันทึก</button>`;
+  document.getElementById('userMd').style.display='flex';
+}
+async function saveUser(username){
+  const isEdit=!!username;
+  const err=document.getElementById('uErr');
+  const spec=(v('uSpec')||'').split(',').map(s=>s.trim()).filter(Boolean);
+  const base={ name:v('uName'), role:v('uRole'), specialty:spec, color:v('uColor'), initials:v('uInit') };
+  showLoader('กำลังบันทึก...');
+  try{
+    if(isEdit){
+      await api('updateUser',{username,fields:base,token:AUTH_TOKEN});
+    }else{
+      const uname=v('uUser'), pass=document.getElementById('uPass').value;
+      if(!uname||!pass){ hideLoader(); err.style.display='block'; err.textContent='กรุณากรอก Username และรหัสผ่าน'; return; }
+      await api('addUser',{user:{...base,username:uname,password:pass},token:AUTH_TOKEN});
+    }
+    await loadAll({silent:true});
+    hideLoader(); cm('userMd'); rp(); showToast(isEdit?'บันทึกผู้ใช้แล้ว':'เพิ่มผู้ใช้แล้ว');
+  }catch(e){ hideLoader(); err.style.display='block'; err.textContent=e.message; }
+}
+async function resetUserPw(username){
+  const np=prompt('ตั้งรหัสผ่านใหม่ให้ '+username+' (อย่างน้อย 4 ตัว):'); if(np===null) return;
+  if((np||'').length<4){ showToast('รหัสผ่านสั้นเกินไป'); return; }
+  showLoader('กำลังตั้งรหัสผ่าน...');
+  try{ await api('setPassword',{username,password:np,token:AUTH_TOKEN}); hideLoader(); showToast('ตั้งรหัสผ่านใหม่แล้ว'); }
+  catch(e){ hideLoader(); showToast('ไม่สำเร็จ: '+e.message,3000); }
+}
+async function toggleUserActive(username,active){
+  showLoader('กำลังบันทึก...');
+  try{ await api('updateUser',{username,fields:{active:!!active},token:AUTH_TOKEN}); await loadAll({silent:true}); hideLoader(); rp(); showToast(active?'เปิดใช้งานแล้ว':'ปิดการใช้งานแล้ว'); }
+  catch(e){ hideLoader(); showToast('ไม่สำเร็จ: '+e.message,3000); }
+}
+async function delUser(username){
+  if(!confirm('ลบผู้ใช้ '+username+' ?')) return;
+  showLoader('กำลังลบ...');
+  try{ await api('deleteUser',{username,token:AUTH_TOKEN}); await loadAll({silent:true}); hideLoader(); rp(); showToast('ลบผู้ใช้แล้ว'); }
+  catch(e){ hideLoader(); showToast('ไม่สำเร็จ: '+e.message,3000); }
+}
+
+// ═══════════ ข้อ 5: กติกาการวิ่งงาน (Routing) ═══════════
+let routingDraft=null;
+function ensureRoutingDraft(){
+  if(!routingDraft){
+    routingDraft = CATS.map(cat=>{ const r=routeOf(cat); return { category:cat, autoAssign:r?r.autoAssign:'', approverRoles:r?(r.approverRoles||[]).slice():[] }; });
+  }
+  return routingDraft;
+}
+function renderRouting(){
+  const rows=ensureRoutingDraft();
+  const assignable=Object.values(USERS).filter(u=>u.active!==false);  // ทุกคนเลือกได้ (ช่าง/ไอที/นักวิทย์)
+  const roleChips=ROLES.filter(r=>!r.isEngineer);
+  const body=rows.map((r,i)=>`<tr>
+    <td style="font-size:12.5px">${escAttr(r.category)}</td>
+    <td><select onchange="routeEdit(${i},'autoAssign',this.value)" style="min-width:150px">
+      <option value="">— ไม่ออโต้ (รอมอบหมาย) —</option>
+      ${assignable.map(u=>`<option value="${u.username}" ${r.autoAssign===u.username?'selected':''}>${escAttr(u.name)}</option>`).join('')}
+    </select></td>
+    <td><div style="display:flex;gap:5px;flex-wrap:wrap">${roleChips.map(rc=>`<label class="pill ${r.approverRoles.includes(rc.role)?'on':''}" style="cursor:pointer;font-size:11px"><input type="checkbox" ${r.approverRoles.includes(rc.role)?'checked':''} onchange="routeApprover(${i},'${rc.role}',this.checked)" style="display:none">${escAttr(rc.label)}</label>`).join('')||'<span style="color:var(--tx3);font-size:11px">—</span>'}</div></td>
+  </tr>`).join('');
+  return `<div class="card" style="margin-bottom:1rem">
+    <div class="ctitle">🔀 กติกาการวิ่งงาน (อัตโนมัติ)</div>
+    <div class="notice n-info" style="margin-bottom:.8rem;font-size:12px">กำหนดว่างานแต่ละประเภท <b>วิ่งไปหาใคร</b> โดยอัตโนมัติ (ระบบจะเลือกให้ตอนอนุมัติ แก้ไขได้) และ <b>บทบาทใดมีสิทธิ์อนุมัติ</b> ใบประเภทนั้น (ไม่เลือก = ใครมีสิทธิ์อนุมัติก็ได้)</div>
+    <div style="overflow-x:auto"><table class="tbl" style="min-width:560px">
+      <thead><tr><th>ประเภทงาน</th><th>วิ่งไปหา (ออโต้)</th><th>บทบาทที่อนุมัติได้</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table></div>
+    <button class="btn btn-accent btn-sm" style="margin-top:.7rem" onclick="saveRouting()"><i class="ti ti-device-floppy"></i> บันทึกกติกา</button>
+  </div>`;
+}
+function routeEdit(i,k,v2){ const d=ensureRoutingDraft(); if(d[i]) d[i][k]=v2; }
+function routeApprover(i,role,on){ const d=ensureRoutingDraft(); const r=d[i]; if(!r) return; r.approverRoles=r.approverRoles||[]; if(on){ if(!r.approverRoles.includes(role)) r.approverRoles.push(role);} else { r.approverRoles=r.approverRoles.filter(x=>x!==role);} const lbl=event&&event.target&&event.target.closest('label'); if(lbl) lbl.classList.toggle('on',on); }
+async function saveRouting(){
+  const d=ensureRoutingDraft();
+  showLoader('กำลังบันทึกกติกา...');
+  try{ await api('saveRouting',{routing:d,token:AUTH_TOKEN}); ROUTING=JSON.parse(JSON.stringify(d)); routingDraft=null; hideLoader(); showToast('บันทึกกติกาการวิ่งงานแล้ว'); rp(); }
+  catch(e){ hideLoader(); showToast('ไม่สำเร็จ: '+e.message,3000); }
+}
+
+// ═══════════ ข้อ 3: คลังอุปกรณ์ (ซ่อนไว้จนกว่าจะเปิด) ═══════════
+let invDraft=null;
+function ensureInvDraft(){ if(!invDraft) invDraft=JSON.parse(JSON.stringify(INVENTORY||[])); return invDraft; }
+function renderInventoryConfig(){
+  const on=!!FLAGS.inventory;
+  const items=ensureInvDraft();
+  const rows=items.map((it,i)=>`<tr>
+    <td><input value="${escAttr(it.name||'')}" placeholder="เช่น หลอด LED 18W" onchange="invEdit(${i},'name',this.value)" style="min-width:150px"></td>
+    <td><input value="${escAttr(it.unit||'ชิ้น')}" style="width:70px" onchange="invEdit(${i},'unit',this.value)"></td>
+    <td><input type="number" value="${it.stock||0}" min="0" style="width:80px" onchange="invEdit(${i},'stock',this.value)"></td>
+    <td style="text-align:center"><button class="btn btn-sm btn-red" onclick="invRemove(${i})"><i class="ti ti-trash"></i></button></td>
+  </tr>`).join('');
+  return `<div class="card" style="margin-bottom:1rem">
+    <div class="ctitle" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span>📦 ระบบเบิกอุปกรณ์ ${on?'<span class="badge b-green nodot">เปิดใช้</span>':'<span class="badge b-gray nodot">ปิดอยู่</span>'}</span>
+      <button class="btn btn-sm ${on?'btn-red':'btn-green'}" onclick="toggleInventory(${on?'false':'true'})">${on?'ปิดระบบนี้':'เปิดใช้ระบบนี้'}</button>
+    </div>
+    <div class="notice n-info" style="margin-bottom:.8rem;font-size:12px">กำหนดรายการอุปกรณ์และจำนวนคงเหลือ เมื่อเปิดใช้ ช่างจะเบิกอุปกรณ์เข้าใบงานได้ (ตัดสต็อกอัตโนมัติ) — ขณะนี้${on?'เปิดอยู่':'ซ่อนไว้ รอเปิดใช้'}</div>
+    <div style="overflow-x:auto"><table class="tbl" style="min-width:420px">
+      <thead><tr><th>ชื่ออุปกรณ์</th><th>หน่วย</th><th>คงเหลือ</th><th></th></tr></thead>
+      <tbody>${rows||'<tr><td colspan="4" style="text-align:center;color:var(--tx3);padding:12px">ยังไม่มีอุปกรณ์</td></tr>'}</tbody>
+    </table></div>
+    <div style="display:flex;gap:8px;margin-top:.7rem;flex-wrap:wrap">
+      <button class="btn btn-sm" onclick="invAdd()"><i class="ti ti-plus"></i> เพิ่มอุปกรณ์</button>
+      <button class="btn btn-accent btn-sm" onclick="saveInventory()"><i class="ti ti-device-floppy"></i> บันทึกคลัง</button>
+    </div>
+  </div>`;
+}
+function invEdit(i,k,v2){ const d=ensureInvDraft(); if(!d[i]) return; d[i][k]=(k==='stock')?(Number(v2)||0):v2; }
+function invAdd(){ ensureInvDraft().push({id:'',name:'',unit:'ชิ้น',stock:0,hidden:false}); rp(); }
+function invRemove(i){ ensureInvDraft().splice(i,1); rp(); }
+async function saveInventory(){
+  const d=ensureInvDraft().filter(it=>(it.name||'').trim());
+  showLoader('กำลังบันทึกคลัง...');
+  try{ const r=await api('saveInventory',{inventory:d,token:AUTH_TOKEN}); await loadAll({silent:true}); invDraft=null; hideLoader(); showToast('บันทึกคลังอุปกรณ์แล้ว'); rp(); }
+  catch(e){ hideLoader(); showToast('ไม่สำเร็จ: '+e.message,3000); }
+}
+async function toggleInventory(on){
+  showLoader('กำลังบันทึก...');
+  try{ await api('setFlag',{key:'inventory',value:!!on,token:AUTH_TOKEN}); FLAGS.inventory=!!on; hideLoader(); showToast(on?'เปิดใช้ระบบเบิกอุปกรณ์แล้ว':'ปิดระบบเบิกอุปกรณ์แล้ว'); rp(); }
+  catch(e){ hideLoader(); showToast('ไม่สำเร็จ: '+e.message,3000); }
+}
+
+// ─── หน้าจัดการระบบ (เฉพาะวิศวกร) ───
+function renderAdminManage(){
+  const cfg = CFG_RAW || {
+    buildings: BUILDINGS.map(b=>({...b,hidden:false})),
+    statuses:  STATUSES.map(s=>({...s,paused:SLA_PAUSED.includes(s.id),closed:CLOSED_STATUS.includes(s.id),hidden:false})),
+    categories:CATS.map(c=>({name:c,sla:SLA[c]||14,hidden:false})),
+  };
+  // นับการใช้งานจริงเพื่อกันลบของที่ถูกใช้
+  const usedB={},usedS={},usedC={};
+  DB.tickets.forEach(t=>{usedB[t.building]=1;usedS[t.status]=1;usedC[t.category]=1;});
+
+  const bRows = cfg.buildings.map((b,i)=>`<tr>
+    <td><input value="${escAttr(b.icon||'')}" style="width:42px;text-align:center" onchange="cfgEdit('buildings',${i},'icon',this.value)"></td>
+    <td><input value="${escAttr(b.name)}" onchange="cfgEdit('buildings',${i},'name',this.value)"></td>
+    <td><input value="${escAttr(b.short||'')}" style="width:80px" onchange="cfgEdit('buildings',${i},'short',this.value)"></td>
+    <td><input type="number" value="${b.budget||0}" style="width:90px" onchange="cfgEdit('buildings',${i},'budget',this.value)"></td>
+    <td style="text-align:center">${cfgToggle('buildings',i,'hidden',b.hidden,usedB[b.id])}</td>
+  </tr>`).join('');
+
+  const sRows = cfg.statuses.map((s,i)=>`<tr>
+    <td><input value="${escAttr(s.label)}" onchange="cfgEdit('statuses',${i},'label',this.value)"></td>
+    <td>${cfgClsSelect('statuses',i,s.cls)}</td>
+    <td style="text-align:center">${cfgToggle('statuses',i,'paused',s.paused)}</td>
+    <td style="text-align:center">${cfgToggle('statuses',i,'closed',s.closed)}</td>
+    <td style="text-align:center">${cfgToggle('statuses',i,'hidden',s.hidden,usedS[s.id])}</td>
+  </tr>`).join('');
+
+  const cRows = cfg.categories.map((c,i)=>`<tr>
+    <td><input value="${escAttr(c.name)}" onchange="cfgEdit('categories',${i},'name',this.value)"></td>
+    <td><input type="number" value="${c.sla||14}" style="width:70px" onchange="cfgEdit('categories',${i},'sla',this.value)"> วัน</td>
+    <td style="text-align:center">${cfgToggle('categories',i,'hidden',c.hidden,usedC[c.name])}</td>
+  </tr>`).join('');
+
+  const hol = (cfg.holidays||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const hRows = hol.length ? hol.map((h)=>{
+    const realIdx = (cfg.holidays||[]).indexOf(h);
+    return `<tr>
+    <td><input type="date" value="${escAttr(h.date||'')}" onchange="cfgEdit('holidays',${realIdx},'date',this.value)"></td>
+    <td><input value="${escAttr(h.name||'')}" placeholder="เช่น วันสงกรานต์" onchange="cfgEdit('holidays',${realIdx},'name',this.value)"></td>
+    <td style="text-align:center"><button class="btn btn-sm btn-red" onclick="cfgRemove('holidays',${realIdx})"><i class="ti ti-trash"></i></button></td>
+  </tr>`;}).join('') : `<tr><td colspan="3" style="text-align:center;color:var(--tx3);padding:12px">ยังไม่มีวันหยุด — กด “เพิ่มวันหยุด”</td></tr>`;
+
+  return `<div class="card" style="margin-bottom:1rem">
+    <div class="ctitle" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span><i class="ti ti-building-cog" style="color:var(--accent)"></i> จัดการอาคาร</span>
+      <button class="btn btn-sm" onclick="cfgAdd('buildings')"><i class="ti ti-plus"></i> เพิ่มอาคาร</button>
+    </div>
+    <div style="overflow-x:auto"><table class="tbl xls"><thead><tr><th>ไอคอน</th><th>ชื่ออาคาร</th><th>ชื่อย่อ</th><th>งบ/ปี</th><th>ซ่อน</th></tr></thead><tbody>${bRows}</tbody></table></div>
+    <div style="font-size:11px;color:var(--tx3);margin-top:6px">* อาคารที่มีงานใช้อยู่จะซ่อนได้อย่างเดียว ลบไม่ได้ (กันข้อมูลเก่าเพี้ยน)</div>
+  </div>
+  ${floorManageCard(cfg)}
+  <div class="card" style="margin-bottom:1rem">
+    <div class="ctitle" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span><i class="ti ti-list-check" style="color:var(--accent)"></i> จัดการสถานะงาน</span>
+      <button class="btn btn-sm" onclick="cfgAdd('statuses')"><i class="ti ti-plus"></i> เพิ่มสถานะ</button>
+    </div>
+    <div style="overflow-x:auto"><table class="tbl xls"><thead><tr><th>ชื่อสถานะ</th><th>สี</th><th>พัก SLA</th><th>จบงาน</th><th>ซ่อน</th></tr></thead><tbody>${sRows}</tbody></table></div>
+    <div style="font-size:11px;color:var(--tx3);margin-top:6px">* "พัก SLA" = หยุดนับเวลา (เช่น ประกัน/ผู้รับเหมา) · "จบงาน" = นับเป็นงานสิ้นสุด</div>
+  </div>
+  <div class="card" style="margin-bottom:1rem">
+    <div class="ctitle" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span><i class="ti ti-category" style="color:var(--accent)"></i> จัดการประเภทงาน + SLA</span>
+      <button class="btn btn-sm" onclick="cfgAdd('categories')"><i class="ti ti-plus"></i> เพิ่มประเภท</button>
+    </div>
+    <div style="overflow-x:auto"><table class="tbl xls"><thead><tr><th>ประเภทงาน</th><th>SLA</th><th>ซ่อน</th></tr></thead><tbody>${cRows}</tbody></table></div>
+  </div>
+  <div class="card" style="margin-bottom:1rem">
+    <div class="ctitle" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span><i class="ti ti-calendar-off" style="color:var(--accent)"></i> วันหยุดราชการ (ใช้คำนวณวันคาดว่าเสร็จ)</span>
+      <button class="btn btn-sm" onclick="cfgAdd('holidays')"><i class="ti ti-plus"></i> เพิ่มวันหยุด</button>
+    </div>
+    <div style="overflow-x:auto"><table class="tbl xls"><thead><tr><th>วันที่</th><th>ชื่อวันหยุด</th><th>ลบ</th></tr></thead><tbody>${hRows}</tbody></table></div>
+    <div style="font-size:11px;color:var(--tx3);margin-top:6px">* ระบบจะข้ามเสาร์–อาทิตย์ให้อยู่แล้ว ใส่เฉพาะวันหยุดนักขัตฤกษ์/วันหยุดพิเศษ · รูปแบบวันที่ ปปปป-ดด-วว (ค.ศ.)</div>
+  </div>
+  <div class="card" style="margin-bottom:1rem;text-align:center">
+    <button class="btn btn-accent" onclick="saveAdminConfig()"><i class="ti ti-device-floppy"></i> บันทึกการตั้งค่าทั้งหมด</button>
+    <div id="admCfgMsg" style="margin-top:.6rem"></div>
+    <div style="font-size:11px;color:var(--tx3);margin-top:6px">การเปลี่ยนแปลงจะมีผลกับทุกคนหลังบันทึกและรีเฟรช</div>
+  </div>`;
+}
+
+// ── การ์ดจัดการชั้น (แยกตามอาคาร) ──
+let floorMgBuilding = null;  // อาคารที่กำลังจัดการชั้นอยู่
+function floorManageCard(cfg){
+  const blds = (cfg.buildings||[]).filter(b=>!b.hidden);
+  if(!blds.length) return `<div class="card" style="margin-bottom:1rem"><div class="ctitle"><i class="ti ti-stack-2" style="color:var(--accent)"></i> จัดการชั้น</div><div style="font-size:12px;color:var(--tx3)">เพิ่มอาคารก่อน แล้วจึงกำหนดชั้นได้</div></div>`;
+  if(!floorMgBuilding || !blds.find(b=>b.id===floorMgBuilding)) floorMgBuilding = blds[0].id;
+  const floors=(cfg.floors||[]);
+  const rows = floors.map((f,i)=>({f,i})).filter(x=>x.f.building===floorMgBuilding);
+  const body = rows.length ? rows.map(({f,i})=>`<tr>
+    <td><input value="${escAttr(f.floor)}" placeholder="เช่น ชั้น 3" onchange="cfgEdit('floors',${i},'floor',this.value)"></td>
+    <td style="text-align:center"><button class="btn btn-sm btn-red" onclick="cfgRemove('floors',${i})"><i class="ti ti-trash"></i></button></td>
+  </tr>`).join('') : `<tr><td colspan="2" style="text-align:center;color:var(--tx3);padding:12px">อาคารนี้ยังไม่มีชั้น — กด “เพิ่มชั้น”</td></tr>`;
+  return `<div class="card" style="margin-bottom:1rem">
+    <div class="ctitle" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span><i class="ti ti-stack-2" style="color:var(--accent)"></i> จัดการชั้นในอาคาร</span>
+      <button class="btn btn-sm" onclick="cfgAddFloor()"><i class="ti ti-plus"></i> เพิ่มชั้น</button>
+    </div>
+    <div class="ff" style="margin-bottom:.75rem"><label>เลือกอาคารที่จะกำหนดชั้น</label>
+      <select onchange="floorMgBuilding=this.value;rp()">${blds.map(b=>`<option value="${b.id}" ${b.id===floorMgBuilding?'selected':''}>${b.icon||'🏢'} ${b.name}</option>`).join('')}</select>
+    </div>
+    <div style="overflow-x:auto"><table class="tbl xls"><thead><tr><th>ชื่อชั้น</th><th>ลบ</th></tr></thead><tbody>${body}</tbody></table></div>
+    <div style="font-size:11px;color:var(--tx3);margin-top:6px">* ชั้นที่กำหนดจะไปแสดงเป็นตัวเลือกในฟอร์มแจ้งซ่อม เมื่อผู้แจ้งเลือกอาคารนี้</div>
+  </div>`;
+}
+function cfgAddFloor(){
+  const d=ensureDraft();
+  if(!d.floors) d.floors=[];
+  d.floors.push({building:floorMgBuilding, floor:'', hidden:false});
+  CFG_RAW = d; rp();
+}
+
+// working copy สำหรับแก้ก่อนบันทึก
+let cfgDraft=null;
+function ensureDraft(){
+  if(!cfgDraft){
+    const src = CFG_RAW || {
+      buildings: BUILDINGS.map(b=>({...b,hidden:false})),
+      floors:    FLOORS.map(f=>({...f})),
+      statuses:  STATUSES.map(s=>({...s,paused:SLA_PAUSED.includes(s.id),closed:CLOSED_STATUS.includes(s.id),hidden:false})),
+      categories:CATS.map(c=>({name:c,sla:SLA[c]||14,hidden:false})),
+      holidays:  HOLIDAYS.map(d=>({date:d,name:''})),
+    };
+    cfgDraft = JSON.parse(JSON.stringify(src));
+    if(!cfgDraft.holidays) cfgDraft.holidays=[];
+    if(!cfgDraft.floors) cfgDraft.floors=[];
+  }
+  return cfgDraft;
+}
+function cfgEdit(kind,i,field,val){
+  const d=ensureDraft();
+  if(field==='budget'||field==='sla') val=Number(val)||0;
+  d[kind][i][field]=val;
+}
+function cfgRemove(kind,i){
+  const d=ensureDraft();
+  d[kind].splice(i,1);
+  CFG_RAW = d; rp();
+}
+function cfgToggle(kind,i,field,cur,used){
+  const dis = (field==='hidden'&&used)?'':''; // ซ่อนได้เสมอ
+  return `<label style="cursor:pointer"><input type="checkbox" ${cur?'checked':''} onchange="cfgEdit('${kind}',${i},'${field}',this.checked)" style="width:auto;accent-color:var(--accent)"></label>`;
+}
+function cfgClsSelect(kind,i,cur){
+  const opts=[['b-blue','ฟ้า'],['b-green','เขียว'],['b-amber','เหลือง'],['b-red','แดง'],['b-purple','ม่วง'],['b-teal','เขียวน้ำทะเล'],['b-gray','เทา']];
+  return `<select onchange="cfgEdit('${kind}',${i},'cls',this.value)" style="width:120px">${opts.map(o=>`<option value="${o[0]}" ${cur===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select>`;
+}
+function cfgAdd(kind){
+  const d=ensureDraft();
+  if(kind==='buildings') d.buildings.push({id:'b'+Date.now().toString(36),name:'อาคารใหม่',short:'ใหม่',icon:'🏢',budget:0,hidden:false});
+  else if(kind==='statuses') d.statuses.push({id:'st'+Date.now().toString(36),label:'สถานะใหม่',cls:'b-gray',paused:false,closed:false,hidden:false});
+  else if(kind==='holidays') d.holidays.push({date:'',name:''});
+  else d.categories.push({name:'ประเภทใหม่',sla:14,hidden:false});
+  CFG_RAW = d; rp();
+}
+async function saveAdminConfig(){
+  const d=ensureDraft();
+  const msg=document.getElementById('admCfgMsg');
+  // validation เบื้องต้น
+  for(const b of d.buildings){ if(!b.name.trim()){ msg.innerHTML='<div class="notice n-red" style="margin:0">ชื่ออาคารห้ามว่าง</div>'; return; } }
+  for(const s of d.statuses){ if(!s.label.trim()){ msg.innerHTML='<div class="notice n-red" style="margin:0">ชื่อสถานะห้ามว่าง</div>'; return; } }
+  for(const c of d.categories){ if(!c.name.trim()){ msg.innerHTML='<div class="notice n-red" style="margin:0">ชื่อประเภทห้ามว่าง</div>'; return; } }
+  // เอาวันหยุดที่ยังไม่กรอกวันที่ออก
+  if(d.holidays) d.holidays = d.holidays.filter(h=>h.date && /^\d{4}-\d{2}-\d{2}$/.test(h.date));
+  // เอาชั้นที่ยังไม่กรอกชื่อออก
+  if(d.floors) d.floors = d.floors.filter(f=>f.building && String(f.floor).trim());
+  showLoader('กำลังบันทึกการตั้งค่า...');
+  try{
+    if(GAS_URL) await api('saveConfig',{config:d,token:AUTH_TOKEN});
+    localStorage.setItem('vr3_cfg',JSON.stringify(d));
+    applyConfig(d);
+    cfgDraft=null;
+    hideLoader();
+    msg.innerHTML='<div class="notice n-green" style="margin:0">บันทึกสำเร็จ — มีผลกับทุกคนแล้ว</div>';
+    showToast('บันทึกการตั้งค่าแล้ว');
+  }catch(e){
+    hideLoader();
+    if(handleAuthError(e)) return;
+    msg.innerHTML=`<div class="notice n-red" style="margin:0">บันทึกไม่สำเร็จ: ${e.message}</div>`;
+  }
+}
+
+function saveGasUrl() {
+  GAS_URL=document.getElementById('gasUrl').value.trim();
+  localStorage.setItem('gas_url',GAS_URL);
+  document.getElementById('cfgMsg').innerHTML='<div class="notice n-green" style="margin:0">✅ บันทึก URL แล้ว</div>';
+  showToast('บันทึก URL แล้ว');
+}
+
+async function initSheet() {
+  GAS_URL=document.getElementById('gasUrl').value.trim();
+  localStorage.setItem('gas_url',GAS_URL);
+  showLoader('กำลังสร้าง Google Sheet...');
+  try {
+    await api('init');
+    hideLoader();
+    document.getElementById('cfgMsg').innerHTML='<div class="notice n-green" style="margin:0">✅ สร้าง Sheet สำเร็จ! พร้อมใช้งานแล้ว</div>';
+    showToast('สร้าง Sheet สำเร็จ');
+    await loadAll();
+  } catch(e) {
+    hideLoader();
+    document.getElementById('cfgMsg').innerHTML=`<div class="notice n-red" style="margin:0">❌ เกิดข้อผิดพลาด: ${e.message}</div>`;
+  }
+}
+
+async function testConnection() {
+  GAS_URL=document.getElementById('gasUrl').value.trim();
+  showLoader('กำลังทดสอบ...');
+  try {
+    await api('getAll');
+    hideLoader();
+    document.getElementById('cfgMsg').innerHTML='<div class="notice n-green" style="margin:0">✅ เชื่อมต่อสำเร็จ! Google Sheet พร้อมใช้งาน</div>';
+    showToast('เชื่อมต่อสำเร็จ');
+  } catch(e) {
+    hideLoader();
+    document.getElementById('cfgMsg').innerHTML=`<div class="notice n-red" style="margin:0">❌ เชื่อมต่อไม่ได้: ${e.message}</div>`;
+  }
+}
+
+// ════════════════════════ DETAIL MODAL ════════════════════════
+
+// ═══════════ ระบบแนบรูปภาพ ═══════════
+let PHOTOS = {};          // { ticketId: [ {fileId, kind, name, by, at} ] }
+let pendingPhotos = [];   // รูปที่เลือกไว้ในฟอร์มแจ้งซ่อม (ยังไม่ส่ง)
+const MAX_PHOTOS = 5;
+
+function thumbUrl(fileId){ return 'https://drive.google.com/thumbnail?id='+fileId+'&sz=w400'; }
+function fullUrl(fileId){ return 'https://drive.google.com/file/d/'+fileId+'/view'; }
+
+// ย่อรูปก่อนส่ง เพื่อลดขนาดไฟล์และเวลาอัปโหลด
+function resizeImage(file, maxSide=1600, quality=0.82){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onerror=()=>reject(new Error('อ่านไฟล์ไม่สำเร็จ'));
+    reader.onload=e=>{
+      const img=new Image();
+      img.onerror=()=>reject(new Error('ไฟล์รูปไม่ถูกต้อง'));
+      img.onload=()=>{
+        let {width:w,height:h}=img;
+        if(Math.max(w,h)>maxSide){
+          if(w>h){ h=Math.round(h*maxSide/w); w=maxSide; }
+          else   { w=Math.round(w*maxSide/h); h=maxSide; }
+        }
+        const c=document.createElement('canvas'); c.width=w; c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        const durl=c.toDataURL('image/jpeg',quality);
+        resolve({ dataUrl:durl, base64:durl.split(',')[1], mimeType:'image/jpeg' });
+      };
+      img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// เลือกรูปในฟอร์มแจ้งซ่อม
+async function onPickReportPhotos(input){
+  const files=[...input.files];
+  input.value='';
+  for(const f of files){
+    if(pendingPhotos.length>=MAX_PHOTOS){ showToast('แนบได้สูงสุด '+MAX_PHOTOS+' รูป'); break; }
+    if(!f.type.startsWith('image/')){ showToast('รองรับเฉพาะไฟล์รูปภาพ'); continue; }
+    try{
+      const r=await resizeImage(f);
+      pendingPhotos.push(r);
+    }catch(e){ showToast('ไม่สามารถอ่านรูปได้: '+e.message); }
+  }
+  renderPendingPhotos();
+}
+function renderPendingPhotos(){
+  const box=document.getElementById('photoPreview');
+  if(!box) return;
+  box.innerHTML = pendingPhotos.length
+    ? pendingPhotos.map((p,i)=>`<div class="ph-thumb">
+        <img src="${p.dataUrl}" alt="รูปที่ ${i+1}">
+        <button type="button" class="ph-del" onclick="removePendingPhoto(${i})" title="ลบรูปนี้"><i class="ti ti-x"></i></button>
+      </div>`).join('')
+    : '';
+  const c=document.getElementById('photoCount');
+  if(c) c.textContent = pendingPhotos.length ? `เลือกแล้ว ${pendingPhotos.length}/${MAX_PHOTOS} รูป` : '';
+}
+function removePendingPhoto(i){ pendingPhotos.splice(i,1); renderPendingPhotos(); }
+
+// ส่งรูปที่แนบไว้ขึ้นเซิร์ฟเวอร์
+async function uploadPendingPhotos(ticketId, by, kind='report'){
+  if(!GAS_URL || !pendingPhotos.length) return 0;
+  // ส่งทุกรูปพร้อมกัน (ขนานกัน) แทนการรอทีละรูป
+  const results = await Promise.all(pendingPhotos.map(p=>
+    api('uploadPhoto',{photo:{ticketId,data:p.base64,mimeType:p.mimeType,kind,by:by||'ผู้แจ้ง'}})
+      .catch(e=>{ console.warn('upload photo failed',e); return null; })
+  ));
+  let n=0;
+  results.forEach(r=>{
+    if(r && r.fileId){
+      if(!PHOTOS[ticketId]) PHOTOS[ticketId]=[];
+      PHOTOS[ticketId].push({fileId:r.fileId,kind:r.kind,name:r.name,by:by||'ผู้แจ้ง',at:new Date().toISOString()});
+      n++;
+    }
+  });
+  return n;
+}
+
+// ช่าง/วิศวกรแนบรูปเพิ่มในหน้ารายละเอียด
+async function onAddTicketPhoto(input, ticketId, kind){
+  const files=[...input.files].filter(f=>f.type.startsWith('image/')); input.value='';
+  if(!files.length) return;
+  if(!GAS_URL){ showToast('ยังไม่ได้เชื่อมต่อเซิร์ฟเวอร์'); return; }
+  showLoader('กำลังอัปโหลดรูป...');
+  // ย่อขนาดทุกรูปพร้อมกัน แล้วอัปโหลดพร้อมกัน
+  let n=0, errMsg='';
+  try{
+    const resized=await Promise.all(files.map(f=>resizeImage(f).catch(()=>null)));
+    const results=await Promise.all(resized.map(r=>
+      r ? api('uploadPhoto',{photo:{ticketId,data:r.base64,mimeType:r.mimeType,kind,by:cu?cu.name:'-'}}).catch(e=>({error:e.message})) : null
+    ));
+    results.forEach(res=>{
+      if(res && res.fileId){
+        if(!PHOTOS[ticketId]) PHOTOS[ticketId]=[];
+        PHOTOS[ticketId].push({fileId:res.fileId,kind:res.kind,name:res.name,by:cu?cu.name:'-',at:new Date().toISOString()});
+        n++;
+      } else if(res && res.error){ errMsg=res.error; }
+    });
+  }catch(e){ errMsg=e.message; }
+  hideLoader();
+  if(n){ showToast('อัปโหลด '+n+' รูปแล้ว'); openDet(ticketId); }
+  else if(errMsg){ showToast('อัปโหลดไม่สำเร็จ: '+errMsg); }
+}
+
+async function removeTicketPhoto(ticketId, fileId){
+  if(!cu||!cu.isEngineer){ showToast('เฉพาะวิศวกรเท่านั้นที่ลบรูปได้'); return; }
+  if(!confirm('ลบรูปนี้?')) return;
+  showLoader('กำลังลบ...');
+  try{
+    await api('deletePhoto',{fileId,token:AUTH_TOKEN});
+    PHOTOS[ticketId]=(PHOTOS[ticketId]||[]).filter(p=>p.fileId!==fileId);
+    hideLoader(); openDet(ticketId); showToast('ลบรูปแล้ว');
+  }catch(e){ hideLoader(); if(!handleAuthError(e)) showToast('ลบไม่สำเร็จ: '+e.message); }
+}
+
+// แสดงรูปในหน้ารายละเอียด
+function renderTicketPhotos(t){
+  const list=PHOTOS[t.id]||[];
+  const groups=[
+    {k:'report', label:'รูปจากผู้แจ้ง',  icon:'ti-camera'},
+    {k:'before', label:'ก่อนซ่อม',       icon:'ti-photo'},
+    {k:'after',  label:'หลังซ่อม',       icon:'ti-photo-check'},
+  ];
+  let html='<div style="font-size:12px;font-weight:600;color:var(--tx3);margin:14px 0 8px">รูปภาพประกอบ</div>';
+  let any=false;
+  groups.forEach(g=>{
+    const items=list.filter(p=>p.kind===g.k);
+    if(!items.length) return;
+    any=true;
+    html+=`<div style="margin-bottom:10px">
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:5px"><i class="ti ${g.icon}"></i> ${g.label} (${items.length})</div>
+      <div class="ph-grid">${items.map(p=>`<div class="ph-thumb">
+        <a href="${fullUrl(p.fileId)}" target="_blank" rel="noopener"><img src="${thumbUrl(p.fileId)}" alt="${g.label}" loading="lazy"></a>
+        ${cu&&cu.isEngineer?`<button type="button" class="ph-del" onclick="removeTicketPhoto('${t.id}','${p.fileId}')" title="ลบรูป"><i class="ti ti-x"></i></button>`:''}
+      </div>`).join('')}</div>
+    </div>`;
+  });
+  if(!any) html+='<div style="font-size:12px;color:var(--tx3);margin-bottom:8px">ยังไม่มีรูปภาพ</div>';
+  if(cu){
+    html+=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+      <label class="btn btn-sm" style="cursor:pointer;margin:0">
+        <i class="ti ti-camera-plus"></i> เพิ่มรูปก่อนซ่อม
+        <input type="file" accept="image/*" multiple style="display:none" onchange="onAddTicketPhoto(this,'${t.id}','before')">
+      </label>
+      <label class="btn btn-sm" style="cursor:pointer;margin:0">
+        <i class="ti ti-camera-check"></i> เพิ่มรูปหลังซ่อม
+        <input type="file" accept="image/*" multiple style="display:none" onchange="onAddTicketPhoto(this,'${t.id}','after')">
+      </label>
+    </div>`;
+  }
+  return html;
+}
+
+function statusPipe(cur){
+  if(cur==='cannot') return '<div class="notice n-red" style="margin-bottom:1rem"><i class="ti ti-ban ni"></i><div>งานนี้ไม่สามารถดำเนินการได้</div></div>';
+  if(SLA_PAUSED.includes(cur)){
+    const t=cur==='insurance'?'ส่งเรื่องประกันเคลม':'ส่งงานให้ผู้รับเหมาภายนอก';
+    return `<div class="notice n-purple" style="margin-bottom:1rem"><i class="ti ti-clock-pause ni"></i><div><b>${t}</b> — อยู่ระหว่างประสานงานภายนอก (พัก SLA ชั่วคราว) โดยช่าง/วิศวกรผู้รับผิดชอบเป็นผู้ประสานงาน</div></div>`;
+  }
+  const flow=['pending_approval','assigned','survey','purchase','working','done'];
+  const short={pending_approval:'รออนุมัติ',assigned:'มอบหมาย',survey:'สำรวจ',purchase:'จัดซื้อ',working:'ซ่อม',done:'เสร็จ'};
+  const ci=flow.indexOf(cur);
+  return `<div class="pipe">${flow.map((st,i)=>{
+    const cls=i<ci?'done':i===ci?'now':'';
+    const lineCls=i<ci?'done':'';
+    return `<div class="pipe-step">
+      ${i>0?`<div class="pipe-line ${i<=ci?'done':''}"></div>`:''}
+      <div class="pipe-dot ${cls}">${i<ci?'<i class="ti ti-check" style="font-size:11px"></i>':i+1}</div>
+      <div class="pipe-lbl ${i===ci?'act':''}">${short[st]}</div>
+    </div>`;
+  }).join('')}</div><div style="height:1px;background:var(--bd);margin:0 0 1rem"></div>`;
+}
+// ─── แก้ไข / ยกเลิกใบแจ้งซ่อม (เฉพาะวิศวกร) ───
+function openEdit(id){
+  if(!cu||!cu.isEngineer){ showToast('เฉพาะวิศวกรเท่านั้นที่แก้ไขได้'); return; }
+  const t=DB.tickets.find(t=>t.id===id); if(!t) return;
+  document.getElementById('editContent').innerHTML=`
+    <div class="modal-title">แก้ไขใบแจ้งซ่อม <button class="mc" onclick="cm('editMd')"><i class="ti ti-x"></i></button></div>
+    <div style="background:var(--surf2);border-radius:8px;padding:.6rem .75rem;margin-bottom:1rem;font-size:12px;color:var(--tx2)"><span class="mono">${t.id}</span></div>
+    <div class="frow">
+      <div class="ff" style="margin:0"><label>ชื่อ-นามสกุล</label><input id="edN" value="${escAttr(t.name)}"></div>
+      <div class="ff" style="margin:0"><label>โทรศัพท์</label><input id="edP" value="${escAttr(t.phone)}"></div>
+    </div>
+    <div class="frow" style="margin-top:.75rem">
+      <div class="ff" style="margin:0"><label>ตำแหน่ง/หน่วยงาน</label><input id="edD" value="${escAttr(t.dept)}"></div>
+      <div class="ff" style="margin:0"><label>อีเมล</label><input id="edE" value="${escAttr(t.email)}"></div>
+    </div>
+    <div class="frow" style="margin-top:.75rem">
+      <div class="ff" style="margin:0"><label>อาคาร</label>
+        <select id="edB">${BUILDINGS.map(b=>`<option value="${b.id}" ${t.building===b.id?'selected':''}>${b.name}</option>`).join('')}</select>
+      </div>
+      <div class="ff" style="margin:0"><label>ห้อง / ชั้น</label><input id="edR" value="${escAttr(t.room)}"></div>
+    </div>
+    <div class="frow" style="margin-top:.75rem">
+      <div class="ff" style="margin:0"><label>ประเภทงาน</label>
+        <select id="edC">${CATS.map(c=>`<option ${t.category===c?'selected':''}>${c}</option>`).join('')}</select>
+      </div>
+      <div class="ff" style="margin:0"><label>ความเร่งด่วน</label>
+        <select id="edPr"><option value="low" ${t.priority==='low'?'selected':''}>ปกติ</option><option value="med" ${t.priority==='med'?'selected':''}>ปานกลาง</option><option value="high" ${t.priority==='high'?'selected':''}>เร่งด่วน/ความปลอดภัย</option></select>
+      </div>
+    </div>
+    <div class="ff" style="margin-top:.25rem"><label>ค่าใช้จ่ายประมาณการ (บาท)</label><input id="edCost" type="number" value="${t.estimatedCost||0}"></div>
+    <div class="ff"><label>รายละเอียดปัญหา</label><textarea id="edDesc">${escHtml(t.desc)}</textarea></div>
+    <button class="btn btn-p btn-block" onclick="saveEdit('${id}')"><i class="ti ti-device-floppy"></i> บันทึกการแก้ไข</button>`;
+  document.getElementById('detMd').style.display='none';
+  document.getElementById('editMd').style.display='flex';
+}
+function escAttr(s){return (s||'').replace(/"/g,'&quot;');}
+function escHtml(s){return (s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+async function saveEdit(id){
+  const t=DB.tickets.find(t=>t.id===id); if(!t) return;
+  const fields={
+    name:v('edN'), phone:v('edP'), dept:v('edD'), email:v('edE'),
+    building:document.getElementById('edB').value, room:v('edR'),
+    category:document.getElementById('edC').value, priority:document.getElementById('edPr').value,
+    estimatedCost:parseFloat(document.getElementById('edCost').value)||0, desc:v('edDesc')
+  };
+  Object.assign(t, fields);
+  const entry={status:t.status,date:now(),note:`วิศวกรแก้ไขข้อมูลใบแจ้งซ่อม`,by:cu.name};
+  if(!t.history)t.history=[]; t.history.push(entry);
+  showLoader('กำลังบันทึก...');
+  await syncUpdate(id, fields, entry);
+  hideLoader(); cm('editMd'); rp();
+  showToast('บันทึกการแก้ไขแล้ว');
+}
+
+async function cancelTicket(id){
+  if(!cu||!cu.isEngineer){ showToast('เฉพาะวิศวกรเท่านั้นที่ยกเลิกได้'); return; }
+  const reason=prompt('เหตุผลที่ยกเลิกใบแจ้งซ่อมนี้:'); if(reason===null) return;
+  const t=DB.tickets.find(t=>t.id===id); if(!t) return;
+  t.status='cancelled';
+  const entry={status:'cancelled',date:now(),note:'ยกเลิกใบแจ้ง: '+(reason||'-'),by:cu.name};
+  if(!t.history)t.history=[]; t.history.push(entry);
+  showLoader('กำลังบันทึก...');
+  await syncUpdate(id,{status:'cancelled'},entry);
+  hideLoader(); cm('detMd'); updApvCnt(); rp();
+  showToast('ยกเลิกใบแจ้งซ่อมแล้ว');
+}
+
+// Timeline แนวนอน — จุดแต่ละสถานะ + ระยะเวลาที่ค้างในแต่ละขั้น (หาคอขวด)
+function horizontalTimeline(t){
+  const hist=(t.history||[]).slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
+  if(hist.length<1) return '';
+  const now=Date.now();
+  const segs=hist.map((h,i)=>{
+    const start=new Date(h.date).getTime();
+    const end = i<hist.length-1 ? new Date(hist[i+1].date).getTime() : (CLOSED_STATUS.includes(t.status)?start:now);
+    const days=Math.max(0,Math.round((end-start)/86400000));
+    const si=getSI(h.status);
+    const isLast=i===hist.length-1;
+    const colorMap={pending_approval:'#e0a94b',assigned:'#8b6ff0',survey:'#e0a94b',purchase:'#8b6ff0',working:'#3ba7d6',insurance:'#22c19a',contractor:'#22c19a',done:'#5cc93f',cannot:'#e35b5b',cancelled:'#a8a08a'};
+    const col=colorMap[h.status]||'#888';
+    // ค้างนานผิดปกติ (>7 วันในขั้นที่ยังไม่จบ) = เตือน
+    const stuck = days>=7 && !CLOSED_STATUS.includes(h.status);
+    return {label:si.label,days,col,isLast,stuck,ongoing:isLast&&!CLOSED_STATUS.includes(t.status)};
+  });
+  return `<div style="font-size:12px;font-weight:600;color:var(--tx3);margin:4px 0 10px">เส้นทางการดำเนินงาน</div>
+  <div class="htl">
+    ${segs.map((s,i)=>`<div class="htl-seg">
+      <div class="htl-node" style="background:${s.col}${s.ongoing?';box-shadow:0 0 0 4px '+s.col+'33;animation:htlPulse 1.6s ease-in-out infinite':''}"></div>
+      ${i<segs.length-1?`<div class="htl-line" style="background:linear-gradient(90deg,${s.col},${segs[i+1].col})"></div>`:''}
+      <div class="htl-lbl">${s.label}</div>
+      <div class="htl-days ${s.stuck?'htl-stuck':''}">${s.ongoing?'กำลังอยู่ขั้นนี้ ':''}${s.days} วัน${s.stuck?' ⚠️':''}</div>
+    </div>`).join('')}
+  </div>
+  <div style="height:12px"></div>`;
+}
+
+// ─── ความพึงพอใจหลังปิดงาน (ดาว 1-5) ───
+let pendingRating=0;
+function starSVG(filled){
+  return `<svg viewBox="0 0 24 24" width="28" height="28" style="display:block"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.7 1.4 6.8L12 17.8 5.9 20.5l1.4-6.8L2.2 9l6.9-.7z" fill="${filled?'#f2b50c':'none'}" stroke="#f2b50c" stroke-width="1.5" stroke-linejoin="round"/></svg>`;
+}
+function ratingBlock(t){
+  // แสดงเฉพาะงานที่เสร็จแล้ว
+  if(t.status!=='done') return '';
+  // ให้คะแนนแล้ว → โชว์ผล
+  if(t.rating && t.rating>0){
+    return `<div class="rate-box rated">
+      <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">⭐ ความพึงพอใจของผู้แจ้ง</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="display:flex;gap:2px">${[1,2,3,4,5].map(i=>`<span style="opacity:${i<=t.rating?1:.25}">${starSVG(i<=t.rating)}</span>`).join('')}</div>
+        <span style="font-weight:700;font-size:16px;color:var(--gold)">${t.rating}.0</span>
+      </div>
+      ${t.ratingComment?`<div style="font-size:13px;color:var(--tx2);margin-top:8px;background:var(--surf2);border-radius:8px;padding:.6rem .8rem">“${t.ratingComment}”</div>`:''}
+    </div>`;
+  }
+  // ยังไม่ให้คะแนน → ฟอร์มให้ดาว (ใครก็ให้ได้ ไม่ต้อง login)
+  pendingRating=0;
+  return `<div class="rate-box" id="rateForm">
+    <div style="font-size:13px;font-weight:600;margin-bottom:4px">งานนี้เสร็จแล้ว — ให้คะแนนความพึงพอใจ</div>
+    <div style="font-size:12px;color:var(--tx3);margin-bottom:10px">ความเห็นของท่านช่วยให้เราพัฒนาบริการ (ให้คะแนนได้ครั้งเดียว)</div>
+    <div class="star-row" id="starRow">${[1,2,3,4,5].map(i=>`<button type="button" class="star-btn" data-v="${i}" onclick="setStars(${i})" onmouseover="hoverStars(${i})" onmouseout="hoverStars(0)">${starSVG(false)}</button>`).join('')}</div>
+    <textarea id="rateComment" placeholder="ความเห็นเพิ่มเติม (ไม่บังคับ)" style="margin-top:10px;min-height:60px"></textarea>
+    <div id="rateMsg" style="margin:8px 0"></div>
+    <button class="btn btn-accent btn-sm" onclick="submitRating('${t.id}')"><i class="ti ti-send"></i> ส่งคะแนน</button>
+  </div>`;
+}
+function paintStars(n){
+  document.querySelectorAll('#starRow .star-btn').forEach(b=>{
+    const v=+b.dataset.v;
+    b.innerHTML=starSVG(v<=n);
+  });
+}
+function hoverStars(n){ paintStars(n||pendingRating); }
+function setStars(n){ pendingRating=n; paintStars(n); }
+async function submitRating(id){
+  const msg=document.getElementById('rateMsg');
+  if(!pendingRating){ msg.innerHTML='<div class="notice n-amber" style="margin:0;padding:.5rem .7rem">กรุณาเลือกดาวก่อน</div>'; return; }
+  if(!GAS_URL){ msg.innerHTML='<div class="notice n-red" style="margin:0;padding:.5rem .7rem">ยังไม่ได้เชื่อมต่อเซิร์ฟเวอร์</div>'; return; }
+  const comment=(document.getElementById('rateComment').value||'').trim();
+  showLoader('กำลังส่งคะแนน...');
+  try{
+    await api('rateTicket',{id,rating:pendingRating,comment});
+    const t=DB.tickets.find(x=>x.id===id); if(t){ t.rating=pendingRating; t.ratingComment=comment; }
+    hideLoader(); openDet(id); showToast('ขอบคุณสำหรับคะแนน '+pendingRating+' ดาว');
+  }catch(e){ hideLoader(); msg.innerHTML='<div class="notice n-red" style="margin:0;padding:.5rem .7rem">ส่งไม่สำเร็จ: '+e.message+'</div>'; }
+}
+
+function openDet(id) {
+  const t=DB.tickets.find(t=>t.id===id);if(!t)return;
+  const s=getSI(t.status),b=getBI(t.building),pLbl={high:'เร่งด่วน',med:'ปานกลาง',low:'ปกติ'}[t.priority];
+  const pCls=t.priority==='high'?'b-red':t.priority==='med'?'b-amber':'b-gray';
+  document.getElementById('detContent').innerHTML=`
+    <div class="modal-title"><span class="mono">${t.id}</span> <button class="mc" onclick="cm('detMd')"><i class="ti ti-x"></i></button></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem">
+      <span class="badge ${s.cls}">${s.label}</span>
+      <span class="badge ${pCls}">${pLbl}</span>
+    </div>
+    ${statusPipe(t.status)}
+    <table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:1rem">
+    ${[['อาคาร',b.icon+' '+b.name],['ห้อง',t.room],['ประเภท',t.category],['ผู้แจ้ง',t.name],
+       ['โทร',t.phone],['หน่วยงาน',t.dept],['วันที่แจ้ง',fd(t.createdAt)],
+       ...(cu?[['วันที่อนุมัติ',t.approvedAt?fd(t.approvedAt):'ยังไม่อนุมัติ'],
+              ['คาดว่าเสร็จ',(()=>{const di=dueInfo(t);return `<span class="badge ${di.cls}">${di.text}</span>${di.sub?` <span style="font-size:11px;color:var(--tx3)">${di.sub}</span>`:''}`;})()]]:[]),
+       ['ผู้รับผิดชอบ',assigneeChips(t.assignees)],
+       ['ประมาณการ',(t.estimatedCost||0).toLocaleString()+' บาท'],
+       ['ค่าใช้จ่ายจริง',(t.actualCost||0).toLocaleString()+' บาท'],
+    ].map(([l,v2])=>`<tr><td style="color:var(--tx3);padding:4px 0;width:110px;font-size:12px;vertical-align:top">${l}</td><td style="padding:4px 0">${v2}</td></tr>`).join('')}
+    </table>
+    <div style="font-size:12px;color:var(--tx3);margin-bottom:4px">รายละเอียด</div>
+    <div style="font-size:13px;background:var(--surf2);border-radius:8px;padding:.75rem;margin-bottom:1rem;line-height:1.6">${t.desc}</div>
+    ${renderTicketPhotos(t)}
+    <div style="height:12px"></div>
+    ${ratingBlock(t)}
+    ${cu&&cu.isEngineer&&t.status!=='cancelled'?`<div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
+      <button class="btn btn-sm" onclick="openEdit('${t.id}')"><i class="ti ti-edit"></i> แก้ไขใบแจ้ง</button>
+      <button class="btn btn-sm btn-red" onclick="cancelTicket('${t.id}')"><i class="ti ti-ban"></i> ยกเลิกใบแจ้ง</button>
+    </div>`:''}
+    ${t.status==='cancelled'?`<div class="notice n-red" style="margin-bottom:1rem"><i class="ti ti-ban ni"></i><div>ใบแจ้งซ่อมนี้ถูกยกเลิกแล้ว (เก็บไว้เป็นประวัติ)</div></div>`:''}
+    ${horizontalTimeline(t)}
+    <div style="font-size:12px;font-weight:600;color:var(--tx3);margin-bottom:8px">ประวัติดำเนินงาน</div>
+    ${(t.history||[]).map((h,i,arr)=>{const si=getSI(h.status);return `<div class="tl-item">
+      <div class="tl-rail">
+        <div class="tl-dot"></div>
+        ${i<arr.length-1?`<div class="tl-ln"></div>`:''}
+      </div>
+      <div style="padding-bottom:12px;flex:1">
+        <span class="badge ${si.cls}" style="font-size:10px">${si.label}</span>
+        ${h.note&&h.note!=='-'?`<div style="font-size:12px;color:var(--tx2);margin-top:3px">${h.note}</div>`:''}
+        <div style="font-size:11px;color:var(--tx3);margin-top:2px">${fd(h.date)} — ${h.by}</div>
+      </div>
+    </div>`;}).join('')}`;
+  document.getElementById('detMd').style.display='flex';
+}
+
+// ════════════════════════ INIT ════════════════════════
+// กู้คืน session เดิม (ถ้ามี) — เซิร์ฟเวอร์จะปฏิเสธเองถ้า token หมดอายุ
+// ─── ล้างข้อมูลเก่าครั้งเดียว เมื่อเปลี่ยนมาเป็นคณะการแพทย์แผนไทย ───
+(function migrateData(){
+  const DATA_VERSION='sahavej-2026';   // เปลี่ยนค่านี้เมื่อต้องการล้างแคชผู้ใช้ทุกคนอีกครั้ง
+  if(localStorage.getItem('vr3_dataver')!==DATA_VERSION){
+    // ล้างแคชข้อมูลเก่าทั้งหมด (อาคารเดิม/รายการซ่อม/รูป/ผู้ใช้)
+    ['vr3_t','vr3_hist','vr3_cfg','vr3_photos','vr3_users','vr3_cache_at'].forEach(k=>localStorage.removeItem(k));
+    localStorage.setItem('vr3_dataver',DATA_VERSION);
+  }
+})();
+
+// ─── โหมดมืด/สว่าง ───
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  const btn=document.getElementById('themeBtn');
+  if(btn) btn.textContent = t==='dark' ? '☀️' : '🌙';
+}
+function toggleTheme(){
+  const cur=document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light';
+  const next=cur==='dark'?'light':'dark';
+  localStorage.setItem('vr3_theme',next);
+  applyTheme(next);
+}
+(function initTheme(){
+  const saved=localStorage.getItem('vr3_theme');
+  const prefers=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(saved || (prefers?'dark':'light'));
+})();
+
+(function restoreSession(){
+  try{
+    const t=localStorage.getItem('vr3_token'), u=localStorage.getItem('vr3_user');
+    if(t&&u){ AUTH_TOKEN=t; cu=JSON.parse(u); }
+  }catch{}
+})();
+updAuthUI();
+
+// เลือกอาคาร/ชั้นจาก QR param หลังหน้า report พร้อม
+function applyQrParams(){
+  const params=new URLSearchParams(window.location.search);
+  const bParam=params.get('b'), fParam=params.get('f');
+  if(bParam){ const el=document.getElementById('fB'); if(el){ el.value=bParam; updFloorOptions(fParam||undefined); } }
+}
+
+// เปิดเว็บ: ถ้ามีแคช แสดงทันที (instant) แล้วค่อยดึงใหม่เบื้องหลัง — ถ้าไม่มีแคชค่อยโหลดแบบปกติ
+(function boot(){
+  const cached=readCache();
+  if(cached){
+    applyBundle(cached);        // แสดงของเก่าทันที ไม่ต้องรอเซิร์ฟเวอร์
+    rp(); applyQrParams();
+    loadAll({silent:true}).then(()=>{ rp(); applyQrParams(); });  // อัปเดตเบื้องหลัง
+  }else{
+    loadAll().then(()=>{ rp(); applyQrParams(); });
+  }
+})();
+</script>
+</body>
+</html>
