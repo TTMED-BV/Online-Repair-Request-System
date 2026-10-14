@@ -7,8 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.31.0/tabler-icons.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -568,8 +566,10 @@ async function api(action, body={}) {
 // นำข้อมูลชุดหนึ่ง (จาก bootstrap หรือจากแคช) มาใส่ใน state
 function applyBundle(d){
   if(d.tickets){ DB.tickets = d.tickets; DB.history = d.history||{}; DB.tickets.forEach(t=>{ t.history = DB.history[t.id] || t.history || []; if(!t.assignees) t.assignees=[]; }); }
+  if(d.tickets) replayQ();
   if(d.config) applyConfig(d.config);
   if(d.photos) PHOTOS = d.photos;
+  if(d.photoCounts){ PHOTO_COUNTS = d.photoCounts; PHOTO_COUNTS_KNOWN = true; }
   if(d.users && d.users.length){ const m={}; d.users.filter(u=>u.active!==false).forEach(u=>{ m[u.username]=u; }); USERS=m; }
   if(d.users) ALL_USERS = d.users;   // รวมที่ปิดใช้งาน ไว้หน้าจัดการผู้ใช้
   if(d.roles) ROLES = d.roles;
@@ -612,6 +612,7 @@ function cacheBundle(d){
     if(d.photos) localStorage.setItem('vr3_photos', JSON.stringify(d.photos));
     if(d.users)  localStorage.setItem('vr3_users', JSON.stringify(d.users));
     if(d.pm)     localStorage.setItem('vr3_pm', JSON.stringify(d.pm));
+    if(d.photoCounts) localStorage.setItem('vr3_pc', JSON.stringify(d.photoCounts));
     localStorage.setItem('vr3_cache_at', String(Date.now()));
   }catch{}
 }
@@ -627,6 +628,7 @@ function readCache(){
       photos:JSON.parse(localStorage.getItem('vr3_photos')||'{}'),
       users:JSON.parse(localStorage.getItem('vr3_users')||'null')||undefined,
       pm:JSON.parse(localStorage.getItem('vr3_pm')||'[]'),
+      photoCounts:JSON.parse(localStorage.getItem('vr3_pc')||'null')||undefined,
     };
   }catch{ return null; }
 }
@@ -653,28 +655,58 @@ function saveLocal() {
   localStorage.setItem('vr3_t', JSON.stringify(DB.tickets));
 }
 
+// ═══ คิวบันทึกเบื้องหลัง (ข้อ 4–5) ═══
+// กดบันทึกแล้วหน้าจอเปลี่ยนทันที — ระบบส่งข้อมูลไปเซิร์ฟเวอร์อยู่เบื้องหลัง
+// ถ้าเน็ตหลุด/ล้มเหลว จะเก็บไว้ในเครื่องและลองส่งใหม่อัตโนมัติ (ไม่หาย แม้ปิดหน้าเว็บ)
+let SYNC_Q = (()=>{ try{ return JSON.parse(localStorage.getItem('vr3_q')||'[]'); }catch{ return []; } })();
+let flushing = false;
+function qSave(){ try{ localStorage.setItem('vr3_q', JSON.stringify(SYNC_Q)); }catch{} updSyncBadge(); }
+function updSyncBadge(){
+  let el=document.getElementById('syncBadge');
+  if(!el){ el=document.createElement('div'); el.id='syncBadge';
+    el.style.cssText='position:fixed;right:14px;bottom:14px;z-index:650;background:var(--surf);border:.5px solid var(--bd2);box-shadow:var(--sh2);border-radius:20px;padding:6px 12px;font-size:12px;color:var(--tx2);display:none';
+    document.body.appendChild(el); }
+  el.style.display = SYNC_Q.length ? 'block' : 'none';
+  el.innerHTML = '<i class="ti ti-cloud-upload" style="vertical-align:-2px"></i> กำลังบันทึก '+SYNC_Q.length+' รายการ…';
+}
 async function syncAdd(ticket) {
-  if (GAS_URL) {
-    try {
-      await api('add', { ticket });
-      await api('addHistory', { ticketId: ticket.id, entry: ticket.history[0] });
-    } catch(e) { showToast('⚠ บันทึก Sheet ไม่สำเร็จ: ' + e.message, 3000); }
-  }
   saveLocal();
+  if (!GAS_URL) return;
+  SYNC_Q.push({ op:'add', ticket, entry:(ticket.history||[])[0]||null }); qSave(); flushQ();
 }
-
 async function syncUpdate(id, fields, histEntry) {
-  if (GAS_URL) {
-    try {
-      await api('update', { id, fields, token: AUTH_TOKEN });
-      if (histEntry) await api('addHistory', { ticketId: id, entry: histEntry });
-    } catch(e) {
-      if(handleAuthError(e)) return;
-      showToast('⚠ อัปเดต Sheet ไม่สำเร็จ: ' + e.message, 3000);
-    }
-  }
   saveLocal();
+  if (!GAS_URL) return;
+  SYNC_Q.push({ op:'upd', id, fields, entry:histEntry||null }); qSave(); flushQ();
 }
+async function flushQ(){
+  if (flushing || !SYNC_Q.length || !GAS_URL) return;
+  flushing = true;
+  try{
+    while (SYNC_Q.length){
+      const j = SYNC_Q[0];
+      try{
+        if (j.op==='add') await api('add', { ticket:j.ticket, entry:j.entry });
+        else await api('updateWithHistory', { id:j.id, fields:j.fields, entry:j.entry, token:AUTH_TOKEN });
+        SYNC_Q.shift(); qSave();
+      }catch(e){
+        if (handleAuthError(e)) break;                                   // รอล็อกอินใหม่แล้วค่อยส่งต่อ
+        if (/not found|Unknown action/i.test(e.message||'')){ SYNC_Q.shift(); qSave(); showToast('⚠ '+e.message,3000); continue; }
+        showToast('⚠ บันทึกยังไม่สำเร็จ — ระบบจะลองใหม่อัตโนมัติ', 2500);
+        setTimeout(flushQ, 8000); break;
+      }
+    }
+  } finally { flushing = false; }
+}
+// นำงานที่ยังส่งไม่สำเร็จมาทับข้อมูลจากเซิร์ฟเวอร์ (กันหน้าจอย้อนกลับ)
+function replayQ(){
+  SYNC_Q.forEach(j=>{
+    if (j.op==='add'){ if(!DB.tickets.find(t=>t.id===j.ticket.id)) DB.tickets.push(j.ticket); }
+    else { const t=DB.tickets.find(x=>x.id===j.id); if(t){ Object.assign(t, j.fields); if(j.entry && !(t.history||[]).some(h=>h.date===j.entry.date&&h.note===j.entry.note)) (t.history=t.history||[]).push(j.entry); } }
+  });
+}
+window.addEventListener('online', ()=>flushQ());
+window.addEventListener('beforeunload', e=>{ if(SYNC_Q.length){ e.preventDefault(); e.returnValue=''; } });
 // session หมดอายุ → ให้ล็อกอินใหม่
 function handleAuthError(e){
   if(e && /AUTH_REQUIRED|session/i.test(e.message||'')){
@@ -1109,8 +1141,13 @@ function exportRows(){
       'วันเสร็จจริง':t.completedAt?fd(t.completedAt):''
     }));
 }
-function exportExcel(){
-  if(typeof XLSX==='undefined'){ showToast('กำลังโหลดตัวช่วย ลองอีกครั้ง'); return; }
+async function exportExcel(){
+  if(typeof XLSX==='undefined'){
+    showLoader('กำลังเตรียมไฟล์ Excel...');
+    try{ await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'); }
+    catch(e){ hideLoader(); showToast(e.message); return; }
+    hideLoader();
+  }
   const rows=exportRows();
   if(!rows.length){ showToast('ไม่มีข้อมูลให้ส่งออก'); return; }
   const ws=XLSX.utils.json_to_sheet(rows);
@@ -1307,8 +1344,11 @@ function pgQR() {
     </div>`).join('')}</div>
   </div>`;
 }
-function renderQRs() {
-  if (typeof QRCode==='undefined') return;
+const _scripts={};
+function loadScript(src){ if(_scripts[src]) return _scripts[src];
+  return _scripts[src]=new Promise((ok,ng)=>{ const s=document.createElement('script'); s.src=src; s.onload=ok; s.onerror=()=>{ delete _scripts[src]; ng(new Error('โหลดไลบรารีไม่สำเร็จ')); }; document.head.appendChild(s); }); }
+async function renderQRs() {
+  if (typeof QRCode==='undefined'){ try{ await loadScript('https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'); }catch(e){ showToast(e.message); return; } }
   BUILDINGS.forEach(b=>{
     const el=document.getElementById('qr-'+b.id);
     if(el){el.innerHTML='';new QRCode(el,{text:window.location.href+'?b='+b.id,width:140,height:140,colorDark:'#0f1a2e',colorLight:'#fff'});}
@@ -1439,7 +1479,6 @@ async function confirmAssign(id) {
   const entry={status:'assigned',date:now(),note:`อนุมัติโดย ${cu.name} → มอบหมาย: ${selected.map(getUserName).join(', ')}${needBuy?' (ต้องจัดซื้อ)':''}${note?' — '+note:''}`,by:cu.name};
   if(!t.history)t.history=[];
   t.history.push(entry);
-  showLoader('กำลังบันทึก...');
   await syncUpdate(id,{status:'assigned',assignees:selected,approvedAt:t.approvedAt,approvedBy:t.approvedBy,approvedBudget:budget,needsPurchase:needBuy},entry);
   hideLoader(); cm('assignMd'); updApvCnt(); rp();
   showToast(`มอบหมายงานให้ ${selected.map(u=>getUserName(u).split(' ')[0]).join(' + ')} แล้ว`);
@@ -1452,7 +1491,6 @@ async function doReject(id) {
   const entry={status:'cannot',date:now(),note:'ส่งกลับ: '+reason,by:cu.name};
   if(!t.history)t.history=[];
   t.history.push(entry);
-  showLoader('กำลังบันทึก...');
   await syncUpdate(id,{status:'cannot'},entry);
   hideLoader(); updApvCnt(); rp();
 }
@@ -1566,12 +1604,12 @@ async function saveStatusUpdate(id) {
   const entry={status:ns,date:now(),note:note||'-',by:cu.name};
   if(!t.history)t.history=[];
   t.history.push(entry);
-  showLoader('กำลังบันทึก...');
   await syncUpdate(id,{status:ns,actualCost:cost,...(ns==='done'?{completedAt:t.completedAt}:{})},entry);
   // ข้อ 3: เบิกอุปกรณ์ (ถ้าเปิดระบบและมีการกรอกจำนวน)
   if(FLAGS.inventory){
     const items=[...document.querySelectorAll('#wdBox input[data-inv]')].map(el=>({id:el.getAttribute('data-inv'),qty:Number(el.value)||0})).filter(x=>x.qty>0);
     if(items.length){
+      showLoader('กำลังเบิกอุปกรณ์...');
       try{ const r=await api('withdrawItems',{ticketId:id,items,by:cu.name,token:AUTH_TOKEN}); if(r&&r.inventory) INVENTORY=r.inventory; showToast('เบิกอุปกรณ์แล้ว '+items.length+' รายการ'); }
       catch(e){ showToast('เบิกอุปกรณ์ไม่สำเร็จ: '+e.message,3000); }
     }
@@ -2401,7 +2439,20 @@ async function testConnection() {
 // ════════════════════════ DETAIL MODAL ════════════════════════
 
 // ═══════════ ระบบแนบรูปภาพ ═══════════
-let PHOTOS = {};          // { ticketId: [ {fileId, kind, name, by, at} ] }
+let PHOTOS = {};          // { ticketId: [ {fileId, kind, name, by, at} ] } — โหลดเมื่อเปิดดู
+let PHOTO_COUNTS = {};    // { ticketId: จำนวนรูป } มาพร้อมหน้าแรก (เล็ก)
+let PHOTO_COUNTS_KNOWN = false;
+const _photoLoading = {};
+async function ensurePhotos(id){
+  if (PHOTOS[id] !== undefined || _photoLoading[id] || !GAS_URL) return;
+  if (PHOTO_COUNTS_KNOWN && !PHOTO_COUNTS[id]) { PHOTOS[id] = []; return; }   // รู้แล้วว่าใบนี้ไม่มีรูป → ไม่ต้องถามเซิร์ฟเวอร์
+  _photoLoading[id] = true;
+  try{ const r = await api('getTicketPhotos', { id }); PHOTOS[id] = (r && r.photos) || []; }
+  catch(e){ PHOTOS[id] = []; }
+  finally{ delete _photoLoading[id]; }
+  const md=document.getElementById('detMd');
+  if (md && md.style.display==='flex' && md.dataset.tid===id) openDet(id);   // รีเฟรชเฉพาะถ้ายังเปิดใบเดิมอยู่
+}
 let pendingPhotos = [];   // รูปที่เลือกไว้ในฟอร์มแจ้งซ่อม (ยังไม่ส่ง)
 const MAX_PHOTOS = 5;
 
@@ -2473,7 +2524,7 @@ async function uploadPendingPhotos(ticketId, by, kind='report'){
   results.forEach(r=>{
     if(r && r.fileId){
       if(!PHOTOS[ticketId]) PHOTOS[ticketId]=[];
-      PHOTOS[ticketId].push({fileId:r.fileId,kind:r.kind,name:r.name,by:by||'ผู้แจ้ง',at:new Date().toISOString()});
+      PHOTO_COUNTS[ticketId]=(PHOTO_COUNTS[ticketId]||0)+1; PHOTOS[ticketId].push({fileId:r.fileId,kind:r.kind,name:r.name,by:by||'ผู้แจ้ง',at:new Date().toISOString()});
       n++;
     }
   });
@@ -2496,7 +2547,7 @@ async function onAddTicketPhoto(input, ticketId, kind){
     results.forEach(res=>{
       if(res && res.fileId){
         if(!PHOTOS[ticketId]) PHOTOS[ticketId]=[];
-        PHOTOS[ticketId].push({fileId:res.fileId,kind:res.kind,name:res.name,by:cu?cu.name:'-',at:new Date().toISOString()});
+        PHOTO_COUNTS[ticketId]=(PHOTO_COUNTS[ticketId]||0)+1; PHOTOS[ticketId].push({fileId:res.fileId,kind:res.kind,name:res.name,by:cu?cu.name:'-',at:new Date().toISOString()});
         n++;
       } else if(res && res.error){ errMsg=res.error; }
     });
@@ -2512,7 +2563,7 @@ async function removeTicketPhoto(ticketId, fileId){
   showLoader('กำลังลบ...');
   try{
     await api('deletePhoto',{fileId,token:AUTH_TOKEN});
-    PHOTOS[ticketId]=(PHOTOS[ticketId]||[]).filter(p=>p.fileId!==fileId);
+    PHOTOS[ticketId]=(PHOTOS[ticketId]||[]).filter(p=>p.fileId!==fileId); PHOTO_COUNTS[ticketId]=PHOTOS[ticketId].length;
     hideLoader(); openDet(ticketId); showToast('ลบรูปแล้ว');
   }catch(e){ hideLoader(); if(!handleAuthError(e)) showToast('ลบไม่สำเร็จ: '+e.message); }
 }
@@ -2520,6 +2571,7 @@ async function removeTicketPhoto(ticketId, fileId){
 // แสดงรูปในหน้ารายละเอียด
 function renderTicketPhotos(t){
   const list=PHOTOS[t.id]||[];
+  if (PHOTOS[t.id]===undefined && PHOTO_COUNTS[t.id]) return '<div style="font-size:12px;font-weight:600;color:var(--tx3);margin:14px 0 8px">รูปภาพประกอบ</div><div style="font-size:12px;color:var(--tx3);margin-bottom:8px"><i class="ti ti-loader-2"></i> กำลังโหลดรูป '+PHOTO_COUNTS[t.id]+' รูป…</div>';
   const groups=[
     {k:'report', label:'รูปจากผู้แจ้ง',  icon:'ti-camera'},
     {k:'before', label:'ก่อนซ่อม',       icon:'ti-photo'},
@@ -2623,7 +2675,6 @@ async function saveEdit(id){
   Object.assign(t, fields);
   const entry={status:t.status,date:now(),note:`วิศวกรแก้ไขข้อมูลใบแจ้งซ่อม`,by:cu.name};
   if(!t.history)t.history=[]; t.history.push(entry);
-  showLoader('กำลังบันทึก...');
   await syncUpdate(id, fields, entry);
   hideLoader(); cm('editMd'); rp();
   showToast('บันทึกการแก้ไขแล้ว');
@@ -2636,7 +2687,6 @@ async function cancelTicket(id){
   t.status='cancelled';
   const entry={status:'cancelled',date:now(),note:'ยกเลิกใบแจ้ง: '+(reason||'-'),by:cu.name};
   if(!t.history)t.history=[]; t.history.push(entry);
-  showLoader('กำลังบันทึก...');
   await syncUpdate(id,{status:'cancelled'},entry);
   hideLoader(); cm('detMd'); updApvCnt(); rp();
   showToast('ยกเลิกใบแจ้งซ่อมแล้ว');
@@ -2766,7 +2816,8 @@ function openDet(id) {
         <div style="font-size:11px;color:var(--tx3);margin-top:2px">${fd(h.date)} — ${h.by}</div>
       </div>
     </div>`;}).join('')}`;
-  document.getElementById('detMd').style.display='flex';
+  const _md=document.getElementById('detMd'); _md.dataset.tid=id; _md.style.display='flex';
+  ensurePhotos(id);
 }
 
 // ════════════════════════ INIT ════════════════════════
@@ -2825,6 +2876,7 @@ function applyQrParams(){
     loadAll().then(()=>{ rp(); applyQrParams(); });
   }
 })();
+updSyncBadge(); setTimeout(flushQ, 1500);   // มีงานค้างส่งจากครั้งก่อน → ส่งต่อให้อัตโนมัติ
 </script>
 </body>
 </html>
