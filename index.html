@@ -556,6 +556,7 @@ function applyConfig(cfg){
     CLOSED_STATUS = cfg.statuses.filter(s=>s.closed).map(s=>s.id);
   }
   if (cfg.categories && cfg.categories.length){
+    cfg.categories.forEach(c=>{ c.name=String(c.name||'').trim(); });   // v12.1: กันช่องว่างท้ายชื่อประเภท (ทำให้กติกาวิ่งงาน/SLA ไม่ตรง)
     CATS = cfg.categories.filter(c=>!c.hidden).map(c=>c.name);
     SLA = {}; cfg.categories.forEach(c=>{ SLA[c.name]=Number(c.sla)||14; });
   }
@@ -601,7 +602,7 @@ function applyBundle(d){
 let ROUTING = [];     // ข้อ 5 [{category,autoAssign,approverRoles:[]}]
 let INVENTORY = [];   // ข้อ 3 [{id,name,unit,stock,hidden}]
 let FLAGS = { inventory:false };  // ธงเปิด/ปิดฟีเจอร์
-function routeOf(cat){ return ROUTING.find(r=>r.category===cat) || null; }
+function routeOf(cat){ const k=String(cat||'').trim(); return ROUTING.find(r=>String(r.category||'').trim()===k) || null; }
 
 // ─── บทบาท/สิทธิ์ (ข้อ 4) ───
 let ROLES = [];        // [{role,label,isEngineer,caps:[]}]
@@ -687,7 +688,32 @@ function updSyncBadge(){
     el.style.cssText='position:fixed;right:14px;bottom:14px;z-index:650;background:var(--surf);border:.5px solid var(--bd2);box-shadow:var(--sh2);border-radius:20px;padding:6px 12px;font-size:12px;color:var(--tx2);display:none';
     document.body.appendChild(el); }
   el.style.display = SYNC_Q.length ? 'block' : 'none';
-  el.innerHTML = '<i class="ti ti-cloud-upload" style="vertical-align:-2px"></i> กำลังบันทึก '+SYNC_Q.length+' รายการ…';
+  el.style.cursor='pointer'; el.onclick=openSyncPanel;
+  const bad=SYNC_Q.some(j=>j.err);
+  el.style.borderColor = bad ? '#e35b5b' : '';
+  el.innerHTML = (bad?'⚠️ ส่งไม่สำเร็จ ':'<i class="ti ti-cloud-upload" style="vertical-align:-2px"></i> กำลังบันทึก ')+SYNC_Q.length+' รายการ — กดดู';
+}
+// v12.1: ดูงานที่ค้างส่ง + สาเหตุ / ส่งใหม่ / เอาออกจากคิว
+function openSyncPanel(){
+  const rows=SYNC_Q.map((j,i)=>{
+    const id=j.op==='add'?j.ticket.id:j.id;
+    const what=j.op==='add'?'แจ้งซ่อมใหม่':('อัปเดต '+Object.keys(j.fields||{}).join(', '));
+    return `<div style="border:.5px solid var(--bd);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12.5px">
+      <div><span class="mono">${escHtml(id)}</span> · ${escHtml(what)}</div>
+      <div style="color:${j.err?'var(--red-tx)':'var(--tx3)'};margin-top:3px">${j.err?'ผิดพลาด: '+escHtml(j.err):'รอส่ง'}${j.tries?` · ลองแล้ว ${j.tries} ครั้ง`:''}</div>
+      <button class="btn btn-sm btn-red" style="margin-top:6px" onclick="syncDrop(${i})">เอาออกจากคิว</button>
+    </div>`;}).join('')||'<div class="empty-sub">ไม่มีงานค้างส่ง</div>';
+  document.getElementById('dueContent').innerHTML=`<div class="modal-title">งานที่ยังไม่ถึงเซิร์ฟเวอร์ <button class="mc" onclick="cm('dueMd')">✕</button></div>
+    <div style="font-size:12px;color:var(--tx3);margin-bottom:10px">ข้อมูลเหล่านี้อยู่ในเครื่องนี้เท่านั้น คนอื่นยังไม่เห็น ระบบจะลองส่งใหม่อัตโนมัติ</div>
+    ${rows}<button class="btn btn-p" style="width:100%" onclick="flushing=false;flushQ();cm('dueMd')">ลองส่งใหม่ตอนนี้</button>`;
+  document.getElementById('dueMd').style.display='flex';
+}
+function syncDrop(i){
+  const j=SYNC_Q[i]; if(!j) return;
+  if(!confirm('เอารายการนี้ออกจากคิว? ข้อมูลที่ยังไม่ถึงเซิร์ฟเวอร์จะหายไป')) return;
+  SYNC_Q.splice(i,1); qSave();
+  if(j.op==='add'){ DB.tickets=DB.tickets.filter(t=>t.id!==j.ticket.id); saveLocal(); }
+  openSyncPanel(); rp();
 }
 async function syncAdd(ticket) {
   saveLocal();
@@ -726,6 +752,7 @@ async function flushQ(){
         }
         SYNC_Q.shift(); qSave();
       }catch(e){
+        j.err=String(e.message||e); j.tries=(j.tries||0)+1; qSave();
         if (handleAuthError(e)) break;                                   // รอล็อกอินใหม่แล้วค่อยส่งต่อ
         if (/not found/i.test(e.message||'')){ SYNC_Q.shift(); qSave(); showToast('⚠ '+e.message,3000); continue; }
         showToast('⚠ บันทึกยังไม่สำเร็จ — ระบบจะลองใหม่อัตโนมัติ', 2500);
@@ -737,7 +764,7 @@ async function flushQ(){
 // นำงานที่ยังส่งไม่สำเร็จมาทับข้อมูลจากเซิร์ฟเวอร์ (กันหน้าจอย้อนกลับ)
 function replayQ(){
   SYNC_Q.forEach(j=>{
-    if (j.op==='add'){ if(!DB.tickets.find(t=>t.id===j.ticket.id)) DB.tickets.push(j.ticket); }
+    if (j.op==='add'){ const ex=DB.tickets.find(t=>t.id===j.ticket.id); if(!ex){ DB.tickets.push(j.ticket); j.ticket._local=true; } }
     else { const t=DB.tickets.find(x=>x.id===j.id); if(t){ Object.assign(t, j.fields); if(j.entry && !(t.history||[]).some(h=>h.date===j.entry.date&&h.note===j.entry.note)) (t.history=t.history||[]).push(j.entry); } }
   });
 }
@@ -765,7 +792,7 @@ const STATUS_FALLBACK={pending_approval:'รอวิศวกรอนุมั
 function getSI(id) { return STATUSES.find(s=>s.id===id) || {id,label:STATUS_FALLBACK[id]||id,cls:'b-gray'}; }
 function getBI(id) { return BUILDINGS.find(b=>b.id===id)||BUILDINGS[0]; }
 function elapsed(iso) { return Math.floor((Date.now()-new Date(iso))/86400000); }
-function getSLA(cat) { return SLA[cat]||14; }
+function getSLA(cat) { return SLA[String(cat||'').trim()]||14; }
 // จำนวนวันที่งานถูกพัก (ส่งประกัน/ผู้รับเหมา) — คำนวณจากช่วงเวลาในประวัติ
 function pausedDays(t){
   const h=(t.history||[]).slice().sort((a,b)=>new Date(a.date)-new Date(b.date));
@@ -870,7 +897,8 @@ function suggestAssignees(cat) {
     .map(x=>x.u);
   // ข้อ 5: ถ้ามีกติกาวิ่งงานตามประเภท ให้ช่างที่กำหนดขึ้นเป็นอันดับแรก (ออโต้ แก้ไขได้)
   const rule = routeOf(cat);
-  if(rule && rule.autoAssign && USERS[rule.autoAssign]) list = [rule.autoAssign, ...list.filter(u=>u!==rule.autoAssign)];
+  const au = rule && rule.autoAssign ? Object.keys(USERS).find(u=>u.toLowerCase()===String(rule.autoAssign).trim().toLowerCase()) : null;
+  if(au) list = [au, ...list.filter(u=>u!==au)];
   return list;
 }
 // ข้อ 5: ผู้ใช้ปัจจุบันมีสิทธิ์อนุมัติใบประเภทนี้ไหม (ตามกติกา approverRoles)
@@ -1507,6 +1535,7 @@ function pgApprove() {
           <div style="flex:1">
             <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:5px">
               <span class="mono">${t.id}</span><span class="badge ${pCls}">${pLbl}</span>
+              ${t._local?'<span class="badge b-red nodot" style="cursor:pointer" onclick="openSyncPanel()">⚠️ ยังไม่ถึงเซิร์ฟเวอร์ — กดดู</span>':''}
             </div>
             <div style="font-weight:600;margin-bottom:3px">${b.icon} ${b.name} — ${t.room}</div>
             <div style="font-size:12px;color:var(--tx2)">${t.category} | ผู้แจ้ง: ${t.name} (${t.dept})</div>
