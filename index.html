@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- ระบบแจ้งซ่อมออนไลน์ คณะการแพทย์แผนไทย — หน้าเว็บ v14.1 (2026-10-21) · ต้องใช้คู่กับ Code.gs v14 -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -431,7 +432,7 @@ textarea{resize:vertical;min-height:76px}
 
 <!-- NAV -->
 <nav class="nav">
-  <div class="nav-logo"><b>คณะการแพทย์แผนไทย</b><small>ระบบแจ้งซ่อมออนไลน์</small></div>
+  <div class="nav-logo"><b>คณะการแพทย์แผนไทย</b><small>ระบบแจ้งซ่อมออนไลน์ <span id="verTag" style="display:inline-block;margin-left:4px;padding:0 6px;border-radius:8px;background:rgba(255,255,255,.18);color:#fff;font-size:10px;font-weight:600;line-height:16px;vertical-align:1px">v14.1</span></small></div>
   <div class="nav-tabs" id="navTabs">
     <button class="ntab on" onclick="gp('report')">แจ้งซ่อม</button>
     <button class="ntab" onclick="gp('status')">ติดตามงาน</button>
@@ -491,6 +492,11 @@ textarea{resize:vertical;min-height:76px}
 // CONFIG — แก้ GAS_URL หลัง Deploy Apps Script
 // ═══════════════════════════════════════════
 // URL ของ Google Apps Script ฝังไว้ในโปรแกรม (แก้ได้ที่หน้า ⚙ ตั้งค่า)
+// ─── เวอร์ชันโปรแกรม (อัปเดตทุกครั้งที่ออกเวอร์ชันใหม่ — ต้องตรงกับ Code.gs) ───
+const APP_VERSION = 'v14.1';
+const SERVER_REQUIRED = 'v14';   // เวอร์ชัน Code.gs ที่หน้าเว็บนี้ต้องใช้
+const APP_BUILD   = '2026-10-21';
+let SERVER_VERSION = '';   // อ่านจาก Code.gs ตอนเปิดเว็บ
 const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbyOsSEC8KI1bmWJpWoCXC18XEWRqNTyzN4sRQwc4UV_GAWOUlvnzTzaUCwVId-FmaY2/exec';
 // ถ้า URL ที่ฝังมาใหม่ไม่ตรงกับที่เคยบันทึกไว้ ให้ยึดตัวใหม่ (กันเครื่องเก่าค้าง URL เดิม)
 (function(){
@@ -2382,7 +2388,9 @@ function pgConfig() {
       <div style="font-size:13px;color:var(--tx2);line-height:2">
         งานในระบบ: <b>${DB.tickets.length}</b><br>
         ข้อมูลใน localStorage: <b>${JSON.parse(localStorage.getItem('vr3_t')||'[]').length}</b> รายการ<br>
-        URL ปัจจุบัน: <span class="mono" style="font-size:11px">${GAS_URL||'ยังไม่ได้ตั้งค่า'}</span>
+        URL ปัจจุบัน: <span class="mono" style="font-size:11px">${GAS_URL||'ยังไม่ได้ตั้งค่า'}</span><br>
+        เวอร์ชันหน้าเว็บ: <b>${APP_VERSION}</b> (${APP_BUILD}) · เวอร์ชันเซิร์ฟเวอร์ (Code.gs): <b>${SERVER_VERSION||'—'}</b>
+        ${SERVER_VERSION&&SERVER_VERSION!==SERVER_REQUIRED?`<div class="notice n-amber" style="margin:6px 0 0;font-size:12px">เวอร์ชันไม่ตรงกัน — ให้ Deploy Code.gs ${SERVER_REQUIRED} (Edit → New version)</div>`:''}
       </div>
       <hr class="divider">
       <button class="btn btn-sm btn-red" onclick="if(confirm('ล้างข้อมูลทั้งหมดใน localStorage?')){localStorage.removeItem('vr3_t');DB.tickets=[];rp();}">🗑 ล้างข้อมูล localStorage</button>
@@ -3417,6 +3425,19 @@ function applyQrParams(){
 }
 
 // เปิดเว็บ: ถ้ามีแคช แสดงทันที (instant) แล้วค่อยดึงใหม่เบื้องหลัง — ถ้าไม่มีแคชค่อยโหลดแบบปกติ
+// เช็กเวอร์ชันเซิร์ฟเวอร์ (GET /exec) — ถ้าไม่ตรง แจ้งวิศวกรที่ป้ายเวอร์ชัน
+async function checkServerVersion(){
+  try{
+    if(!GAS_URL) return;
+    const r=await fetch(GAS_URL); const j=await r.json();
+    SERVER_VERSION=(j&&j.data&&j.data.version)||'';
+    const tag=document.getElementById('verTag');
+    const bad=SERVER_VERSION&&SERVER_VERSION!==SERVER_REQUIRED;
+    if(tag){ tag.textContent=APP_VERSION+(bad?' ⚠':''); if(bad) tag.style.background='rgba(227,91,91,.75)';
+      tag.title=`หน้าเว็บ ${APP_VERSION} · เซิร์ฟเวอร์ ${SERVER_VERSION||'?'}${bad?' — ต้อง Deploy Code.gs '+SERVER_REQUIRED:''}`; }
+  }catch(e){}
+}
+setTimeout(checkServerVersion,2500);
 (function boot(){
   const cached=readCache();
   if(cached){
