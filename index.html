@@ -561,6 +561,7 @@ function applyConfig(cfg){
     SLA = {}; cfg.categories.forEach(c=>{ SLA[c.name]=Number(c.sla)||14; });
   }
   HOLIDAYS = (cfg.holidays||[]).map(h=>h.date).filter(Boolean);
+  applyCarbonCfg(cfg.carbon);
   FLOORS = (cfg.floors||[]).filter(f=>!f.hidden);
 }
 // ชั้นของอาคารที่เลือก (ไว้ทำ dropdown ตาม)
@@ -583,8 +584,98 @@ async function api(action, body={}) {
   return json.data;
 }
 
+// ═══ v13: คาร์บอนที่ประหยัดได้ (คำนวณอัตโนมัติจากค่ามาตรฐาน) ═══
+// EF: ไฟฟ้า 0.4750 kgCO2e/kWh (อบก. มีผล 1 ม.ค. 2569) · กระดาษ A4 2.1020 kgCO2e/kg (อบก.) · R-32 GWP 677 (IPCC AR5)
+// ค่า kWh / ลบ.ม. / คาร์บอนของใหม่ ต่อใบงาน = ค่าตั้งต้นโดยประมาณ แอดมินแก้ได้ที่หน้าตั้งค่า
+const CARBON_DEFAULT={
+  efElec:0.4750, efPaper:2.1020, efWater:0, sheetsPerTicket:2, gramsPerSheet:5,
+  refrigKg:0.5, refrigGwp:677, treeKgYear:9.5,
+  cats:{
+    'ระบบไฟฟ้า':{kwh:10,pmKwh:10,water:0,replaceKg:5},
+    'ระบบประปา/สุขาภิบาล':{kwh:0,pmKwh:0,water:3,replaceKg:10},
+    'ระบบปรับอากาศ':{kwh:30,pmKwh:50,water:0,replaceKg:200},
+    'งานโครงสร้างอาคาร':{kwh:0,pmKwh:0,water:0,replaceKg:0},
+    'ระบบสื่อสาร/เครือข่าย IT':{kwh:0,pmKwh:0,water:0,replaceKg:150},
+    'งานครุภัณฑ์/เฟอร์นิเจอร์':{kwh:0,pmKwh:0,water:0,replaceKg:30},
+    'แก้ไขปัญหาโปรแกรมในคอมพิวเตอร์':{kwh:0,pmKwh:0,water:0,replaceKg:150},
+    'อื่นๆ':{kwh:0,pmKwh:0,water:0,replaceKg:0},
+  }
+};
+let CARBON=JSON.parse(JSON.stringify(CARBON_DEFAULT));
+function applyCarbonCfg(c){
+  CARBON=JSON.parse(JSON.stringify(CARBON_DEFAULT));
+  if(c&&typeof c==='object'){ Object.keys(c).forEach(k=>{ if(k!=='cats') CARBON[k]=c[k]; });
+    if(c.cats) Object.keys(c.cats).forEach(n=>{ CARBON.cats[String(n).trim()]=Object.assign({kwh:0,pmKwh:0,water:0,replaceKg:0},c.cats[n]); }); }
+}
+function carbonCat(cat){ return CARBON.cats[String(cat||'').trim()]||{kwh:0,pmKwh:0,water:0,replaceKg:0}; }
+// คาร์บอนที่ประหยัดของใบงาน (เฉพาะใบที่เสร็จ) → {paper,elec,water,refrig,replace,total,kwh,m3}
+function carbonOf(t){
+  const z={paper:0,elec:0,water:0,refrig:0,replace:0,total:0,kwh:0,m3:0};
+  if(!t||t.status!=='done') return z;
+  const c=carbonCat(t.category), C=CARBON, fl=t.carbonFlags||[];
+  if(t.source!=='PM') z.paper=(+C.sheetsPerTicket||0)*(+C.gramsPerSheet||0)/1000*(+C.efPaper||0);
+  z.kwh=+(t.source==='PM'?c.pmKwh:c.kwh)||0; z.elec=z.kwh*(+C.efElec||0);
+  z.m3=+c.water||0; z.water=z.m3*(+C.efWater||0);
+  if(fl.includes('refrig')) z.refrig=(+C.refrigKg||0)*(+C.refrigGwp||0);
+  if(fl.includes('replace')) z.replace=+c.replaceKg||0;
+  z.total=z.paper+z.elec+z.water+z.refrig+z.replace;
+  return z;
+}
+function fmtKg(x){ return x>=100?Math.round(x).toLocaleString():x>=10?x.toFixed(1):x.toFixed(2); }
+function carbonBadge(t){ const c=carbonOf(t); return c.total>0?`<span class="badge b-green nodot" title="${escAttr(carbonTip(c))}">🌱 ${fmtKg(c.total)} kgCO2e</span>`:''; }
+function carbonTip(c){ return [c.paper&&`กระดาษ ${fmtKg(c.paper)}`,c.elec&&`ไฟฟ้า ${c.kwh} kWh = ${fmtKg(c.elec)}`,c.m3&&`น้ำ ${c.m3} ลบ.ม.${c.water?' = '+fmtKg(c.water):''}`,c.refrig&&`น้ำยาแอร์ ${fmtKg(c.refrig)}`,c.replace&&`ซ่อมแทนซื้อใหม่ ${fmtKg(c.replace)}`].filter(Boolean).join(' · ')+' kgCO2e'; }
+// สรุปรายเดือน (ตามเดือนที่ปิดงาน) ย้อนหลัง n เดือน
+function carbonMonthly(n){
+  const now=new Date(), out=[];
+  for(let i=n-1;i>=0;i--){ const d=new Date(now.getFullYear(),now.getMonth()-i,1); out.push({y:d.getFullYear(),m:d.getMonth(),paper:0,elec:0,water:0,refrig:0,replace:0,total:0,kwh:0,m3:0,n:0}); }
+  DB.tickets.forEach(t=>{
+    if(t.status!=='done') return; const dt=doneAtOf(t); if(!dt) return;
+    const b=out.find(o=>o.y===dt.getFullYear()&&o.m===dt.getMonth()); if(!b) return;
+    const c=carbonOf(t); ['paper','elec','water','refrig','replace','total','kwh','m3'].forEach(k=>b[k]+=c[k]); b.n++;
+  });
+  return out;
+}
+function carbonCard(){
+  const TH=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const data=carbonMonthly(12), cur=data[11], prev=data[10];
+  const yearTotal=data.reduce((a,b)=>a+b.total,0);
+  const diff=prev.total?Math.round((cur.total-prev.total)/prev.total*100):null;
+  const COL={elec:'#e0a94b',water:'#3ba7d6',refrig:'#9b7be0',replace:'#5cc93f',paper:'#a8a29e'};
+  const LBL={elec:'ไฟฟ้า',water:'น้ำ',refrig:'น้ำยาแอร์',replace:'ซ่อมแทนซื้อใหม่',paper:'กระดาษ'};
+  const maxV=Math.max(1,...data.map(d=>d.total));
+  const bars=data.map(d=>{
+    const segs=Object.keys(COL).map(k=>d[k]>0?`<div title="${LBL[k]} ${fmtKg(d[k])} kgCO2e" style="height:${d[k]/maxV*100}%;background:${COL[k]}"></div>`:'').join('');
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0">
+      <div style="font-size:10px;color:var(--tx3)">${d.total?fmtKg(d.total):''}</div>
+      <div style="height:120px;width:70%;max-width:28px;display:flex;flex-direction:column-reverse;border-radius:4px;overflow:hidden;background:var(--surf2)">${segs}</div>
+      <div style="font-size:10px;color:var(--tx3);white-space:nowrap">${TH[d.m]}</div></div>`;
+  }).join('');
+  const trees=CARBON.treeKgYear?Math.round(cur.total/(+CARBON.treeKgYear)*12):0;
+  return `<div class="card" style="margin-bottom:1rem">
+    <div class="ctitle" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span>🌱 คาร์บอนที่ประหยัดได้ (รายเดือน)</span>
+      <span style="display:flex;gap:10px;flex-wrap:wrap;font-size:11.5px;font-weight:400">${Object.keys(COL).map(k=>`<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:3px;background:${COL[k]};display:inline-block"></span>${LBL[k]}</span>`).join('')}</span>
+    </div>
+    <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px">
+      <div><div style="font-size:12px;color:var(--tx3)">เดือนนี้ (${TH[cur.m]})</div><div style="font-size:28px;font-weight:700;color:var(--green-tx,#2f7d32)">${fmtKg(cur.total)} <span style="font-size:13px;font-weight:500">kgCO2e</span></div>
+        <div style="font-size:12px;color:var(--tx3)">${diff===null?'':(diff>=0?'▲ ':'▼ ')+Math.abs(diff)+'% จากเดือนก่อน · '}${cur.n} งาน${trees?` · เท่ากับต้นไม้ ~${trees} ต้นดูดซับใน 1 เดือน`:''}</div></div>
+      <div style="font-size:12px;color:var(--tx2);line-height:1.7">ไฟฟ้า ${Math.round(cur.kwh)} kWh · น้ำ ${Math.round(cur.m3)} ลบ.ม.<br>รวม 12 เดือน <b>${fmtKg(yearTotal)}</b> kgCO2e</div>
+    </div>
+    <div style="display:flex;gap:4px;align-items:flex-end">${bars}</div>
+    <div style="font-size:10.5px;color:var(--tx3);margin-top:8px">คำนวณอัตโนมัติจากใบที่ "เสร็จเรียบร้อย" ตามเดือนที่ปิดงาน · EF ไฟฟ้า ${CARBON.efElec} kgCO2e/kWh, กระดาษ ${CARBON.efPaper} kgCO2e/kg (อบก.)${CARBON.efWater?'':' · ยังไม่ได้ตั้งค่า EF น้ำ (แสดงเป็น ลบ.ม.)'} · ค่ามาตรฐานต่อใบเป็นค่าประมาณ แก้ได้ที่หน้าตั้งค่า</div>
+  </div>`;
+}
+
+// v12.1: ใบที่รหัสซ้ำในชีต (เกิดจากการส่งซ้ำตอนเน็ตช้า) → แสดงใบเดียว ใช้แถวที่สถานะ "คืบหน้าที่สุด"
+function dedupeTickets(arr){
+  const m=new Map();
+  const rank=t=>t.status==='pending_approval'?0:1;
+  arr.forEach(t=>{ const o=m.get(t.id); if(!o || rank(t)>rank(o)) m.set(t.id,t); });
+  return [...m.values()];
+}
 // นำข้อมูลชุดหนึ่ง (จาก bootstrap หรือจากแคช) มาใส่ใน state
 function applyBundle(d){
+  if(d.tickets){ d.tickets = dedupeTickets(d.tickets); }
   if(d.tickets){ DB.tickets = d.tickets; DB.history = d.history||{}; DB.tickets.forEach(t=>{ t.history = DB.history[t.id] || t.history || []; if(!t.assignees) t.assignees=[]; }); }
   if(d.tickets) replayQ();
   if(d.config) applyConfig(d.config);
@@ -964,7 +1055,7 @@ function updAuthUI() {
   document.getElementById('lobtn').style.display=cu?'':'none';
   ['nt-approve','nt-manage','nt-pm','nt-cfg'].forEach(id=>document.getElementById(id).style.display='none');
   if (cu) {
-    b.style.display='inline-block'; b.textContent=cu.name;
+    b.style.display='inline-block'; b.textContent=cu.name+' 🔔'; b.style.cursor='pointer'; b.title='การแจ้งเตือนของฉัน'; b.onclick=openMyNotify;
     b.className='ubadge '+(cu.isEngineer?'ua':'ut');
     // แสดงเมนูตามสิทธิ์ของบทบาท (วิศวกรเห็นทุกเมนู)
     if(can('approve_ticket')||can('approve_purchase')) document.getElementById('nt-approve').style.display='';
@@ -1000,6 +1091,7 @@ function buildMobileMenu() {
     html+=`<button class="mnav-item ${curPage===it.p?'on':''}" onclick="mNav('${it.p}')"><i class="ti ${it.icon} mi"></i> ${it.label} ${badge}</button>`;
   });
   html+='<div class="mnav-sep"></div>';
+  if(cu) html+=`<button class="mnav-item" onclick="openMyNotify();toggleMenu()"><i class="ti ti-bell mi"></i> การแจ้งเตือนของฉัน</button>`;
   if(cu) html+=`<button class="mnav-item" onclick="doOut();toggleMenu()"><i class="ti ti-logout mi"></i> ออกจากระบบ</button>`;
   else   html+=`<button class="mnav-item" onclick="toggleMenu();oLogin()"><i class="ti ti-login mi"></i> เข้าสู่ระบบ</button>`;
   box.innerHTML=html;
@@ -1415,6 +1507,7 @@ function renderStatusList(tickets) {
             ${t.source==='PM'?'<span class="badge b-teal nodot">🛠 PM</span>':''}
             ${over?'<span class="badge b-red">เกิน SLA</span>':''}
             ${rateBadge(t)}
+            ${carbonBadge(t)}
           </div>
           <div style="font-weight:700;font-size:15.5px;line-height:1.35;margin-bottom:3px">${b.icon} ${escHtml(t.room)}</div>
           <div style="font-size:12px;color:var(--tx3);margin-bottom:6px">${b.name} · ${t.category}</div>
@@ -1764,7 +1857,7 @@ function openStatusUpdate(id) {
     </div>
     ${t.needsPurchase?`<div class="notice ${t.purchaseApprovedBy?'n-green':'n-warn'}" style="margin-bottom:1rem;font-size:12px"><i class="ti ti-shopping-cart ni"></i><div>${t.purchaseApprovedBy?'บริหารอนุมัติจัดซื้อแล้ว — เริ่มจัดซื้อได้':'งานนี้ต้องจัดซื้อ — ต้องให้บริหารอนุมัติก่อน (เลือก “รออนุมัติจัดซื้อ” เพื่อส่งให้บริหาร)'}</div></div>`:''}
     <div class="ff"><label>สถานะใหม่</label>
-      <select id="updSt">${avail.map(s=>`<option value="${s.id}" ${t.status===s.id?'selected':''}>${s.label}</option>`).join('')}</select>
+      <select id="updSt" onchange="document.getElementById('carbonFlagsBox').style.display=this.value==='done'?'block':'none'">${avail.map(s=>`<option value="${s.id}" ${t.status===s.id?'selected':''}>${s.label}</option>`).join('')}</select>
     </div>
     <div class="ff"><label>ค่าใช้จ่ายจริง (บาท)</label><input id="updCost" type="number" value="${t.actualCost||0}"></div>
     ${FLAGS.inventory&&(INVENTORY||[]).filter(x=>!x.hidden).length?`<div class="fsec">เบิกอุปกรณ์ (ตัดสต็อก)</div>
@@ -1772,6 +1865,11 @@ function openStatusUpdate(id) {
         <span style="flex:1;font-size:13px">${escAttr(it.name)} <span style="color:var(--tx3)">(เหลือ ${it.stock} ${escAttr(it.unit)})</span></span>
         <input type="number" min="0" max="${it.stock}" value="0" data-inv="${escAttr(it.id)}" style="width:72px">
       </div>`).join('')}</div>`:''}
+    <div id="carbonFlagsBox" style="display:${t.status==='done'?'block':'none'};background:var(--surf2);border-radius:8px;padding:.6rem .75rem;margin-bottom:.9rem;font-size:12.5px">
+      <div style="font-weight:600;margin-bottom:4px">🌱 ข้อมูลคาร์บอน (ถ้ามี)</div>
+      <label style="display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="cfRefrig" style="width:auto" ${(t.carbonFlags||[]).includes('refrig')?'checked':''}> ซ่อมรอยรั่วน้ำยาแอร์ (กันน้ำยารั่ว ~${CARBON.refrigKg} กก.)</label>
+      <label style="display:flex;gap:6px;align-items:center;cursor:pointer;margin-top:3px"><input type="checkbox" id="cfReplace" style="width:auto" ${(t.carbonFlags||[]).includes('replace')?'checked':''}> ซ่อมแทนการซื้อของใหม่</label>
+    </div>
     <div class="ff"><label>หมายเหตุ</label><textarea id="updNote" placeholder="รายละเอียดการดำเนินงาน..."></textarea></div>
     <button class="btn btn-p" style="width:100%" onclick="saveStatusUpdate('${id}')">บันทึก</button>`;
   document.getElementById('statusMd').style.display='flex';
@@ -1787,11 +1885,12 @@ async function saveStatusUpdate(id) {
     return;
   }
   t.status=ns; t.actualCost=cost;
-  if(ns==='done') t.completedAt=now();
+  let cflags=null;
+  if(ns==='done'){ t.completedAt=now(); cflags=[document.getElementById('cfRefrig')?.checked&&'refrig',document.getElementById('cfReplace')?.checked&&'replace'].filter(Boolean); t.carbonFlags=cflags; }
   const entry={status:ns,date:now(),note:note||'-',by:cu.name};
   if(!t.history)t.history=[];
   t.history.push(entry);
-  await syncUpdate(id,{status:ns,actualCost:cost,...(ns==='done'?{completedAt:t.completedAt}:{})},entry);
+  await syncUpdate(id,{status:ns,actualCost:cost,...(ns==='done'?{completedAt:t.completedAt,carbonFlags:cflags}:{})},entry);
   // ข้อ 3: เบิกอุปกรณ์ (ถ้าเปิดระบบและมีการกรอกจำนวน)
   if(FLAGS.inventory){
     const items=[...document.querySelectorAll('#wdBox input[data-inv]')].map(el=>({id:el.getAttribute('data-inv'),qty:Number(el.value)||0})).filter(x=>x.qty>0);
@@ -2178,6 +2277,7 @@ function pgDashboard() {
         </div>
       </div>
     </div>`:''}
+    ${pub?'':carbonCard()}
     ${monthlyTrendCard(tickets)}
     <div class="${pub?'':'g2'}" style="margin-bottom:1rem">
       ${pub?'':`<div class="card">
@@ -2304,6 +2404,7 @@ function renderUserManage(){
       <td><span class="av-chip" style="background:${(u.color||'#ccc')}22;color:${u.color||'#777'}">${u.initials||'?'}</span> <b>${escAttr(u.name||u.username)}</b></td>
       <td class="mono" style="font-size:12px">${escAttr(u.username)}</td>
       <td><span class="badge ${u.isEngineer?'b-teal':'b-gray'} nodot">${roleLabel(u.role)}</span></td>
+      <td style="white-space:nowrap;font-size:12px" title="ช่องทางแจ้งเตือน">${notifyIcons(u)}</td>
       <td style="text-align:center"><span class="badge ${act?'b-green':'b-red'} nodot">${act?'ใช้งาน':'ปิด'}</span></td>
       <td style="text-align:right;white-space:nowrap">
         <button class="btn btn-sm" onclick="openUserForm('${escAttr(u.username)}')"><i class="ti ti-edit"></i></button>
@@ -2319,7 +2420,7 @@ function renderUserManage(){
       <button class="btn btn-sm btn-accent" onclick="openUserForm()"><i class="ti ti-user-plus"></i> เพิ่มผู้ใช้</button>
     </div>
     <div style="overflow-x:auto"><table class="tbl" style="min-width:520px">
-      <thead><tr><th>ชื่อ</th><th>Username</th><th>บทบาท</th><th style="text-align:center">สถานะ</th><th></th></tr></thead>
+      <thead><tr><th>ชื่อ</th><th>Username</th><th>บทบาท</th><th>แจ้งเตือน</th><th style="text-align:center">สถานะ</th><th></th></tr></thead>
       <tbody>${uRows||'<tr><td colspan="5" style="text-align:center;color:var(--tx3);padding:14px">ยังไม่มีผู้ใช้</td></tr>'}</tbody>
     </table></div>
     <div id="userMsg" style="margin-top:.6rem"></div>
@@ -2368,6 +2469,66 @@ async function saveRoleMatrix(){
   }catch(e){ hideLoader(); showToast('บันทึกไม่สำเร็จ: '+e.message,3000); }
 }
 
+// ═══ v14: การแจ้งเตือนรายคน (LINE OA / อีเมล) ═══
+const NOTIFY_LBL={both:'LINE + อีเมล',line:'LINE',email:'อีเมล',none:'ไม่รับ'};
+const NOTIFY_EVT={new:'มีใบแจ้งซ่อมใหม่ (เฉพาะที่ตนเกี่ยวข้อง)',assigned:'ถูกมอบหมายงาน',purchase:'มีงานรออนุมัติจัดซื้อ (บริหาร)'};
+function notifyIcons(u){
+  if(u.notify==='none') return '<span class="badge b-gray nodot">ไม่รับ</span>';
+  const l=(u.notify!=='email')?(u.hasLine?'<span class="badge b-green nodot">LINE ✓</span>':'<span class="badge b-amber nodot" title="ยังไม่ผูก LINE">LINE —</span>'):'';
+  const e=(u.notify!=='line')?(u.hasEmail?'<span class="badge b-blue nodot">อีเมล ✓</span>':'<span class="badge b-amber nodot" title="ยังไม่ใส่อีเมล">อีเมล —</span>'):'';
+  return l+' '+e;
+}
+function notifyFormHtml(info,prefix){
+  return `<div class="ff"><label>อีเมลสำหรับรับแจ้งเตือน</label><input id="${prefix}Email" type="email" value="${escAttr(info.email||'')}" placeholder="name@psu.ac.th"></div>
+    <div class="ff"><label>รับแจ้งเตือนทาง</label><select id="${prefix}Ch">${Object.entries(NOTIFY_LBL).map(([k,l])=>`<option value="${k}" ${(info.notify||'both')===k?'selected':''}>${l}</option>`).join('')}</select>
+      <div style="font-size:11px;color:var(--tx3);margin-top:3px">ถ้าเลือก LINE แต่ส่งไม่ได้ (ยังไม่ผูก/เกินโควตาเดือนนี้) ระบบส่งทางอีเมลแทน</div></div>
+    <div class="ff"><label>แจ้งเมื่อ</label>${Object.entries(NOTIFY_EVT).map(([k,l])=>`<label style="display:flex;gap:6px;align-items:center;font-size:13px;cursor:pointer;margin:3px 0"><input type="checkbox" class="${prefix}Evt" value="${k}" style="width:auto" ${(info.events||Object.keys(NOTIFY_EVT)).includes(k)?'checked':''}> ${l}</label>`).join('')}</div>`;
+}
+function readNotifyForm(prefix){
+  return { email:(document.getElementById(prefix+'Email').value||'').trim(), notify:document.getElementById(prefix+'Ch').value,
+           events:[...document.querySelectorAll('.'+prefix+'Evt:checked')].map(x=>x.value) };
+}
+async function openMyNotify(extra){
+  if(!cu) return;
+  showLoader('กำลังโหลด...');
+  let info;
+  try{ info=await api('myNotify',{token:AUTH_TOKEN,fields:extra||null}); }
+  catch(e){ hideLoader(); if(!handleAuthError(e)) showToast(/Unknown action/.test(e.message)?'ต้อง Deploy Code.gs เวอร์ชัน v14 ก่อน':'โหลดไม่สำเร็จ: '+e.message,3500); return; }
+  hideLoader();
+  const ln=info.line||{};
+  document.getElementById('userContent').innerHTML=`
+    <div class="modal-title">🔔 การแจ้งเตือนของฉัน <button class="mc" onclick="cm('userMd')"><i class="ti ti-x"></i></button></div>
+    ${notifyFormHtml(info,'my')}
+    <div style="background:var(--surf2);border-radius:8px;padding:.7rem .8rem;margin-bottom:.9rem;font-size:13px">
+      <div style="font-weight:600;margin-bottom:4px">LINE: ${info.hasLine?'<span class="badge b-green nodot">ผูกแล้ว ✓</span>':'<span class="badge b-amber nodot">ยังไม่ผูก</span>'}</div>
+      ${!ln.ready?'<div style="color:var(--tx3);font-size:12px">ผู้ดูแลยังไม่ได้ตั้งค่า LINE OA ในระบบ</div>':
+        info.linkCode?`<div>1) เพิ่มเพื่อน LINE OA ของระบบแจ้งซ่อม<br>2) พิมพ์รหัสนี้ส่งในแชท OA (ใช้ได้ 15 นาที)</div><div style="font-size:30px;font-weight:700;letter-spacing:6px;text-align:center;margin:8px 0" class="mono">${info.linkCode}</div>`:
+        `<button class="btn btn-sm" onclick="openMyNotify({newCode:true})">${info.hasLine?'ผูกใหม่ (เปลี่ยนบัญชี LINE)':'ขอรหัสผูก LINE'}</button>
+         ${info.hasLine?`<button class="btn btn-sm btn-red" onclick="if(confirm('ยกเลิกการผูก LINE?'))openMyNotify({unlinkLine:true})">ยกเลิกการผูก</button>`:''}`}
+      ${cu.isEngineer&&ln.ready?`<div style="font-size:11.5px;color:var(--tx3);margin-top:6px">โควตา LINE เดือนนี้: ${ln.used} / ${ln.limit} ข้อความ</div>`:''}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-accent" style="flex:1" onclick="saveMyNotify()"><i class="ti ti-device-floppy"></i> บันทึก</button>
+      <button class="btn" onclick="testMyNotify()">ส่งทดสอบ</button>
+    </div>`;
+  document.getElementById('userMd').style.display='flex';
+}
+async function saveMyNotify(){
+  const f=readNotifyForm('my');
+  showLoader('กำลังบันทึก...');
+  try{ await api('myNotify',{token:AUTH_TOKEN,fields:f}); hideLoader(); showToast('บันทึกการแจ้งเตือนแล้ว'); cm('userMd'); loadAll({silent:true}).then(rp); }
+  catch(e){ hideLoader(); showToast('ไม่สำเร็จ: '+e.message,3000); }
+}
+async function testMyNotify(){
+  await saveMyNotify();
+  showLoader('กำลังส่งทดสอบ...');
+  try{ const r=await api('testNotify',{token:AUTH_TOKEN}); hideLoader();
+    showToast(r.line||r.email?`ส่งแล้ว: ${[r.line&&'LINE',r.email&&'อีเมล'].filter(Boolean).join(' + ')}`:'ส่งไม่ได้ — ตรวจว่าผูก LINE หรือใส่อีเมลแล้ว',3500); }
+  catch(e){ hideLoader(); showToast('ไม่สำเร็จ: '+e.message,3000); }
+}
+let NOTIFY_ALL=null;
+async function loadNotifyAll(){ try{ NOTIFY_ALL=await api('getNotifyAll',{token:AUTH_TOKEN}); }catch(e){ NOTIFY_ALL=null; } return NOTIFY_ALL; }
+
 function openUserForm(username){
   const isEdit=!!username;
   const u=isEdit?(usersForManage().find(x=>x.username===username)||{}):{};
@@ -2387,9 +2548,14 @@ function openUserForm(username){
       <div class="ff" style="margin:0"><label>สีประจำตัว</label><input id="uColor" type="color" value="${escAttr(u.color||'#9fb4cc')}" style="height:38px;padding:3px"></div>
       <div class="ff" style="margin:0"><label>อักษรย่อ</label><input id="uInit" value="${escAttr(u.initials||'')}" maxlength="3" placeholder="เช่น ธร"></div>
     </div>
+    <div style="font-weight:600;font-size:13px;margin:.9rem 0 .4rem">🔔 การแจ้งเตือน</div>
+    <div id="uNotifyBox"><div style="font-size:12px;color:var(--tx3)">กำลังโหลด...</div></div>
     <div id="uErr" style="color:var(--red-tx);font-size:12px;margin:.5rem 0;display:none"></div>
     <button class="btn btn-accent" style="width:100%;margin-top:.5rem" onclick="saveUser(${isEdit?`'${escAttr(username)}'`:'null'})"><i class="ti ti-device-floppy"></i> บันทึก</button>`;
   document.getElementById('userMd').style.display='flex';
+  (async()=>{ const all=isEdit?await loadNotifyAll():null; const box=document.getElementById('uNotifyBox'); if(!box) return;
+    const info=(all&&all.users&&all.users[username])||{notify:'both'};
+    box.innerHTML=notifyFormHtml(info,'u')+(isEdit?`<div style="font-size:12px;color:var(--tx3)">LINE: ${info.hasLine?'ผูกแล้ว ✓ (ผู้ใช้ผูกเองที่เมนูชื่อผู้ใช้ → การแจ้งเตือนของฉัน)':'ยังไม่ผูก — ให้ผู้ใช้ผูกเองที่เมนูชื่อผู้ใช้มุมขวาบน'}</div>`:''); })();
 }
 async function saveUser(username){
   const isEdit=!!username;
@@ -2398,12 +2564,15 @@ async function saveUser(username){
   const base={ name:v('uName'), role:v('uRole'), specialty:spec, color:v('uColor'), initials:v('uInit') };
   showLoader('กำลังบันทึก...');
   try{
+    const nf=document.getElementById('uEmail')?readNotifyForm('u'):null;
     if(isEdit){
       await api('updateUser',{username,fields:base,token:AUTH_TOKEN});
+      if(nf) try{ await api('setUserNotify',{username,fields:nf,token:AUTH_TOKEN}); }catch(e2){ if(!/Unknown action/.test(e2.message)) throw e2; }
     }else{
       const uname=v('uUser'), pass=document.getElementById('uPass').value;
       if(!uname||!pass){ hideLoader(); err.style.display='block'; err.textContent='กรุณากรอก Username และรหัสผ่าน'; return; }
       await api('addUser',{user:{...base,username:uname,password:pass},token:AUTH_TOKEN});
+      if(nf) try{ await api('setUserNotify',{username:uname,fields:nf,token:AUTH_TOKEN}); }catch(e2){ if(!/Unknown action/.test(e2.message)) throw e2; }
     }
     await loadAll({silent:true});
     hideLoader(); cm('userMd'); rp(); showToast(isEdit?'บันทึกผู้ใช้แล้ว':'เพิ่มผู้ใช้แล้ว');
@@ -2584,6 +2753,7 @@ function renderAdminManage(){
     <div style="overflow-x:auto"><table class="tbl xls"><thead><tr><th>วันที่</th><th>ชื่อวันหยุด</th><th>ลบ</th></tr></thead><tbody>${hRows}</tbody></table></div>
     <div style="font-size:11px;color:var(--tx3);margin-top:6px">* ระบบจะข้ามเสาร์–อาทิตย์ให้อยู่แล้ว ใส่เฉพาะวันหยุดนักขัตฤกษ์/วันหยุดพิเศษ · รูปแบบวันที่ ปปปป-ดด-วว (ค.ศ.)</div>
   </div>
+  ${carbonCfgCard()}
   <div class="card" style="margin-bottom:1rem">
     <div class="ctitle"><span><i class="ti ti-mail" style="color:var(--accent)"></i> ลิงก์เว็บระบบ (ใช้ในอีเมลขอประเมินความพึงพอใจ)</span></div>
     <input value="${escAttr(ensureDraft().siteUrl||'')}" placeholder="${escAttr(location.origin+location.pathname)}" onchange="ensureDraft().siteUrl=this.value.trim()">
@@ -2632,6 +2802,27 @@ function cfgAddFloor(){
 
 // working copy สำหรับแก้ก่อนบันทึก
 let cfgDraft=null;
+// v13: ตั้งค่าคาร์บอน
+function cbSet(path,val){ const c=ensureDraft().carbon; if(path.length===1) c[path[0]]=Number(val)||0; else { c.cats[path[1]]=c.cats[path[1]]||{kwh:0,pmKwh:0,water:0,replaceKg:0}; c.cats[path[1]][path[2]]=Number(val)||0; } }
+function carbonCfgCard(){
+  const c=ensureDraft().carbon;
+  const num=(path,val,w)=>`<input type="number" step="any" min="0" value="${val}" style="width:${w||80}px" onchange='cbSet(${JSON.stringify(path)},this.value)'>`;
+  const rows=CATS.map(n=>{ const x=c.cats[n]||{kwh:0,pmKwh:0,water:0,replaceKg:0};
+    return `<tr><td>${escHtml(n)}</td><td>${num(['cats',n,'kwh'],x.kwh)}</td><td>${num(['cats',n,'pmKwh'],x.pmKwh)}</td><td>${num(['cats',n,'water'],x.water)}</td><td>${num(['cats',n,'replaceKg'],x.replaceKg)}</td></tr>`; }).join('');
+  return `<div class="card" style="margin-bottom:1rem">
+    <div class="ctitle"><span>🌱 ค่ามาตรฐานคาร์บอน (คำนวณอัตโนมัติเมื่อปิดงาน)</span></div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;margin-bottom:10px">
+      <label>EF ไฟฟ้า ${num(['efElec'],c.efElec)} kgCO2e/kWh</label>
+      <label>EF กระดาษ ${num(['efPaper'],c.efPaper)} kgCO2e/kg</label>
+      <label>EF น้ำประปา ${num(['efWater'],c.efWater)} kgCO2e/ลบ.ม.</label>
+      <label>กระดาษต่อใบ ${num(['sheetsPerTicket'],c.sheetsPerTicket,60)} แผ่น × ${num(['gramsPerSheet'],c.gramsPerSheet,60)} กรัม</label>
+      <label>น้ำยาแอร์ที่กันรั่ว ${num(['refrigKg'],c.refrigKg,60)} กก. × GWP ${num(['refrigGwp'],c.refrigGwp,70)}</label>
+      <label>ต้นไม้ 1 ต้นดูดซับ ${num(['treeKgYear'],c.treeKgYear,60)} kgCO2e/ปี</label>
+    </div>
+    <div style="overflow-x:auto"><table class="tbl xls"><thead><tr><th>ประเภทงาน</th><th>ไฟฟ้าที่ประหยัด (kWh/ใบ)</th><th>งาน PM (kWh/ใบ)</th><th>น้ำที่ประหยัด (ลบ.ม./ใบ)</th><th>ซ่อมแทนซื้อใหม่ (kgCO2e)</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div style="font-size:11px;color:var(--tx3);margin-top:6px">EF ไฟฟ้า 0.4750 (อบก. มีผล 1 ม.ค. 2569) · EF กระดาษ A4 2.1020 (อบก.) · R-32 GWP 677 (IPCC AR5) · ค่า kWh/ลบ.ม./ซ่อมแทนซื้อใหม่ เป็นค่าประมาณตั้งต้น ควรปรับตามหน้างานจริง · "ซ่อมแทนซื้อใหม่" และ "น้ำยาแอร์" นับเฉพาะใบที่ช่างติ๊กตอนปิดงาน</div>
+  </div>`;
+}
 function ensureDraft(){
   if(!cfgDraft){
     const src = CFG_RAW || {
@@ -2643,6 +2834,7 @@ function ensureDraft(){
     };
     cfgDraft = JSON.parse(JSON.stringify(src));
     if(!cfgDraft.holidays) cfgDraft.holidays=[];
+    cfgDraft.carbon=JSON.parse(JSON.stringify(CARBON));   // v13: ค่าคาร์บอนปัจจุบัน (รวมค่าเริ่มต้น)
     if(!cfgDraft.floors) cfgDraft.floors=[];
   }
   return cfgDraft;
@@ -3141,6 +3333,7 @@ function openDet(id) {
        ['ผู้รับผิดชอบ',assigneeChips(t.assignees)],
        ['ประมาณการ',(t.estimatedCost||0).toLocaleString()+' บาท'],
        ['ค่าใช้จ่ายจริง',(t.actualCost||0).toLocaleString()+' บาท'],
+       ...(t.status==='done'?[['คาร์บอนที่ประหยัด',(()=>{const c=carbonOf(t);return c.total?`<b>🌱 ${fmtKg(c.total)} kgCO2e</b><div style="font-size:11.5px;color:var(--tx3)">${carbonTip(c)}</div>`:'—';})()]]:[]),
     ].map(([l,v2])=>`<tr><td style="color:var(--tx3);padding:4px 0;width:110px;font-size:12px;vertical-align:top">${l}</td><td style="padding:4px 0">${v2}</td></tr>`).join('')}
     </table>
     <div style="font-size:12px;color:var(--tx3);margin-bottom:4px">รายละเอียด</div>
@@ -3213,6 +3406,8 @@ let rateLinkDone=false;
 function applyQrParams(){
   const params=new URLSearchParams(window.location.search);
   // v12: ลิงก์ประเมินจากอีเมล ?rate=REP-xxx → เปิดใบนั้นพร้อมฟอร์มให้ดาว
+  const oid=params.get('id');
+  if(oid && !rateLinkDone && DB.tickets.find(t=>t.id===oid)){ rateLinkDone=true; setTimeout(()=>openDet(oid),60); }
   const rid=params.get('rate');
   if(rid && !rateLinkDone && DB.tickets.find(t=>t.id===rid)){
     rateLinkDone=true; gp('status'); setTimeout(()=>{ openDet(rid); const f=document.getElementById('rateForm'); if(f) f.scrollIntoView({behavior:'smooth',block:'center'}); },60);
