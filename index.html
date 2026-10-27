@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ระบบแจ้งซ่อมออนไลน์ คณะการแพทย์แผนไทย — หน้าเว็บ v15.3 (2026-10-27) · ต้องใช้คู่กับ Code.gs v15 · ไฟล์ PWA: manifest.json, sw.js, icon-192.png, icon-512.png -->
+<!-- ระบบแจ้งซ่อมออนไลน์ คณะการแพทย์แผนไทย — หน้าเว็บ v15.4 (2026-10-27) · ต้องใช้คู่กับ Code.gs v15 · ไฟล์ PWA: manifest.json, sw.js, icon-192.png, icon-512.png -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -531,7 +531,7 @@ textarea{resize:vertical;min-height:76px}
 
 <!-- NAV -->
 <nav class="nav">
-  <div class="nav-logo"><b>คณะการแพทย์แผนไทย</b><small>ระบบแจ้งซ่อมออนไลน์ <span id="verTag" style="display:inline-block;margin-left:4px;padding:0 6px;border-radius:8px;background:rgba(255,255,255,.18);color:#fff;font-size:10px;font-weight:600;line-height:16px;vertical-align:1px">v15.3</span></small></div>
+  <div class="nav-logo"><b>คณะการแพทย์แผนไทย</b><small>ระบบแจ้งซ่อมออนไลน์ <span id="verTag" style="display:inline-block;margin-left:4px;padding:0 6px;border-radius:8px;background:rgba(255,255,255,.18);color:#fff;font-size:10px;font-weight:600;line-height:16px;vertical-align:1px">v15.4</span></small></div>
   <div class="nav-tabs" id="navTabs">
     <button class="ntab on" data-p="report" onclick="gp('report')">แจ้งซ่อม</button>
     <button class="ntab" data-p="status" onclick="gp('status')">ติดตามงาน</button>
@@ -598,7 +598,7 @@ textarea{resize:vertical;min-height:76px}
 // ═══════════════════════════════════════════
 // URL ของ Google Apps Script ฝังไว้ในโปรแกรม (แก้ได้ที่หน้า ⚙ ตั้งค่า)
 // ─── เวอร์ชันโปรแกรม (อัปเดตทุกครั้งที่ออกเวอร์ชันใหม่ — ต้องตรงกับ Code.gs) ───
-const APP_VERSION = 'v15.3';
+const APP_VERSION = 'v15.4';
 const SERVER_REQUIRED = 'v15';   // เวอร์ชัน Code.gs ที่หน้าเว็บนี้ต้องใช้
 const APP_BUILD   = '2026-10-27';
 let SERVER_VERSION = '';   // อ่านจาก Code.gs ตอนเปิดเว็บ
@@ -4012,7 +4012,30 @@ setTimeout(checkServerVersion,2500);
 })();
 updSyncBadge(); setTimeout(flushQ, 1500);   // มีงานค้างส่งจากครั้งก่อน → ส่งต่อให้อัตโนมัติ
 // v15: PWA — ติดตั้งเป็นแอปบนมือถือได้ (ทำงานเฉพาะบน https เช่น GitHub Pages)
-if('serviceWorker' in navigator && location.protocol==='https:'){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
+if('serviceWorker' in navigator && location.protocol==='https:'){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>{ try{ r.update(); }catch(e){} }).catch(()=>{}); }); }
+// v15.4: ตรวจว่ามีหน้าเว็บเวอร์ชันใหม่บนเซิร์ฟเวอร์ไหม (ข้ามแคชเบราว์เซอร์) → แสดงแถบให้กดอัปเดต
+async function checkWebUpdate(){
+  if(location.protocol!=='https:') return;
+  try{
+    const r=await fetch(location.pathname+'?_v='+Date.now(),{cache:'no-store'}); if(!r.ok) return;
+    const m=(await r.text()).match(/const APP_VERSION = '([^']+)'/);
+    if(m && m[1]!==APP_VERSION) showUpdateBar(m[1]);
+  }catch(e){}
+}
+function showUpdateBar(v){
+  if(document.getElementById('updBar')) return;
+  const d=document.createElement('div'); d.id='updBar';
+  d.style.cssText='position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:600;background:var(--navy);color:#fff;border:1px solid var(--gold);border-radius:12px;padding:10px 14px;box-shadow:var(--sh3);display:flex;gap:10px;align-items:center;font-size:13.5px;max-width:92vw';
+  d.innerHTML=`<span>🔄 มีหน้าเว็บเวอร์ชันใหม่ <b>${v}</b> (ตอนนี้ ${APP_VERSION})</span><button class="btn btn-sm" style="background:var(--gold);color:var(--navy);border:none;font-weight:700" onclick="hardReload()">อัปเดตเลย</button>`;
+  document.body.appendChild(d);
+}
+async function hardReload(){
+  try{ if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(e){}
+  try{ const regs=await navigator.serviceWorker?.getRegistrations?.(); if(regs) await Promise.all(regs.map(r=>r.update().catch(()=>{}))); }catch(e){}
+  location.replace(location.pathname+'?_v='+Date.now()+(location.search?'&'+location.search.slice(1):''));
+}
+setTimeout(checkWebUpdate,4000); setInterval(checkWebUpdate,30*60000);
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') checkWebUpdate(); });
 </script>
 </body>
 </html>
