@@ -1,0 +1,21 @@
+{
+  "name": "ระบบแจ้งซ่อมออนไลน์ คณะการแพทย์แผนไทย",
+  "short_name": "แจ้งซ่อม",
+  "description": "แจ้งซ่อม ติดตามงาน และงานของช่างวันนี้",
+  "start_url": "./?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6f4ec",
+  "theme_color": "#1d4632",
+  "lang": "th",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "แจ้งซ่อม", "url": "./?page=report", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
+    { "name": "งานของฉันวันนี้", "url": "./?page=mywork", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
+    { "name": "ใบของฉัน", "url": "./?page=mine", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] }
+  ]
+}
