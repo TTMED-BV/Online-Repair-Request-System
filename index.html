@@ -1447,7 +1447,7 @@ function pgMyWork(){
       <div><div style="font-size:19px;font-weight:700">สวัสดี ${escHtml((cu.name||'').split(' ')[0])} 👋</div><div style="font-size:12.5px;color:var(--tx3)">${today}</div></div>
       <button class="btn btn-sm" onclick="loadAll({silent:true}).then(rp);showToast('กำลังรีเฟรช...')"><i class="ti ti-refresh"></i> รีเฟรช</button>
     </div>
-    <div class="mw-stats">
+    <div class="mw-stats dash-stats">
       <div class="stat stat-grad-d"><div class="stat-lbl">ด่วน/ครบกำหนด</div><div class="stat-n">${urgent.length}</div></div>
       <div class="stat stat-grad-b"><div class="stat-lbl">งานของฉันทั้งหมด</div><div class="stat-n">${mine.length}</div></div>
       <div class="stat stat-grad-c"><div class="stat-lbl">เสร็จวันนี้</div><div class="stat-n">${doneToday}</div></div>
