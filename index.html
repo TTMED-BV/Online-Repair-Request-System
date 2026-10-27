@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ระบบแจ้งซ่อมออนไลน์ คณะการแพทย์แผนไทย — หน้าเว็บ v15.2 (2026-10-27) · ต้องใช้คู่กับ Code.gs v15 · ไฟล์ PWA: manifest.json, sw.js, icon-192.png, icon-512.png -->
+<!-- ระบบแจ้งซ่อมออนไลน์ คณะการแพทย์แผนไทย — หน้าเว็บ v15.3 (2026-10-27) · ต้องใช้คู่กับ Code.gs v15 · ไฟล์ PWA: manifest.json, sw.js, icon-192.png, icon-512.png -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -66,6 +66,65 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opa
 .thai-border{height:6px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='6' viewBox='0 0 48 6'%3E%3Cg fill='none' stroke='%23b8893a' stroke-width='1'%3E%3Cpath d='M0 3h6c2 0 3-2 6-2s4 2 6 2 3-2 6-2 4 2 6 2 3-2 6-2 4 2 6 2'/%3E%3C/g%3E%3C/svg%3E");background-repeat:repeat-x;background-size:24px 6px;opacity:.55}
 #pg,.nav,.modal-bg{position:relative;z-index:1}
 ::selection{background:var(--accent-soft);color:var(--teal-tx)}
+
+
+/* ══ v15.3: ธีมเทศกาล (ฮาโลวีน / คริสต์มาส) — ใช้คู่กับโหมดสว่าง/มืด ══ */
+[data-season="halloween"]{
+  --bg:#fbf2e8;--surf:#fffaf4;--surf2:#f7e9da;--surf3:#eedac3;
+  --navy:#2b1240;--navy2:#58207a;
+  --gold:#f08a24;--gold-lt:#ffb45e;--gold-soft:#fde6cc;
+  --accent:#d65f12;--accent-soft:#fde2cb;--teal:#d65f12;--teal-bg:#fde2cb;--teal-tx:#8a3a06;
+  --sh3:0 10px 34px rgba(88,32,122,.18);
+}
+[data-season="halloween"][data-theme="dark"]{
+  --bg:#130b18;--surf:#1d1324;--surf2:#26192f;--surf3:#33223d;
+  --navy:#1a0a27;--navy2:#3d1655;
+  --gold:#ff9b3d;--gold-lt:#ffbd73;--gold-soft:#3b2310;
+  --accent:#ff8c3a;--accent-soft:#3a1f0d;--teal:#ff8c3a;--teal-bg:#3a1f0d;--teal-tx:#ffc28f;
+}
+[data-season="xmas"]{
+  --bg:#f6f3ec;--surf:#fffdf8;--surf2:#f0ebe0;--surf3:#e4ddcd;
+  --navy:#7c1420;--navy2:#b0202f;
+  --gold:#d6a634;--gold-lt:#f2cf6a;--gold-soft:#f8eccc;
+  --accent:#1e7a43;--accent-soft:#d9efe1;--teal:#1e7a43;--teal-bg:#d9efe1;--teal-tx:#0d4f29;
+  --sh3:0 10px 34px rgba(124,20,32,.16);
+}
+[data-season="xmas"][data-theme="dark"]{
+  --bg:#0b1611;--surf:#122119;--surf2:#192b21;--surf3:#22382b;
+  --navy:#3f0a12;--navy2:#74131f;
+  --gold:#e9c45c;--gold-lt:#f4d889;--gold-soft:#332a10;
+  --accent:#5ccb8b;--accent-soft:#143020;--teal:#5ccb8b;--teal-bg:#143020;--teal-tx:#a6e6c1;
+}
+[data-season="halloween"] body::before{opacity:calc(var(--pattern-op) + .04);background-size:200px 200px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Cg fill='%23f08a24'%3E%3Cellipse cx='50' cy='60' rx='16' ry='13'/%3E%3Crect x='48' y='44' width='4' height='6' fill='%23356b2d'/%3E%3C/g%3E%3Cg fill='%2358207a'%3E%3Cpath d='M140 40c6-8 14-8 16-2 4-4 8-4 10 0 2-6 10-6 16 2-8-2-12 2-14 6-2-3-5-3-7 0-2-3-5-3-7 0-2-4-6-8-14-6z'/%3E%3Cpath d='M30 150c5-6 11-6 13-1 3-3 6-3 8 0 2-5 8-5 13 1-6-1-10 2-11 5-2-2-4-2-6 0-2-2-4-2-6 0-1-3-5-6-11-5z'/%3E%3C/g%3E%3Cg fill='none' stroke='%2358207a' stroke-width='1'%3E%3Cpath d='M200 120l-40 0M200 120l-34 22M200 120l-22 34M200 120l-6 40'/%3E%3Cpath d='M190 120c0 4-4 8-10 8M184 132c-3 3-8 4-12 2'/%3E%3C/g%3E%3Cg fill='%23f08a24'%3E%3Cellipse cx='120' cy='150' rx='10' ry='8'/%3E%3C/g%3E%3C/svg%3E")}
+[data-season="xmas"] body::before{opacity:calc(var(--pattern-op) + .03);background-size:180px 180px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg stroke='%231e7a43' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='M45 25v40M25 45h40M31 31l28 28M59 31L31 59'/%3E%3C/g%3E%3Cg stroke='%23b0202f' stroke-width='1.3' stroke-linecap='round'%3E%3Cpath d='M135 105v30M120 120h30M125 110l20 20M145 110l-20 20'/%3E%3C/g%3E%3Cpath d='M130 20l14 26h-28z M130 34l18 30h-36z' fill='%231e7a43'/%3E%3Crect x='127' y='64' width='6' height='7' fill='%237c4a1e'/%3E%3Ccircle cx='40' cy='140' r='7' fill='%23b0202f'/%3E%3Cpath d='M40 133v-4' stroke='%23d6a634' stroke-width='2'/%3E%3C/svg%3E")}
+[data-season="halloween"] .nav-logo b::before{content:'🎃'}
+[data-season="xmas"] .nav-logo b::before{content:'🎄'}
+[data-season="halloween"] .nav{box-shadow:0 4px 22px rgba(88,32,122,.35)}
+[data-season="xmas"] .nav{box-shadow:0 4px 22px rgba(124,20,32,.3)}
+/* แถบประดับใต้แถบเมนู */
+.season-deco{display:none;position:sticky;top:58px;z-index:99;height:22px;pointer-events:none;overflow:hidden}
+[data-season="xmas"] .season-deco,[data-season="halloween"] .season-deco{display:block}
+.season-deco i{position:absolute;top:2px;width:9px;height:13px;border-radius:50% 50% 45% 45%;animation:twinkle 1.6s ease-in-out infinite;box-shadow:0 0 8px currentColor}
+.season-deco::before{content:'';position:absolute;left:0;right:0;top:-8px;height:14px;border-bottom:1.5px solid rgba(60,40,20,.45);border-radius:0 0 50% 50%/0 0 100% 100%}
+[data-season="halloween"] .season-deco i{width:12px;height:10px;border-radius:50% 50% 40% 40%;box-shadow:none;animation:swing 2.4s ease-in-out infinite;transform-origin:50% -6px}
+@keyframes twinkle{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes swing{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+/* ของร่วง */
+.season-fall{position:fixed;inset:0;pointer-events:none;z-index:60;overflow:hidden}
+.season-fall span{position:absolute;top:-40px;user-select:none;animation-name:sfall;animation-timing-function:linear;animation-iteration-count:infinite;opacity:.85;will-change:transform}
+@keyframes sfall{0%{transform:translate3d(0,-40px,0) rotate(0)}100%{transform:translate3d(var(--dx,30px),110vh,0) rotate(var(--rot,240deg))}}
+@media (prefers-reduced-motion: reduce){.season-fall{display:none}.season-deco i{animation:none}}
+/* เมนูเลือกธีม */
+.season-wrap{position:relative}
+.season-menu{display:none;position:absolute;right:0;top:calc(100% + 8px);min-width:230px;background:var(--surf);color:var(--tx);border:1px solid var(--bd2);border-radius:12px;box-shadow:var(--sh3);padding:6px;z-index:300}
+.season-menu.open{display:block}
+.season-menu button{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:none;background:transparent;color:var(--tx);font-family:var(--font);font-size:13.5px;border-radius:8px;cursor:pointer;text-align:left}
+.season-menu button:hover{background:var(--surf2)}
+.season-menu button.on{background:var(--accent-soft);font-weight:600}
+.season-menu .sm-sep{height:1px;background:var(--bd);margin:5px 4px}
+.season-menu .sm-note{font-size:11px;color:var(--tx3);padding:2px 10px 6px}
 
 /* NAV */
 .nav{background:linear-gradient(120deg,var(--navy) 0%,var(--navy2) 100%);color:#fff;display:flex;align-items:center;height:58px;padding:0 1.1rem;gap:3px;position:sticky;top:0;z-index:100;box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 4px 20px rgba(29,70,50,.28);border-bottom:2px solid var(--gold)}
@@ -472,7 +531,7 @@ textarea{resize:vertical;min-height:76px}
 
 <!-- NAV -->
 <nav class="nav">
-  <div class="nav-logo"><b>คณะการแพทย์แผนไทย</b><small>ระบบแจ้งซ่อมออนไลน์ <span id="verTag" style="display:inline-block;margin-left:4px;padding:0 6px;border-radius:8px;background:rgba(255,255,255,.18);color:#fff;font-size:10px;font-weight:600;line-height:16px;vertical-align:1px">v15.2</span></small></div>
+  <div class="nav-logo"><b>คณะการแพทย์แผนไทย</b><small>ระบบแจ้งซ่อมออนไลน์ <span id="verTag" style="display:inline-block;margin-left:4px;padding:0 6px;border-radius:8px;background:rgba(255,255,255,.18);color:#fff;font-size:10px;font-weight:600;line-height:16px;vertical-align:1px">v15.3</span></small></div>
   <div class="nav-tabs" id="navTabs">
     <button class="ntab on" data-p="report" onclick="gp('report')">แจ้งซ่อม</button>
     <button class="ntab" data-p="status" onclick="gp('status')">ติดตามงาน</button>
@@ -489,6 +548,8 @@ textarea{resize:vertical;min-height:76px}
     <button class="ntab" data-p="config" id="nt-cfg" style="display:none" onclick="gp('config')"><i class="ti ti-settings" style="vertical-align:-1px"></i> ตั้งค่า</button>
   </div>
   <div class="nav-r">
+    <div class="season-wrap"><button class="nbtn theme-toggle" id="seasonBtn" onclick="toggleSeasonMenu(event)" title="เลือกธีม">🌿</button>
+      <div class="season-menu" id="seasonMenu" onclick="event.stopPropagation()"></div></div>
     <button class="nbtn theme-toggle" id="themeBtn" onclick="toggleTheme()" title="สลับโหมดสว่าง/มืด">🌙</button>
     <span class="ubadge" id="ubadge" style="display:none"></span>
     <button class="nbtn" id="lbtn" onclick="oLogin()">เข้าสู่ระบบ</button>
@@ -496,6 +557,8 @@ textarea{resize:vertical;min-height:76px}
   </div>
   <button class="nav-burger" id="navBurger" onclick="toggleMenu()" aria-label="เมนู"><i class="ti ti-menu-2"></i></button>
 </nav>
+<div class="season-deco" id="seasonDeco"></div>
+<div class="season-fall" id="seasonFall"></div>
 <!-- MOBILE MENU DRAWER -->
 <div class="mnav-backdrop" id="mnavBd" onclick="toggleMenu()"></div>
 <div class="mnav" id="mnav">
@@ -535,7 +598,7 @@ textarea{resize:vertical;min-height:76px}
 // ═══════════════════════════════════════════
 // URL ของ Google Apps Script ฝังไว้ในโปรแกรม (แก้ได้ที่หน้า ⚙ ตั้งค่า)
 // ─── เวอร์ชันโปรแกรม (อัปเดตทุกครั้งที่ออกเวอร์ชันใหม่ — ต้องตรงกับ Code.gs) ───
-const APP_VERSION = 'v15.2';
+const APP_VERSION = 'v15.3';
 const SERVER_REQUIRED = 'v15';   // เวอร์ชัน Code.gs ที่หน้าเว็บนี้ต้องใช้
 const APP_BUILD   = '2026-10-27';
 let SERVER_VERSION = '';   // อ่านจาก Code.gs ตอนเปิดเว็บ
@@ -1153,6 +1216,9 @@ function buildMobileMenu() {
     const badge=(it.p==='approve'&&apv>0)?`<span class="badge-n">${apv}</span>`:(myN?`<span class="badge-n">${myN}</span>`:'');
     html+=`<button class="mnav-item ${curPage===it.p?'on':''}" onclick="mNav('${it.p}')"><i class="ti ${it.icon} mi"></i> ${it.label} ${badge}</button>`;
   });
+  html+='<div class="mnav-sep"></div>';
+  html+=`<button class="mnav-item" onclick="cycleSeason()"><span class="mi" style="width:18px;text-align:center">${SEASONS[curSeason()].icon}</span> ธีม: ${SEASONS[curSeason()].label}${seasonPref()==='auto'?' (อัตโนมัติ)':''}</button>`;
+  html+=`<button class="mnav-item" onclick="toggleTheme();buildMobileMenu()"><span class="mi" style="width:18px;text-align:center">${document.documentElement.getAttribute('data-theme')==='dark'?'☀️':'🌙'}</span> ${document.documentElement.getAttribute('data-theme')==='dark'?'โหมดสว่าง':'โหมดมืด'}</button>`;
   html+='<div class="mnav-sep"></div>';
   if(cu) html+=`<button class="mnav-item" onclick="openMyNotify();toggleMenu()"><i class="ti ti-bell mi"></i> การแจ้งเตือนของฉัน</button>`;
   if(cu) html+=`<button class="mnav-item" onclick="doOut();toggleMenu()"><i class="ti ti-logout mi"></i> ออกจากระบบ</button>`;
@@ -3831,6 +3897,57 @@ function toggleTheme(){
   localStorage.setItem('vr3_theme',next);
   applyTheme(next);
 }
+
+// ══ v15.3: ธีมเทศกาล ══
+const SEASONS={ normal:{label:'ปกติ (ไทย)',icon:'🌿'}, halloween:{label:'ฮาโลวีน',icon:'🎃'}, xmas:{label:'คริสต์มาส',icon:'🎄'} };
+function seasonPref(){ try{ return localStorage.getItem('vr3_season')||'auto'; }catch(e){ return 'auto'; } }
+function seasonFx(){ try{ return localStorage.getItem('vr3_seasonfx')!=='off'; }catch(e){ return true; } }
+function autoSeason(d){ d=d||new Date(); const m=d.getMonth(), dd=d.getDate();
+  if(m===9 && dd>=20) return 'halloween';   // 20–31 ต.ค.
+  if(m===11) return 'xmas';                  // 1–31 ธ.ค.
+  return 'normal'; }
+function curSeason(){ const p=seasonPref(); return SEASONS[p]?p:autoSeason(); }
+function applySeason(){
+  const s=curSeason(), root=document.documentElement;
+  if(s==='normal') root.removeAttribute('data-season'); else root.setAttribute('data-season',s);
+  const b=document.getElementById('seasonBtn'); if(b) b.textContent=SEASONS[s].icon;
+  const tc=document.querySelector('meta[name=theme-color]'); if(tc) tc.setAttribute('content', s==='halloween'?'#2b1240':s==='xmas'?'#7c1420':'#1d4632');
+  // แถบประดับ
+  const deco=document.getElementById('seasonDeco');
+  if(deco){ let h='';
+    if(s==='xmas'){ const cols=['#e53935','#fdd835','#43a047','#1e88e5','#fb8c00'];
+      for(let i=0;i<40;i++) h+=`<i style="left:${i*2.5+0.8}%;color:${cols[i%5]};background:${cols[i%5]};animation-delay:${(i%5)*.3}s"></i>`; }
+    else if(s==='halloween'){ for(let i=0;i<26;i++) h+=`<i style="left:${i*3.85+1}%;background:${i%3===2?'#58207a':'#f08a24'};animation-delay:${(i%4)*.4}s"></i>`; }
+    deco.innerHTML=h; }
+  // ของร่วงเบา ๆ
+  const fall=document.getElementById('seasonFall');
+  if(fall){ let h='';
+    if(s!=='normal' && seasonFx()){
+      const items = s==='xmas' ? ['❄','❅','❆','❄'] : ['🍂','🦇','🍁','🍂'];
+      const n = window.innerWidth<700 ? 10 : 18;
+      for(let i=0;i<n;i++){ const dur=12+Math.random()*12, sz=s==='xmas'?(10+Math.random()*12):(14+Math.random()*10);
+        h+=`<span style="left:${Math.random()*100}%;font-size:${sz}px;color:${s==='xmas'?'#9ecbe8':'inherit'};animation-duration:${dur}s;animation-delay:${-Math.random()*dur}s;--dx:${(Math.random()*120-60).toFixed(0)}px;--rot:${(Math.random()*360).toFixed(0)}deg;opacity:${s==='xmas'?.75:.6}">${items[i%items.length]}</span>`; }
+    }
+    fall.innerHTML=h; }
+  renderSeasonMenu();
+}
+function setSeason(p){ try{ localStorage.setItem('vr3_season',p); }catch(e){} applySeason(); buildMobileMenu(); }
+function setSeasonFx(on){ try{ localStorage.setItem('vr3_seasonfx',on?'on':'off'); }catch(e){} applySeason(); }
+function cycleSeason(){ const order=['auto','normal','halloween','xmas']; const i=order.indexOf(seasonPref()); setSeason(order[(i+1)%order.length]); showToast('ธีม: '+SEASONS[curSeason()].label+(seasonPref()==='auto'?' (อัตโนมัติ)':'')); }
+function renderSeasonMenu(){
+  const m=document.getElementById('seasonMenu'); if(!m) return;
+  const p=seasonPref(), a=autoSeason();
+  m.innerHTML=`<button class="${p==='auto'?'on':''}" onclick="setSeason('auto')">🗓️ อัตโนมัติตามเทศกาล <span style="margin-left:auto;font-size:11px;color:var(--tx3)">ตอนนี้: ${SEASONS[a].icon}</span></button>
+    <div class="sm-sep"></div>
+    ${Object.entries(SEASONS).map(([k,v])=>`<button class="${p===k?'on':''}" onclick="setSeason('${k}')">${v.icon} ${v.label}</button>`).join('')}
+    <div class="sm-sep"></div>
+    <button onclick="setSeasonFx(${seasonFx()?'false':'true'})">${seasonFx()?'✅':'⬜'} ของร่วง (หิมะ/ใบไม้)</button>
+    <div class="sm-note">อัตโนมัติ: ฮาโลวีน 20–31 ต.ค. · คริสต์มาส 1–31 ธ.ค.<br>โหมดสว่าง/มืดใช้ปุ่ม 🌙 ข้าง ๆ</div>`;
+}
+function toggleSeasonMenu(ev){ ev&&ev.stopPropagation(); const m=document.getElementById('seasonMenu'); if(!m) return; renderSeasonMenu(); m.classList.toggle('open'); }
+document.addEventListener('click',()=>{ const m=document.getElementById('seasonMenu'); if(m) m.classList.remove('open'); });
+applySeason();
+
 (function initTheme(){
   const saved=localStorage.getItem('vr3_theme');
   const prefers=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
