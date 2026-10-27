@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ระบบแจ้งซ่อมออนไลน์ คณะการแพทย์แผนไทย — หน้าเว็บ v15.1 (2026-10-27) · ต้องใช้คู่กับ Code.gs v15 · ไฟล์ PWA: manifest.json, sw.js, icon-192.png, icon-512.png -->
+<!-- ระบบแจ้งซ่อมออนไลน์ คณะการแพทย์แผนไทย — หน้าเว็บ v15.2 (2026-10-27) · ต้องใช้คู่กับ Code.gs v15 · ไฟล์ PWA: manifest.json, sw.js, icon-192.png, icon-512.png -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -472,7 +472,7 @@ textarea{resize:vertical;min-height:76px}
 
 <!-- NAV -->
 <nav class="nav">
-  <div class="nav-logo"><b>คณะการแพทย์แผนไทย</b><small>ระบบแจ้งซ่อมออนไลน์ <span id="verTag" style="display:inline-block;margin-left:4px;padding:0 6px;border-radius:8px;background:rgba(255,255,255,.18);color:#fff;font-size:10px;font-weight:600;line-height:16px;vertical-align:1px">v15.1</span></small></div>
+  <div class="nav-logo"><b>คณะการแพทย์แผนไทย</b><small>ระบบแจ้งซ่อมออนไลน์ <span id="verTag" style="display:inline-block;margin-left:4px;padding:0 6px;border-radius:8px;background:rgba(255,255,255,.18);color:#fff;font-size:10px;font-weight:600;line-height:16px;vertical-align:1px">v15.2</span></small></div>
   <div class="nav-tabs" id="navTabs">
     <button class="ntab on" data-p="report" onclick="gp('report')">แจ้งซ่อม</button>
     <button class="ntab" data-p="status" onclick="gp('status')">ติดตามงาน</button>
@@ -535,7 +535,7 @@ textarea{resize:vertical;min-height:76px}
 // ═══════════════════════════════════════════
 // URL ของ Google Apps Script ฝังไว้ในโปรแกรม (แก้ได้ที่หน้า ⚙ ตั้งค่า)
 // ─── เวอร์ชันโปรแกรม (อัปเดตทุกครั้งที่ออกเวอร์ชันใหม่ — ต้องตรงกับ Code.gs) ───
-const APP_VERSION = 'v15.1';
+const APP_VERSION = 'v15.2';
 const SERVER_REQUIRED = 'v15';   // เวอร์ชัน Code.gs ที่หน้าเว็บนี้ต้องใช้
 const APP_BUILD   = '2026-10-27';
 let SERVER_VERSION = '';   // อ่านจาก Code.gs ตอนเปิดเว็บ
@@ -730,6 +730,7 @@ function applyBundle(d){
   if(d.tickets){ d.tickets = dedupeTickets(d.tickets); }
   if(d.tickets){ DB.tickets = d.tickets; DB.history = d.history||{}; DB.tickets.forEach(t=>{ t.history = DB.history[t.id] || t.history || []; if(!t.assignees) t.assignees=[]; }); }
   if(d.tickets) replayQ();
+  if(d.tickets) syncRatedLocal();
   if(d.config) applyConfig(d.config);
   if(d.photos) PHOTOS = d.photos;
   if(d.photoCounts){ PHOTO_COUNTS = d.photoCounts; PHOTO_COUNTS_KNOWN = true; }
@@ -3642,6 +3643,7 @@ function starSVG(filled){
 function ratingBlock(t){
   // แสดงเฉพาะงานที่เสร็จแล้ว
   if(t.status!=='done') return '';
+  applyLocalRating(t);   // v15.2: เคยประเมินจากเครื่องนี้แล้ว → ไม่แสดงฟอร์มซ้ำ แม้ข้อมูลเซิร์ฟเวอร์ยังไม่อัปเดต
   // ให้คะแนนแล้ว → โชว์ผล
   if(t.rating && t.rating>0){
     return `<div class="rate-box rated">
@@ -3654,7 +3656,10 @@ function ratingBlock(t){
     </div>`;
   }
   // ยังไม่ให้คะแนน → ฟอร์มให้ดาว (ใครก็ให้ได้ ไม่ต้อง login)
-  pendingRating=0;
+  // v15.2: เก็บดาว/ความเห็นที่เลือกไว้ — หน้าต่างวาดใหม่ (เช่น รูปโหลดเสร็จ) แล้วค่าไม่หาย
+  if(rateCurId!==t.id){ rateCurId=t.id; }
+  const dr=rateDraft[t.id]||{};
+  pendingRating=dr.n||0;
   const proxyOk = rateState(t)==='proxy';
   const dAt=doneAtOf(t), left=dAt?Math.max(0,Math.ceil((dAt.getTime()+RATE_PROXY_DAYS*86400000-Date.now())/86400000)):0;
   return `<div class="rate-box" id="rateForm">
@@ -3664,8 +3669,9 @@ function ratingBlock(t){
       ${proxyOk?`<b>เกิน ${RATE_PROXY_DAYS} วันแล้วยังไม่มีการประเมิน</b> — ผู้เกี่ยวข้องหรือผู้ปฏิบัติงานในชั้นนั้น (${escHtml(ticketFloor(t)||getBI(t.building).short)}) ประเมินแทนได้ เช่น งานที่ช่างหรือแม่บ้านแจ้งเอง หรือผู้แจ้งไม่สะดวกประเมิน`
       :`หมายเหตุ: หากผู้แจ้งไม่ประเมินภายใน ${RATE_PROXY_DAYS} วัน${left?` (อีก ${left} วัน)`:''} ผู้เกี่ยวข้องหรือผู้ปฏิบัติงานในชั้นนั้นจะประเมินแทนได้ เช่น งานที่ช่างหรือแม่บ้านแจ้งเอง`}
     </div></div>
-    <div class="star-row" id="starRow">${[1,2,3,4,5].map(i=>`<button type="button" class="star-btn" data-v="${i}" onclick="setStars(${i})" onmouseover="hoverStars(${i})" onmouseout="hoverStars(0)">${starSVG(false)}</button>`).join('')}</div>
-    <textarea id="rateComment" placeholder="ความเห็นเพิ่มเติม (ไม่บังคับ)" style="margin-top:10px;min-height:60px"></textarea>
+    <div class="star-row" id="starRow">${[1,2,3,4,5].map(i=>`<button type="button" class="star-btn" data-v="${i}" onclick="setStars(${i})" onmouseover="hoverStars(${i})" onmouseout="hoverStars(0)">${starSVG(i<=pendingRating)}</button>`).join('')}</div>
+    <div id="starPicked" style="font-size:12.5px;color:var(--tx2);margin-top:4px">${pendingRating?`เลือก ${pendingRating} ดาว`:'แตะดาวเพื่อให้คะแนน'}</div>
+    <textarea id="rateComment" placeholder="ความเห็นเพิ่มเติม (ไม่บังคับ)" style="margin-top:10px;min-height:60px" oninput="(rateDraft['${t.id}']=rateDraft['${t.id}']||{}).c=this.value">${escHtml(dr.c||'')}</textarea>
     ${proxyOk?`<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;margin-top:8px;cursor:pointer"><input type="checkbox" id="rateProxy" style="width:auto" onchange="document.getElementById('rateProxyName').style.display=this.checked?'block':'none'"> ประเมินแทนผู้แจ้ง</label>
     <input id="rateProxyName" placeholder="ชื่อ-นามสกุล ผู้ประเมินแทน (เช่น ผู้ปฏิบัติงานชั้นนั้น)" style="display:none;margin-top:6px" value="${cu?escAttr(cu.name):''}">`:''}
     <div id="rateMsg" style="margin:8px 0"></div>
@@ -3679,7 +3685,22 @@ function paintStars(n){
   });
 }
 function hoverStars(n){ paintStars(n||pendingRating); }
-function setStars(n){ pendingRating=n; paintStars(n); }
+function setStars(n){ pendingRating=n; if(rateCurId){ (rateDraft[rateCurId]=rateDraft[rateCurId]||{}).n=n; } paintStars(n); const p=document.getElementById('starPicked'); if(p) p.textContent='เลือก '+n+' ดาว'; }
+// ─── v15.2: จำการประเมินที่ส่งจากเครื่องนี้ (กันฟอร์มขึ้นซ้ำระหว่างรอข้อมูลเซิร์ฟเวอร์) ───
+let rateDraft={}, rateCurId=null;
+function ratedLocal(){ try{ return JSON.parse(localStorage.getItem('vr3_rated')||'{}'); }catch(e){ return {}; } }
+function saveRatedLocal(m){ try{ localStorage.setItem('vr3_rated',JSON.stringify(m)); }catch(e){} }
+function applyLocalRating(t){
+  if(!t || t.rating>0) return;
+  const r=ratedLocal()[t.id];
+  if(r && r.r>0){ t.rating=r.r; t.ratingComment=r.c||''; t.ratedBy=r.by||''; }
+}
+function syncRatedLocal(){   // เซิร์ฟเวอร์บันทึกแล้ว → ล้างที่จำไว้ / ยังไม่บันทึก → ใช้ค่าที่จำไว้
+  const m=ratedLocal(); let ch=false;
+  Object.keys(m).forEach(id=>{ const t=DB.tickets.find(x=>x.id===id);
+    if(!t || t.rating>0 || Date.now()-(m[id].at||0)>14*86400000){ delete m[id]; ch=true; } else applyLocalRating(t); });
+  if(ch) saveRatedLocal(m);
+}
 async function submitRating(id){
   const msg=document.getElementById('rateMsg');
   if(!pendingRating){ msg.innerHTML='<div class="notice n-amber" style="margin:0;padding:.5rem .7rem">กรุณาเลือกดาวก่อน</div>'; return; }
@@ -3690,7 +3711,9 @@ async function submitRating(id){
   if(isProxy && !ratedBy){ msg.innerHTML='<div class="notice n-amber" style="margin:0;padding:.5rem .7rem">กรุณาใส่ชื่อผู้ประเมินแทน</div>'; return; }
   showLoader('กำลังส่งคะแนน...');
   try{
-    await api('rateTicket',{id,rating:pendingRating,comment,ratedBy});
+    try{ await api('rateTicket',{id,rating:pendingRating,comment,ratedBy}); }
+    catch(e){ if(!/ให้คะแนนไปแล้ว/.test(e.message)) throw e; }   // เคยส่งสำเร็จแล้ว (เช่น กดซ้ำ) → ถือว่าเรียบร้อย
+    const m=ratedLocal(); m[id]={r:pendingRating,c:comment,by:ratedBy,at:Date.now()}; saveRatedLocal(m); delete rateDraft[id];
     const t=DB.tickets.find(x=>x.id===id); if(t){ t.rating=pendingRating; t.ratingComment=comment; t.ratedBy=ratedBy;
       (t.history=t.history||[]).push({status:'done',date:now(),note:(ratedBy?'ประเมินแทนโดย '+ratedBy:'ผู้แจ้งประเมิน')+' — '+pendingRating+' ดาว',by:ratedBy||'ผู้แจ้ง'}); }
     hideLoader(); openDet(id); showToast('ขอบคุณสำหรับคะแนน '+pendingRating+' ดาว');
