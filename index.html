@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ระบบแจ้งซ่อมออนไลน์ คณะการแพทย์แผนไทย — หน้าเว็บ v15 (2026-10-26) · ต้องใช้คู่กับ Code.gs v15 · ไฟล์ PWA: manifest.json, sw.js, icon-192.png, icon-512.png -->
+<!-- ระบบแจ้งซ่อมออนไลน์ คณะการแพทย์แผนไทย — หน้าเว็บ v15.1 (2026-10-27) · ต้องใช้คู่กับ Code.gs v15 · ไฟล์ PWA: manifest.json, sw.js, icon-192.png, icon-512.png -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -472,11 +472,11 @@ textarea{resize:vertical;min-height:76px}
 
 <!-- NAV -->
 <nav class="nav">
-  <div class="nav-logo"><b>คณะการแพทย์แผนไทย</b><small>ระบบแจ้งซ่อมออนไลน์ <span id="verTag" style="display:inline-block;margin-left:4px;padding:0 6px;border-radius:8px;background:rgba(255,255,255,.18);color:#fff;font-size:10px;font-weight:600;line-height:16px;vertical-align:1px">v15</span></small></div>
+  <div class="nav-logo"><b>คณะการแพทย์แผนไทย</b><small>ระบบแจ้งซ่อมออนไลน์ <span id="verTag" style="display:inline-block;margin-left:4px;padding:0 6px;border-radius:8px;background:rgba(255,255,255,.18);color:#fff;font-size:10px;font-weight:600;line-height:16px;vertical-align:1px">v15.1</span></small></div>
   <div class="nav-tabs" id="navTabs">
     <button class="ntab on" data-p="report" onclick="gp('report')">แจ้งซ่อม</button>
     <button class="ntab" data-p="status" onclick="gp('status')">ติดตามงาน</button>
-    <button class="ntab" data-p="mine" onclick="gp('mine')">ใบของฉัน</button>
+    <button class="ntab" data-p="mine" id="nt-mine" style="display:none" onclick="gp('mine')">ใบของฉัน</button>
     <button class="ntab" data-p="qr" onclick="gp('qr')">QR Code</button>
     <button class="ntab" data-p="mywork" id="nt-my" style="display:none" onclick="gp('mywork')">👷 งานของฉัน <span class="badge-n" id="myCnt" style="display:none"></span></button>
     <button class="ntab" data-p="approve" id="nt-approve" style="display:none" onclick="gp('approve')">
@@ -535,9 +535,9 @@ textarea{resize:vertical;min-height:76px}
 // ═══════════════════════════════════════════
 // URL ของ Google Apps Script ฝังไว้ในโปรแกรม (แก้ได้ที่หน้า ⚙ ตั้งค่า)
 // ─── เวอร์ชันโปรแกรม (อัปเดตทุกครั้งที่ออกเวอร์ชันใหม่ — ต้องตรงกับ Code.gs) ───
-const APP_VERSION = 'v15';
+const APP_VERSION = 'v15.1';
 const SERVER_REQUIRED = 'v15';   // เวอร์ชัน Code.gs ที่หน้าเว็บนี้ต้องใช้
-const APP_BUILD   = '2026-10-26';
+const APP_BUILD   = '2026-10-27';
 let SERVER_VERSION = '';   // อ่านจาก Code.gs ตอนเปิดเว็บ
 const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbyOsSEC8KI1bmWJpWoCXC18XEWRqNTyzN4sRQwc4UV_GAWOUlvnzTzaUCwVId-FmaY2/exec';
 // ถ้า URL ที่ฝังมาใหม่ไม่ตรงกับที่เคยบันทึกไว้ ให้ยึดตัวใหม่ (กันเครื่องเก่าค้าง URL เดิม)
@@ -1098,6 +1098,7 @@ async function doIn() {
   }
 }
 function doOut() {
+  if(['mine','mywork'].includes(curPage)) curPage='report';
   const t=AUTH_TOKEN;
   cu=null; AUTH_TOKEN='';
   localStorage.removeItem('vr3_token'); localStorage.removeItem('vr3_user');
@@ -1109,7 +1110,7 @@ function updAuthUI() {
   const b=document.getElementById('ubadge');
   document.getElementById('lbtn').style.display=cu?'none':'';
   document.getElementById('lobtn').style.display=cu?'':'none';
-  ['nt-approve','nt-manage','nt-pm','nt-cfg','nt-my'].forEach(id=>document.getElementById(id).style.display='none');
+  ['nt-approve','nt-manage','nt-pm','nt-cfg','nt-my','nt-mine'].forEach(id=>document.getElementById(id).style.display='none');
   if (cu) {
     b.style.display='inline-block'; b.textContent=cu.name+' 🔔'; b.style.cursor='pointer'; b.title='การแจ้งเตือนของฉัน'; b.onclick=openMyNotify;
     b.className='ubadge '+(cu.isEngineer?'ua':'ut');
@@ -1120,6 +1121,7 @@ function updAuthUI() {
     if(can('manage_tickets')) document.getElementById('nt-cal').style.display='';
     if(can('manage_config')||can('manage_users')||can('manage_routing')) document.getElementById('nt-cfg').style.display='';
     document.getElementById('nt-my').style.display='';
+    document.getElementById('nt-mine').style.display='';
     updApvCnt();
   } else { b.style.display='none'; }
   buildMobileMenu();
@@ -1129,7 +1131,7 @@ function updAuthUI() {
 const NAV_ITEMS = [
   {p:'report',   label:'แจ้งซ่อม',    icon:'ti-clipboard-plus', pub:true},
   {p:'status',   label:'ติดตามงาน',   icon:'ti-list-search',    pub:true},
-  {p:'mine',     label:'ใบของฉัน',     icon:'ti-file-text',      pub:true},
+  {p:'mine',     label:'ใบของฉัน',     icon:'ti-file-text',      pub:false},
   {p:'qr',       label:'QR Code',     icon:'ti-qrcode',         pub:true},
   {p:'mywork',   label:'งานของฉันวันนี้', icon:'ti-briefcase',    pub:false},
   {p:'approve',  label:'อนุมัติ',      icon:'ti-circle-check',   pub:false},
@@ -1172,12 +1174,12 @@ function navAllowed(p){
   if(p==='manage')  return can('manage_tickets');
   if(p==='pm')      return can('manage_pm');
   if(p==='calendar')return can('manage_tickets');
-  if(p==='mywork')  return !!cu;
+  if(p==='mywork'||p==='mine')  return !!cu;
   if(p==='config')  return can('manage_config')||can('manage_users')||can('manage_routing');
   return true;
 }
 // ─── ROUTER ───
-const PRIVATE_PAGES=['approve','manage','pm','calendar','config','mywork'];
+const PRIVATE_PAGES=['approve','manage','pm','calendar','config','mywork','mine'];
 function gp(p) {
   if (PRIVATE_PAGES.includes(p) && !cu) { pendingPage=p; oLogin(); return; }
   if (PRIVATE_PAGES.includes(p) && cu && !navAllowed(p)) { showToast('บทบาทของคุณไม่มีสิทธิ์เข้าหน้านี้'); return; }
@@ -1260,7 +1262,6 @@ function pgReport() {
           <select id="fPr"><option value="low">ปกติ — ไม่เร่งด่วน</option><option value="med">ปานกลาง — กระทบการทำงาน</option><option value="high">เร่งด่วน — กระทบความปลอดภัย</option></select>
         </div>
       </div>
-      <div class="ff" style="margin-top:.25rem"><label>ค่าใช้จ่ายประมาณการ (บาท)</label><input id="fCost" type="number" placeholder="0" min="0"></div>
       <div class="ff"><label>รายละเอียดปัญหา<span class="req">*</span></label><textarea id="fDesc" placeholder="อธิบายปัญหาให้ละเอียด เช่น ไฟดับ ท่อรั่ว แอร์ไม่เย็น เพื่อให้วิศวกรอนุมัติได้รวดเร็ว" oninput="clrErr('fDesc')"></textarea><div class="fld-err" id="e_fDesc">กรุณากรอกรายละเอียด</div></div>
       <div class="ff">
         <label>แนบรูปภาพ (ไม่บังคับ — ช่วยให้ช่างประเมินได้เร็วขึ้น)</label>
@@ -1294,7 +1295,7 @@ async function submitR() {
   const ticket = {
     id:genId(), createdAt:now(), name:n, phone:ph, dept:d,
     email:v('fE'), building:b, room:roomFull, floor:fl, category:c,
-    priority:v('fPr'), estimatedCost:parseFloat(v('fCost'))||0,
+    priority:v('fPr'), estimatedCost:0,   // v15.1: ผู้แจ้งไม่ต้องประมาณราคา — ช่างใส่งบตอนส่งขออนุมัติจัดซื้อ
     actualCost:0, desc, status:'pending_approval',
     assignees:[], approvedAt:null, approvedBy:null, approvedBudget:0,
     history:[{status:'pending_approval',date:now(),note:'รับแจ้งซ่อมเข้าระบบ',by:'ระบบ'}]
@@ -1311,8 +1312,8 @@ async function submitR() {
   msg.innerHTML=`<div class="notice n-green" style="margin:0"><i class="ti ti-circle-check ni"></i><div><b>ส่งแจ้งซ่อมสำเร็จ</b><br>รหัสใบแจ้งซ่อม: <span class="mono">${ticket.id}</span> — จดรหัสนี้ไว้ติดตามสถานะ<br>สถานะ: รอวิศวกรตรวจสอบและอนุมัติ${photoN?`<br>แนบรูปแล้ว ${photoN} รูป`:''}</div></div>`;
   rememberRequester({n,ph,d,e:v('fE')}, document.getElementById('fRemember')?.checked);
   addMine(ticket.id);
-  msg.innerHTML+=`<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" onclick="gp('mine')"><i class="ti ti-file-text"></i> ดูใบของฉัน</button></div>`;
-  ['fR','fDesc','fCost'].concat(ME.n?[]:['fN','fP','fD','fE']).forEach(f=>{const el=document.getElementById(f);if(el)el.value='';});
+  if(cu) msg.innerHTML+=`<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" onclick="gp('mine')"><i class="ti ti-file-text"></i> ดูใบของฉัน</button></div>`;
+  ['fR','fDesc'].concat(ME.n?[]:['fN','fP','fD','fE']).forEach(f=>{const el=document.getElementById(f);if(el)el.value='';});
   document.getElementById('dupWarn').innerHTML='';
   document.getElementById('fB').value=''; document.getElementById('fC').value='';
   updFloorOptions();
@@ -1336,6 +1337,7 @@ function updFloorOptions(preselect){
 function checkDuplicate(){
   const box=document.getElementById('dupWarn');
   if(!box) return;
+  box.innerHTML=''; return;   // v15.1: ไม่แสดงใบอื่นในฟอร์มแจ้งซ่อม (ผู้แจ้งสับสน)
   const b=document.getElementById('fB').value;
   const fl=document.getElementById('fFloor').value;
   const room=(document.getElementById('fR').value||'').trim().toLowerCase();
@@ -2213,7 +2215,11 @@ function openStatusUpdate(id) {
     </div>
     ${t.needsPurchase?`<div class="notice ${t.purchaseApprovedBy?'n-green':'n-warn'}" style="margin-bottom:1rem;font-size:12px"><i class="ti ti-shopping-cart ni"></i><div>${t.purchaseApprovedBy?'บริหารอนุมัติจัดซื้อแล้ว — เริ่มจัดซื้อได้':'งานนี้ต้องจัดซื้อ — ต้องให้บริหารอนุมัติก่อน (เลือก “รออนุมัติจัดซื้อ” เพื่อส่งให้บริหาร)'}</div></div>`:''}
     <div class="ff"><label>สถานะใหม่</label>
-      <select id="updSt" onchange="document.getElementById('carbonFlagsBox').style.display=this.value==='done'?'block':'none'">${avail.map(s=>`<option value="${s.id}" ${t.status===s.id?'selected':''}>${s.label}</option>`).join('')}</select>
+      <select id="updSt" onchange="document.getElementById('carbonFlagsBox').style.display=this.value==='done'?'block':'none';document.getElementById('buyBox').style.display=['pending_purchase','purchase'].includes(this.value)?'block':'none'">${avail.map(s=>`<option value="${s.id}" ${t.status===s.id?'selected':''}>${s.label}</option>`).join('')}</select>
+    </div>
+    <div id="buyBox" style="display:${['pending_purchase','purchase'].includes(t.status)?'block':'none'};background:var(--amber-bg);border-radius:8px;padding:.6rem .75rem;margin-bottom:.9rem">
+      <div class="ff" style="margin:0"><label>💰 งบประมาณจัดซื้อ (บาท)<span class="req">*</span></label><input id="updBudget" type="number" min="0" value="${t.approvedBudget||t.estimatedCost||''}" placeholder="ราคาประเมินจากช่าง/ใบเสนอราคา">
+      <div style="font-size:11.5px;color:var(--tx2);margin-top:3px">ใช้เสนอบริหารอนุมัติจัดซื้อ — ใส่ตามราคาที่สำรวจหรือใบเสนอราคา</div></div>
     </div>
     <div class="ff"><label>ค่าใช้จ่ายจริง (บาท)</label><input id="updCost" type="number" value="${t.actualCost||0}"></div>
     ${FLAGS.inventory&&(INVENTORY||[]).filter(x=>!x.hidden).length?`<div class="fsec">เบิกอุปกรณ์ (ตัดสต็อก)</div>
@@ -2240,13 +2246,19 @@ async function saveStatusUpdate(id) {
     showToast('งานนี้ต้องให้บริหารอนุมัติจัดซื้อก่อน — กรุณาเลือกสถานะ "รออนุมัติจัดซื้อ"',3500);
     return;
   }
+  let budgetF={};
+  if(['pending_purchase','purchase'].includes(ns)){
+    const bud=parseFloat(document.getElementById('updBudget').value)||0;
+    if(ns==='pending_purchase' && !(bud>0)){ showToast('กรุณาใส่งบประมาณจัดซื้อ เพื่อเสนอบริหารอนุมัติ',3500); document.getElementById('updBudget').focus(); return; }
+    if(bud>0){ t.approvedBudget=bud; t.estimatedCost=bud; budgetF={approvedBudget:bud,estimatedCost:bud}; }
+  }
   t.status=ns; t.actualCost=cost;
   let cflags=null;
   if(ns==='done'){ t.completedAt=now(); cflags=[document.getElementById('cfRefrig')?.checked&&'refrig',document.getElementById('cfReplace')?.checked&&'replace'].filter(Boolean); t.carbonFlags=cflags; }
   const entry={status:ns,date:now(),note:note||'-',by:cu.name};
   if(!t.history)t.history=[];
   t.history.push(entry);
-  await syncUpdate(id,{status:ns,actualCost:cost,...(ns==='done'?{completedAt:t.completedAt,carbonFlags:cflags}:{})},entry);
+  await syncUpdate(id,{status:ns,actualCost:cost,...budgetF,...(ns==='done'?{completedAt:t.completedAt,carbonFlags:cflags}:{})},entry);
   // ข้อ 3: เบิกอุปกรณ์ (ถ้าเปิดระบบและมีการกรอกจำนวน)
   if(FLAGS.inventory){
     const items=[...document.querySelectorAll('#wdBox input[data-inv]')].map(el=>({id:el.getAttribute('data-inv'),qty:Number(el.value)||0})).filter(x=>x.qty>0);
@@ -3819,7 +3831,8 @@ function applyQrParams(){
   const pg=params.get('page');
   if(!pageLinkDone){
     pageLinkDone=true;
-    if(pg && LINK_PAGES.includes(pg)) { if(curPage!==pg) gp(pg); }
+    if(pg==='mine' && !cu) gp('status');   // v15.1: ใบของฉันเฉพาะผู้ที่ล็อกอิน → คนทั่วไปไปหน้าติดตามงาน
+    else if(pg && LINK_PAGES.includes(pg)) { if(curPage!==pg) gp(pg); }
     else if(!pg && !params.get('id') && !params.get('rate') && !params.get('b') && cu && isMobile() && curPage==='report') gp('mywork');
   }
   // v12: ลิงก์ประเมินจากอีเมล ?rate=REP-xxx → เปิดใบนั้นพร้อมฟอร์มให้ดาว

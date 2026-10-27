@@ -16,6 +16,6 @@
   "shortcuts": [
     { "name": "แจ้งซ่อม", "url": "./?page=report", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
     { "name": "งานของฉันวันนี้", "url": "./?page=mywork", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
-    { "name": "ใบของฉัน", "url": "./?page=mine", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] }
+    { "name": "ติดตามงาน", "url": "./?page=status", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] }
   ]
 }
