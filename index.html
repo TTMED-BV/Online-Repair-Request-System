@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ระบบแจ้งซ่อมออนไลน์ คณะการแพทย์แผนไทย — หน้าเว็บ v15.4 (2026-10-27) · ต้องใช้คู่กับ Code.gs v15 · ไฟล์ PWA: manifest.json, sw.js, icon-192.png, icon-512.png -->
+<!-- ระบบแจ้งซ่อมออนไลน์ คณะการแพทย์แผนไทย — หน้าเว็บ v15.5 (2026-10-28) · ต้องใช้คู่กับ Code.gs v15 · ไฟล์ PWA: manifest.json, sw.js, icon-192.png, icon-512.png -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -233,6 +233,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opa
 .star-btn{background:none;border:none;cursor:pointer;padding:2px;border-radius:6px;transition:transform .12s}
 .star-btn:hover{transform:scale(1.18)}
 .star-btn:active{transform:scale(.95)}
+.star-btn svg{pointer-events:none}   /* v15.5: คลิกโดนปุ่มเสมอ ไม่โดนรูปดาวที่ถูกวาดใหม่ */
 /* กราฟแนวโน้มรายเดือน */
 .mt-chart{display:flex;align-items:flex-end;gap:10px;height:180px;padding-top:10px}
 .mt-col{flex:1;display:flex;flex-direction:column;align-items:center;height:100%}
@@ -531,7 +532,7 @@ textarea{resize:vertical;min-height:76px}
 
 <!-- NAV -->
 <nav class="nav">
-  <div class="nav-logo"><b>คณะการแพทย์แผนไทย</b><small>ระบบแจ้งซ่อมออนไลน์ <span id="verTag" style="display:inline-block;margin-left:4px;padding:0 6px;border-radius:8px;background:rgba(255,255,255,.18);color:#fff;font-size:10px;font-weight:600;line-height:16px;vertical-align:1px">v15.4</span></small></div>
+  <div class="nav-logo"><b>คณะการแพทย์แผนไทย</b><small>ระบบแจ้งซ่อมออนไลน์ <span id="verTag" style="display:inline-block;margin-left:4px;padding:0 6px;border-radius:8px;background:rgba(255,255,255,.18);color:#fff;font-size:10px;font-weight:600;line-height:16px;vertical-align:1px">v15.5</span></small></div>
   <div class="nav-tabs" id="navTabs">
     <button class="ntab on" data-p="report" onclick="gp('report')">แจ้งซ่อม</button>
     <button class="ntab" data-p="status" onclick="gp('status')">ติดตามงาน</button>
@@ -598,7 +599,7 @@ textarea{resize:vertical;min-height:76px}
 // ═══════════════════════════════════════════
 // URL ของ Google Apps Script ฝังไว้ในโปรแกรม (แก้ได้ที่หน้า ⚙ ตั้งค่า)
 // ─── เวอร์ชันโปรแกรม (อัปเดตทุกครั้งที่ออกเวอร์ชันใหม่ — ต้องตรงกับ Code.gs) ───
-const APP_VERSION = 'v15.4';
+const APP_VERSION = 'v15.5';
 const SERVER_REQUIRED = 'v15';   // เวอร์ชัน Code.gs ที่หน้าเว็บนี้ต้องใช้
 const APP_BUILD   = '2026-10-27';
 let SERVER_VERSION = '';   // อ่านจาก Code.gs ตอนเปิดเว็บ
@@ -789,11 +790,11 @@ function dedupeTickets(arr){
   return [...m.values()];
 }
 // นำข้อมูลชุดหนึ่ง (จาก bootstrap หรือจากแคช) มาใส่ใน state
-function applyBundle(d){
+function applyBundle(d, fresh){   // fresh = ข้อมูลสดจากเซิร์ฟเวอร์ (ไม่ใช่แคชในเครื่อง)
   if(d.tickets){ d.tickets = dedupeTickets(d.tickets); }
   if(d.tickets){ DB.tickets = d.tickets; DB.history = d.history||{}; DB.tickets.forEach(t=>{ t.history = DB.history[t.id] || t.history || []; if(!t.assignees) t.assignees=[]; }); }
   if(d.tickets) replayQ();
-  if(d.tickets) syncRatedLocal();
+  if(d.tickets) syncRatedLocal(!!fresh);
   if(d.config) applyConfig(d.config);
   if(d.photos) PHOTOS = d.photos;
   if(d.photoCounts){ PHOTO_COUNTS = d.photoCounts; PHOTO_COUNTS_KNOWN = true; }
@@ -867,7 +868,7 @@ async function loadAll(opts={}){
   try{
     // เรียกครั้งเดียวได้ครบ (tickets+config+photos+users)
     const d = await api('bootstrap');
-    applyBundle(d);
+    applyBundle(d, true);
     cacheBundle(d);
     bootstrapped=true;
   }catch(e){
@@ -3745,9 +3746,10 @@ function ratingBlock(t){
   </div>`;
 }
 function paintStars(n){
+  // v15.5: เปลี่ยนแค่สีดาว ไม่วาดปุ่มใหม่ (การวาดใหม่ทำให้คลิกด้วยเมาส์ไม่ติด)
   document.querySelectorAll('#starRow .star-btn').forEach(b=>{
-    const v=+b.dataset.v;
-    b.innerHTML=starSVG(v<=n);
+    const v=+b.dataset.v, path=b.querySelector('path');
+    if(path) path.setAttribute('fill', v<=n ? '#f2b50c' : 'none');
   });
 }
 function hoverStars(n){ paintStars(n||pendingRating); }
@@ -3759,12 +3761,12 @@ function saveRatedLocal(m){ try{ localStorage.setItem('vr3_rated',JSON.stringify
 function applyLocalRating(t){
   if(!t || t.rating>0) return;
   const r=ratedLocal()[t.id];
-  if(r && r.r>0){ t.rating=r.r; t.ratingComment=r.c||''; t.ratedBy=r.by||''; }
+  if(r && r.r>0){ t.rating=r.r; t.ratingComment=r.c||''; t.ratedBy=r.by||''; t._lr=1; }   // _lr = ค่าจากเครื่องนี้ ยังไม่ใช่ของเซิร์ฟเวอร์
 }
-function syncRatedLocal(){   // เซิร์ฟเวอร์บันทึกแล้ว → ล้างที่จำไว้ / ยังไม่บันทึก → ใช้ค่าที่จำไว้
+function syncRatedLocal(fresh){   // เซิร์ฟเวอร์บันทึกแล้ว → ล้างที่จำไว้ / ยังไม่บันทึก → ใช้ค่าที่จำไว้
   const m=ratedLocal(); let ch=false;
   Object.keys(m).forEach(id=>{ const t=DB.tickets.find(x=>x.id===id);
-    if(!t || t.rating>0 || Date.now()-(m[id].at||0)>14*86400000){ delete m[id]; ch=true; } else applyLocalRating(t); });
+    if((fresh && t && t.rating>0 && !t._lr) || Date.now()-(m[id].at||0)>14*86400000){ delete m[id]; ch=true; } else if(t) applyLocalRating(t); });   // ลบเมื่อเซิร์ฟเวอร์ยืนยันแล้วเท่านั้น
   if(ch) saveRatedLocal(m);
 }
 async function submitRating(id){
@@ -3780,9 +3782,9 @@ async function submitRating(id){
     try{ await api('rateTicket',{id,rating:pendingRating,comment,ratedBy}); }
     catch(e){ if(!/ให้คะแนนไปแล้ว/.test(e.message)) throw e; }   // เคยส่งสำเร็จแล้ว (เช่น กดซ้ำ) → ถือว่าเรียบร้อย
     const m=ratedLocal(); m[id]={r:pendingRating,c:comment,by:ratedBy,at:Date.now()}; saveRatedLocal(m); delete rateDraft[id];
-    const t=DB.tickets.find(x=>x.id===id); if(t){ t.rating=pendingRating; t.ratingComment=comment; t.ratedBy=ratedBy;
+    const t=DB.tickets.find(x=>x.id===id); if(t){ t.rating=pendingRating; t.ratingComment=comment; t.ratedBy=ratedBy; t._lr=1;
       (t.history=t.history||[]).push({status:'done',date:now(),note:(ratedBy?'ประเมินแทนโดย '+ratedBy:'ผู้แจ้งประเมิน')+' — '+pendingRating+' ดาว',by:ratedBy||'ผู้แจ้ง'}); }
-    hideLoader(); openDet(id); showToast('ขอบคุณสำหรับคะแนน '+pendingRating+' ดาว');
+    hideLoader(); const nStar=pendingRating; rp(); openDet(id); showToast('ขอบคุณสำหรับคะแนน '+nStar+' ดาว');   // rp: รีเฟรชรายการด้านหลัง (ป้ายสถานะประเมิน)
   }catch(e){ hideLoader(); msg.innerHTML='<div class="notice n-red" style="margin:0;padding:.5rem .7rem">ส่งไม่สำเร็จ: '+e.message+'</div>'; }
 }
 
