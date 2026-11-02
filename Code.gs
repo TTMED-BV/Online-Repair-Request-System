@@ -1,11 +1,13 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════
- *  ระบบแจ้งซ่อมออนไลน์ — Google Apps Script Backend (v15)
+ *  ระบบแจ้งซ่อมออนไลน์ — Google Apps Script Backend (v15.1)
  *  เวอร์ชัน v15 (2026-10-26) — ต้องใช้คู่กับหน้าเว็บ index.html v15
  *  ประวัติ: v12 ฟิลเตอร์/ปฏิทินแถบ/วันคาดว่าเสร็จ/PM 5 แบบ/ประเมินแทน+อีเมล · v12.1–12.2 แก้ใบค้าง ใบรหัสซ้ำ
  *           v13 คาร์บอนที่ประหยัดได้รายเดือน · v14 แจ้งเตือนรายคน LINE OA/อีเมล
  *           v15 คลังอุปกรณ์+จุดสั่งซื้อ/แจ้งของใกล้หมด · สรุปรายเดือนอัตโนมัติ (วันที่ 1 08:00)
  *               · ตั้งค่าจุดซ่อมซ้ำ/เป้า KPI · บันทึกการเคลื่อนไหวคลัง (แท็บ InvLog)
+ *           v15.1 (29 ต.ค.) ล้างใบงานทดสอบก่อนเริ่มใช้งาน (resetTickets — สำรองเป็นชีตซ่อนก่อนลบ)
+ *           (27 ต.ค.) ข้อความตอบกลับใน LINE ไม่ส่งลิงก์ "ใบของฉัน" แล้ว (หน้านี้เฉพาะผู้ที่ล็อกอิน)
  *  รวมทุกฟีเจอร์: แจ้งซ่อม + ตั้งค่า + วันหยุด + LINE + Auth + รูปภาพ
  * ═══════════════════════════════════════════════════════════════════════
  *
@@ -216,6 +218,8 @@ function doPost(e) {
       // ─── v15 ───
       case 'monthlyTest':   result = requireEngineer_(body.token, function(){ return sendMonthlySummary({ onlyUser: verifyToken_(body.token), force:true }); }); break;
       case 'getInvLog':     result = requireAuth(body.token, function(){ return getInvLog_(body.limit); }); break;
+      // ─── v15.1: ล้างใบงานทดสอบก่อนเริ่มใช้งานจริง (สำรองก่อนลบ) ───
+      case 'resetTickets':  result = requireEngineer_(body.token, function(){ return resetTickets_(body.confirm); }); break;
       default:            result = { error: 'Unknown action: ' + action };
     }
 
@@ -234,7 +238,7 @@ function doPost(e) {
 
 // รองรับการเปิด URL ตรง ๆ ด้วย GET (ไว้ทดสอบว่า deploy ติดไหม)
 function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({ ok:true, data:{ status:'online', version:'v15' } }))
+  return ContentService.createTextOutput(JSON.stringify({ ok:true, data:{ status:'online', version:'v15.1' } }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -1616,7 +1620,7 @@ function handleLineWebhook_(events) {
       if (ev.type !== 'message' || !ev.message || ev.message.type !== 'text' || !uid) return;
       var txt = String(ev.message.text || '').replace(/\s/g, '');
       if (!/^\d{6}$/.test(txt)) { var st = siteLink_('');
-        lineReply_(ev.replyToken, 'ระบบนี้ใช้ส่งแจ้งเตือนงานซ่อม' + (st ? '\n\n📝 แจ้งซ่อม: ' + siteLink_('report') + '\n🔎 ติดตามงาน: ' + siteLink_('status') + '\n📄 ใบของฉัน: ' + siteLink_('mine') : '') + '\n\nผูกบัญชีเจ้าหน้าที่: พิมพ์รหัส 6 หลักจากหน้าเว็บ'); return; }
+        lineReply_(ev.replyToken, 'ระบบนี้ใช้ส่งแจ้งเตือนงานซ่อม' + (st ? '\n\n📝 แจ้งซ่อม: ' + siteLink_('report') + '\n🔎 ติดตามงาน: ' + siteLink_('status') : '') + '\n\nผูกบัญชีเจ้าหน้าที่: พิมพ์รหัส 6 หลักจากหน้าเว็บ'); return; }
       var sh = ss_().getSheetByName(USERS_SHEET); ensureSheet_(USERS_SHEET, USER_HEADERS);
       var d = sh.getDataRange().getValues();
       for (var i = 1; i < d.length; i++) {
@@ -1913,7 +1917,7 @@ function roomKey_(room) { return String(room || '').toLowerCase().replace(/\s+/g
 function monthlyMail_(st) {
   var esc = function(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
   var o = st.ops;
-  var kpi = function(label, val, unit, target, ok){ return '<td style="padding:10px;border:1px solid #e3dfd0;text-align:center;background:' + (val == null ? '#f6f4ec' : ok ? '#ecf5dc' : '#fceaea') + '">'
+  var kpi = function(label, val, unit, target, ok){ return '<td style="padding:10px;border:1px solid #e3dfd0;text-align:center;background:' + (val == null || target == null ? '#f6f4ec' : ok ? '#ecf5dc' : '#fceaea') + '">'
     + '<div style="font-size:12px;color:#5e5844">' + label + '</div><div style="font-size:22px;font-weight:bold;color:#211d12">' + (val == null ? '—' : val + unit) + '</div>'
     + (target != null ? '<div style="font-size:11px;color:#9c9578">เป้า ' + target + unit + '</div>' : '') + '</td>'; };
   var list = function(title, arr, fmt){ return arr.length ? '<div style="margin-top:14px"><b>' + title + '</b><ul style="margin:6px 0;padding-left:20px">' + arr.map(function(x){ return '<li>' + fmt(x) + '</li>'; }).join('') + '</ul></div>' : ''; };
@@ -1938,4 +1942,31 @@ function monthlyMail_(st) {
     ['ทันกำหนด', st.onTimePct == null ? '—' : st.onTimePct + '%'], ['พึงพอใจ', st.avgRating == null ? '—' : String(st.avgRating)],
     ['จุดซ่อมซ้ำ', st.hot.length + ' จุด'], ['ของใกล้หมด', st.low.length + ' รายการ']];
   return { subject: subject, body: body, shortRows: shortRows };
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+//  v15.1: ล้างใบงานทั้งหมด (ใช้ก่อนเริ่มใช้งานจริง) — เฉพาะวิศวกร/แอดมิน
+//  สำรองชีต Tickets / History / Photos เป็นชีตซ่อน BK_<ชื่อ>_<วันเวลา> ก่อนลบเสมอ
+//  ไม่แตะ: ผู้ใช้ การตั้งค่า เส้นทางงาน คลังอุปกรณ์ PM และไฟล์รูปใน Drive
+// ═══════════════════════════════════════════════════════════════
+function resetTickets_(confirm) {
+  if (String(confirm || '') !== 'ลบทั้งหมด') return { error: 'ต้องพิมพ์คำว่า "ลบทั้งหมด" เพื่อยืนยัน' };
+  var ss = ss_(), stamp = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyyMMdd_HHmmss');
+  var out = { backup: [], deleted: {} };
+  [TICKETS_SHEET, HISTORY_SHEET, PHOTOS_SHEET].forEach(function(n) {
+    var sh = ss.getSheetByName(n); if (!sh) return;
+    var rows = Math.max(0, sh.getLastRow() - 1);
+    out.deleted[n] = rows;
+    if (rows > 0) {
+      var bk = sh.copyTo(ss).setName('BK_' + n + '_' + stamp);
+      bk.hideSheet();
+      out.backup.push(bk.getName());
+      // แถว 1 ถูกตรึงไว้ → Sheets ไม่ยอมให้ลบทุกแถวที่ไม่ได้ตรึง จึงล้างค่าแล้วเหลือแถวว่างไว้ 1 แถว
+      sh.getRange(2, 1, rows, sh.getMaxColumns()).clearContent();
+      if (rows > 1) sh.deleteRows(3, rows - 1);
+    }
+  });
+  invalidateCache_();
+  return out;
 }
