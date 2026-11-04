@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ระบบแจ้งซ่อมออนไลน์ คณะการแพทย์แผนไทย — หน้าเว็บ v15.9 (2026-11-04) · v15.9 ตัวกรอง Dashboard · v15.6 โลโก้ · v15.7 เอาหน้า QR Code ออก · v15.8 ล้างใบงานทดสอบก่อนเริ่มใช้ · ต้องใช้คู่กับ Code.gs v15.1 · ไฟล์ PWA: manifest.json, sw.js, icon-192.png, icon-512.png -->
+<!-- ระบบแจ้งซ่อมออนไลน์ คณะการแพทย์แผนไทย — หน้าเว็บ v15.9 (2026-11-04) · v15.9 ตัวกรอง Dashboard + แก้ติดตามงานไม่ขึ้นเมื่อรายละเอียดเป็นตัวเลข · v15.6 โลโก้ · v15.7 เอาหน้า QR Code ออก · v15.8 ล้างใบงานทดสอบก่อนเริ่มใช้ · ต้องใช้คู่กับ Code.gs v15.1 · ไฟล์ PWA: manifest.json, sw.js, icon-192.png, icon-512.png -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -802,7 +802,8 @@ function dedupeTickets(arr){
 // นำข้อมูลชุดหนึ่ง (จาก bootstrap หรือจากแคช) มาใส่ใน state
 function applyBundle(d, fresh){   // fresh = ข้อมูลสดจากเซิร์ฟเวอร์ (ไม่ใช่แคชในเครื่อง)
   if(d.tickets){ d.tickets = dedupeTickets(d.tickets); }
-  if(d.tickets){ DB.tickets = d.tickets; DB.history = d.history||{}; DB.tickets.forEach(t=>{ t.history = DB.history[t.id] || t.history || []; if(!t.assignees) t.assignees=[]; }); }
+  if(d.tickets){ d.tickets.forEach(t=>{ ['id','name','phone','dept','email','room','floor','category','desc','ratedBy','ratingComment','note'].forEach(k=>{ if(t[k]!=null && typeof t[k]!=='string') t[k]=String(t[k]); }); });   // v15.9: กันข้อความที่ชีตแปลงเป็นตัวเลข
+    DB.tickets = d.tickets; DB.history = d.history||{}; DB.tickets.forEach(t=>{ t.history = DB.history[t.id] || t.history || []; if(!t.assignees) t.assignees=[]; }); }
   if(d.tickets) replayQ();
   if(d.tickets) syncRatedLocal(!!fresh);
   if(d.config) applyConfig(d.config);
@@ -3733,8 +3734,8 @@ function openEdit(id){
   document.getElementById('detMd').style.display='none';
   document.getElementById('editMd').style.display='flex';
 }
-function escAttr(s){return (s||'').replace(/"/g,'&quot;');}
-function escHtml(s){return (s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escAttr(s){return (s==null?'':String(s)).replace(/"/g,'&quot;');}
+function escHtml(s){return (s==null?'':String(s)).replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 async function saveEdit(id){
   const t=DB.tickets.find(t=>t.id===id); if(!t) return;
