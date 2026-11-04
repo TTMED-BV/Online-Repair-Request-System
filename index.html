@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ระบบแจ้งซ่อมออนไลน์ คณะการแพทย์แผนไทย — หน้าเว็บ v15.9 (2026-11-04) · v15.9 ตัวกรอง Dashboard + แก้ติดตามงานไม่ขึ้นเมื่อรายละเอียดเป็นตัวเลข · v15.6 โลโก้ · v15.7 เอาหน้า QR Code ออก · v15.8 ล้างใบงานทดสอบก่อนเริ่มใช้ · ต้องใช้คู่กับ Code.gs v15.1 · ไฟล์ PWA: manifest.json, sw.js, icon-192.png, icon-512.png -->
+<!-- ระบบแจ้งซ่อมออนไลน์ คณะการแพทย์แผนไทย — หน้าเว็บ v15.9 (2026-11-04) · v15.9 ตัวกรอง Dashboard + ตำแหน่งผู้แจ้งแบบเลือก + แก้ติดตามงานไม่ขึ้นเมื่อรายละเอียดเป็นตัวเลข · v15.6 โลโก้ · v15.7 เอาหน้า QR Code ออก · v15.8 ล้างใบงานทดสอบก่อนเริ่มใช้ · ต้องใช้คู่กับ Code.gs v15.1 · ไฟล์ PWA: manifest.json, sw.js, icon-192.png, icon-512.png -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -1336,7 +1336,7 @@ function pgReport() {
         <div class="ff" style="margin:0"><label>โทรศัพท์<span class="req">*</span></label><input id="fP" type="tel" placeholder="08x-xxx-xxxx" value="${escAttr(ME.ph||'')}" oninput="clrErr('fP')"><div class="fld-err" id="e_fP">กรุณากรอกเบอร์โทร</div></div>
       </div>
       <div class="frow" style="margin-top:.75rem">
-        <div class="ff" style="margin:0"><label>ตำแหน่ง/หน่วยงาน<span class="req">*</span></label><input id="fD" placeholder="อาจารย์ / เจ้าหน้าที่ / นักศึกษา" value="${escAttr(ME.d||'')}" oninput="clrErr('fD')"><div class="fld-err" id="e_fD">กรุณากรอกหน่วยงาน</div></div>
+        <div class="ff" style="margin:0"><label>ตำแหน่ง<span class="req">*</span></label>${deptField(ME.d||'')}<div class="fld-err" id="e_fD">กรุณาเลือกตำแหน่ง (ถ้าเลือก “อื่นๆ” ให้ระบุ)</div></div>
         <div class="ff" style="margin:0"><label>อีเมล</label><input id="fE" type="email" placeholder="@psu.ac.th" value="${escAttr(ME.e||'')}"></div>
       </div>
       <label class="remember"><input type="checkbox" id="fRemember" style="width:auto" ${ME.off?'':'checked'}> จำข้อมูลผู้แจ้งไว้ในเครื่องนี้ (ครั้งหน้าไม่ต้องกรอกใหม่)${ME.n?` · <a href="#" onclick="forgetMe();return false" style="color:var(--tx3)">ล้างข้อมูลที่จำไว้</a>`:''}</label>
@@ -1382,7 +1382,7 @@ function pgReport() {
 }
 
 async function submitR() {
-  const n=v('fN'),ph=v('fP'),d=v('fD'),b=v('fB'),fl=v('fFloor'),r=v('fR'),c=v('fC'),desc=v('fDesc');
+  const n=v('fN'),ph=v('fP'),d=deptVal(),b=v('fB'),fl=v('fFloor'),r=v('fR'),c=v('fC'),desc=v('fDesc');
   const msg=document.getElementById('rmsg');
   const checks=[['fN',n],['fP',ph],['fD',d],['fB',b],['fFloor',fl],['fR',r],['fC',c],['fDesc',desc]];
   let firstBad=null;
@@ -1414,13 +1414,22 @@ async function submitR() {
   rememberRequester({n,ph,d,e:v('fE')}, document.getElementById('fRemember')?.checked);
   addMine(ticket.id);
   if(cu) msg.innerHTML+=`<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" onclick="gp('mine')"><i class="ti ti-file-text"></i> ดูใบของฉัน</button></div>`;
-  ['fR','fDesc'].concat(ME.n?[]:['fN','fP','fD','fE']).forEach(f=>{const el=document.getElementById(f);if(el)el.value='';});
+  ['fR','fDesc'].concat(ME.n?[]:['fN','fP','fD','fE','fDo']).forEach(f=>{const el=document.getElementById(f);if(el)el.value='';}); if(!ME.n) deptToggle();
   document.getElementById('dupWarn').innerHTML='';
   document.getElementById('fB').value=''; document.getElementById('fC').value='';
   updFloorOptions();
   showToast('บันทึกลง Google Sheet แล้ว');
 }
 function v(id) { const el=document.getElementById(id); return el?el.value.trim():''; }
+// v15.9: ตำแหน่งผู้แจ้ง — เลือก อาจารย์ / บุคลากร / นักศึกษา / อื่นๆ (กรอกเอง)
+const DEPT_OPTS=['อาจารย์','บุคลากร','นักศึกษา'];
+function deptField(cur){
+  cur=String(cur||'').trim(); if(cur==='เจ้าหน้าที่') cur='บุคลากร'; const other=!!cur && !DEPT_OPTS.includes(cur);
+  return `<select id="fD" onchange="deptToggle();clrErr('fD')"><option value="">-- เลือกตำแหน่ง --</option>${DEPT_OPTS.map(o=>`<option ${o===cur?'selected':''}>${o}</option>`).join('')}<option value="__other" ${other?'selected':''}>อื่นๆ (ระบุ)</option></select>
+    <input id="fDo" placeholder="ระบุ เช่น ผู้รับบริการ / ผู้รับเหมา / หน่วยงานภายนอก" value="${other?escAttr(cur):''}" oninput="clrErr('fD')" style="margin-top:6px;${other?'':'display:none'}">`;
+}
+function deptToggle(){ const s=document.getElementById('fD'), o=document.getElementById('fDo'); if(!s||!o) return; const on=s.value==='__other'; o.style.display=on?'':'none'; if(on) setTimeout(()=>o.focus(),0); }
+function deptVal(){ const s=document.getElementById('fD'); if(!s) return ''; if(s.value==='__other'){ const o=document.getElementById('fDo'); return o?o.value.trim():''; } return s.value; }
 function clrErr(id){ const el=document.getElementById(id),er=document.getElementById('e_'+id); if(el)el.classList.remove('err'); if(er)er.classList.remove('show'); }
 // อัปเดต dropdown ชั้นตามอาคารที่เลือก
 function updFloorOptions(preselect){
@@ -1481,7 +1490,7 @@ function rememberRequester(info, on){
   else { ME={off:true}; }
   lsSet('vr3_me', ME);
 }
-function forgetMe(){ ME={off:true}; lsSet('vr3_me',ME); ['fN','fP','fD','fE'].forEach(f=>{const el=document.getElementById(f);if(el)el.value='';}); const r=document.getElementById('fRemember'); if(r) r.checked=false; showToast('ล้างข้อมูลที่จำไว้แล้ว'); }
+function forgetMe(){ ME={off:true}; lsSet('vr3_me',ME); ['fN','fP','fD','fE','fDo'].forEach(f=>{const el=document.getElementById(f);if(el)el.value='';}); deptToggle(); const r=document.getElementById('fRemember'); if(r) r.checked=false; showToast('ล้างข้อมูลที่จำไว้แล้ว'); }
 function addMine(id){ const m=lsGet('vr3_mine',[]); if(!m.includes(id)) m.unshift(id); lsSet('vr3_mine', m.slice(0,100)); }
 function removeMine(id){ lsSet('vr3_mine', lsGet('vr3_mine',[]).filter(x=>x!==id)); rp(); }
 function digits(x){ return String(x||'').replace(/\D/g,''); }
