@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — admin.js (v16.1) : ตั้งค่า · ผู้ใช้/บทบาท · แจ้งเตือน · กติกาวิ่งงาน · คลัง · จัดการระบบ
+// ระบบแจ้งซ่อมออนไลน์ — admin.js (v16.2) : ตั้งค่า · ผู้ใช้/บทบาท · แจ้งเตือน · กติกาวิ่งงาน · คลัง · จัดการระบบ
 // โหลดตามลำดับใน index.html (classic script ใช้ตัวแปรร่วมกัน)
 // ════════════════════════ PAGE: CONFIG ════════════════════════
 function pgConfig() {
@@ -398,6 +398,20 @@ async function installRichMenu(){
   showLoader('กำลังติดตั้งเมนู LINE...');
   try{ const r=await api('setupRichMenu',{token:AUTH_TOKEN}); hideLoader(); showToast(r&&r.message?r.message:'ติดตั้งแล้ว',4000); }
   catch(e){ hideLoader(); showToast('ไม่สำเร็จ: '+e.message,5000); }
+}
+// v16.2: ดาวน์โหลดรายงานสรุปรายเดือน (PDF จากเซิร์ฟเวอร์ — ไฟล์เดียวกับที่แนบอีเมล)
+function prevYm(back=1){ const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-back); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+async function downloadMonthlyPdf(ym){
+  if(!navigator.onLine){ showToast('ต้องออนไลน์เพื่อสร้างรายงาน'); return; }
+  showLoader('กำลังสร้างรายงาน PDF...');
+  try{
+    const r=await api('monthlyPdf',{ym:ym||prevYm(),token:AUTH_TOKEN}); hideLoader();
+    const bin=atob(r.data), u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+    const url=URL.createObjectURL(new Blob([u8],{type:'application/pdf'}));
+    const a=document.createElement('a'); a.href=url; a.download=r.name||'monthly.pdf'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+    showToast('ดาวน์โหลดรายงาน '+r.label+' แล้ว'+(r.url?' (เก็บสำเนาใน Google Drive ด้วย)':''),3500);
+  }catch(e){ hideLoader(); if(!handleAuthError(e)) showToast('สร้างรายงานไม่สำเร็จ: '+e.message+(/Unknown action/.test(e.message)?' (ต้อง Deploy Code.gs v16.2)':''),4000); }
 }
 async function testMonthly(){
   showLoader('กำลังส่งสรุปรายเดือน...');

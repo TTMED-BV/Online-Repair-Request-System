@@ -567,3 +567,13 @@ textarea{resize:vertical;min-height:76px}
 .hp-q summary{cursor:pointer;font-weight:600}
 .hp-q div{margin-top:.4rem;color:var(--tx2);line-height:1.7}
 @media(max-width:600px){.hp-rm{grid-template-columns:repeat(2,1fr)}.hp-step{gap:9px}.hp-phone{max-width:100%}}
+
+/* ══ v16.2: ป้ายรอส่ง / ออฟไลน์ ══ */
+.sync-badge{position:fixed;right:14px;bottom:14px;z-index:650;display:none;gap:6px;align-items:center;cursor:pointer;background:var(--surf);border:1px solid var(--bd2);box-shadow:var(--sh2);border-radius:20px;padding:7px 13px;font-size:12.5px;color:var(--tx2)}
+.sync-badge.bad{border-color:#e35b5b}
+.sync-badge.off{background:#3a2a05;color:#ffd98a;border-color:#c9a24d}
+.sync-badge i{font-size:15px}
+.sq-row{border:1px solid var(--bd);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12.5px;display:block}
+.sq-row.sq-ph{display:flex;gap:10px;align-items:flex-start}
+.sq-row img{width:56px;height:56px;object-fit:cover;border-radius:6px;flex:none}
+.sq-st{color:var(--tx3);margin:3px 0 6px}.sq-st.e{color:var(--red-tx)}

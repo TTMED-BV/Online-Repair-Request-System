@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — core.js (v16.1) : ค่าตั้งต้น · สถานะ · API · คาร์บอน · สิทธิ์ · คิวบันทึก · ตัวช่วย · ล็อกอิน · เราเตอร์
+// ระบบแจ้งซ่อมออนไลน์ — core.js (v16.2) : ค่าตั้งต้น · สถานะ · API · คาร์บอน · สิทธิ์ · คิวบันทึก · ตัวช่วย · ล็อกอิน · เราเตอร์
 // โหลดตามลำดับใน index.html (classic script ใช้ตัวแปรร่วมกัน)
 // ═══════════════════════════════════════════
 // CONFIG — แก้ GAS_URL หลัง Deploy Apps Script
@@ -6,7 +6,7 @@
 // URL ของ Google Apps Script ฝังไว้ในโปรแกรม (แก้ได้ที่หน้า ⚙ ตั้งค่า)
 // ─── เวอร์ชันโปรแกรม (อัปเดตทุกครั้งที่ออกเวอร์ชันใหม่ — ต้องตรงกับ Code.gs) ───
 // APP_VERSION อยู่ใน index.html (ให้ตัวตรวจเวอร์ชันใหม่อ่านได้จากไฟล์เดียว)
-const SERVER_REQUIRED = 'v16.1';   // เวอร์ชัน Code.gs ที่หน้าเว็บนี้ต้องใช้
+const SERVER_REQUIRED = 'v16.2';   // เวอร์ชัน Code.gs ที่หน้าเว็บนี้ต้องใช้
 const APP_BUILD   = '2026-11-09';
 let SERVER_VERSION = '';   // อ่านจาก Code.gs ตอนเปิดเว็บ
 const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbyOsSEC8KI1bmWJpWoCXC18XEWRqNTyzN4sRQwc4UV_GAWOUlvnzTzaUCwVId-FmaY2/exec';
@@ -321,32 +321,7 @@ function saveLocal() {
 let SYNC_Q = (()=>{ try{ return JSON.parse(localStorage.getItem('vr3_q')||'[]'); }catch{ return []; } })();
 let flushing = false;
 function qSave(){ try{ localStorage.setItem('vr3_q', JSON.stringify(SYNC_Q)); }catch{} updSyncBadge(); }
-function updSyncBadge(){
-  let el=document.getElementById('syncBadge');
-  if(!el){ el=document.createElement('div'); el.id='syncBadge';
-    el.style.cssText='position:fixed;right:14px;bottom:14px;z-index:650;background:var(--surf);border:.5px solid var(--bd2);box-shadow:var(--sh2);border-radius:20px;padding:6px 12px;font-size:12px;color:var(--tx2);display:none';
-    document.body.appendChild(el); }
-  el.style.display = SYNC_Q.length ? 'block' : 'none';
-  el.style.cursor='pointer'; el.onclick=openSyncPanel;
-  const bad=SYNC_Q.some(j=>j.err);
-  el.style.borderColor = bad ? '#e35b5b' : '';
-  el.innerHTML = (bad?'⚠️ ส่งไม่สำเร็จ ':'<i class="ti ti-cloud-upload" style="vertical-align:-2px"></i> กำลังบันทึก ')+SYNC_Q.length+' รายการ — กดดู';
-}
-// v12.1: ดูงานที่ค้างส่ง + สาเหตุ / ส่งใหม่ / เอาออกจากคิว
-function openSyncPanel(){
-  const rows=SYNC_Q.map((j,i)=>{
-    const id=j.op==='add'?j.ticket.id:j.id;
-    const what=j.op==='add'?'แจ้งซ่อมใหม่':('อัปเดต '+Object.keys(j.fields||{}).join(', '));
-    return `<div style="border:.5px solid var(--bd);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12.5px">
-      <div><span class="mono">${escHtml(id)}</span> · ${escHtml(what)}</div>
-      <div style="color:${j.err?'var(--red-tx)':'var(--tx3)'};margin-top:3px">${j.err?'ผิดพลาด: '+escHtml(j.err):'รอส่ง'}${j.tries?` · ลองแล้ว ${j.tries} ครั้ง`:''}</div>
-      <button class="btn btn-sm btn-red" style="margin-top:6px" onclick="syncDrop(${i})">เอาออกจากคิว</button>
-    </div>`;}).join('')||'<div class="empty-sub">ไม่มีงานค้างส่ง</div>';
-  document.getElementById('dueContent').innerHTML=`<div class="modal-title">งานที่ยังไม่ถึงเซิร์ฟเวอร์ <button class="mc" onclick="cm('dueMd')">✕</button></div>
-    <div style="font-size:12px;color:var(--tx3);margin-bottom:10px">ข้อมูลเหล่านี้อยู่ในเครื่องนี้เท่านั้น คนอื่นยังไม่เห็น ระบบจะลองส่งใหม่อัตโนมัติ</div>
-    ${rows}<button class="btn btn-p" style="width:100%" onclick="flushing=false;flushQ();cm('dueMd')">ลองส่งใหม่ตอนนี้</button>`;
-  document.getElementById('dueMd').style.display='flex';
-}
+// v16.2: updSyncBadge / openSyncPanel ย้ายไป js/offline.js (รวมคิวรูปภาพ + สถานะออฟไลน์)
 function syncDrop(i){
   const j=SYNC_Q[i]; if(!j) return;
   if(!confirm('เอารายการนี้ออกจากคิว? ข้อมูลที่ยังไม่ถึงเซิร์ฟเวอร์จะหายไป')) return;
@@ -357,7 +332,7 @@ function syncDrop(i){
 async function syncAdd(ticket) {
   saveLocal();
   if (!GAS_URL) return;
-  SYNC_Q.push({ op:'add', ticket, entry:(ticket.history||[])[0]||null }); qSave(); flushQ();
+  SYNC_Q.push({ op:'add', ticket, entry:(ticket.history||[])[0]||null }); qSave(); await flushQ();   // v16.2 รอให้ใบถึงก่อน แล้วค่อยส่งรูป
 }
 async function syncUpdate(id, fields, histEntry) {
   saveLocal();
@@ -371,6 +346,7 @@ async function legacyUpd(j){
 }
 async function flushQ(){
   if (flushing || !SYNC_Q.length || !GAS_URL) return;
+  if (!navigator.onLine) { updSyncBadge(); return; }   // v16.2 ออฟไลน์: เก็บไว้ก่อน ส่งเมื่อกลับมาออนไลน์
   flushing = true;
   try{
     while (SYNC_Q.length){
@@ -394,11 +370,13 @@ async function flushQ(){
         j.err=String(e.message||e); j.tries=(j.tries||0)+1; qSave();
         if (handleAuthError(e)) break;                                   // รอล็อกอินใหม่แล้วค่อยส่งต่อ
         if (/not found/i.test(e.message||'')){ SYNC_Q.shift(); qSave(); showToast('⚠ '+e.message,3000); continue; }
+        if (isNetErr(e)) { j.err=''; qSave(); if(navigator.onLine) setTimeout(flushAll, 15000); break; }   // v16.2 สัญญาณไม่ดี → เงียบ ๆ แล้วลองใหม่
         showToast('⚠ บันทึกยังไม่สำเร็จ — ระบบจะลองใหม่อัตโนมัติ', 2500);
         setTimeout(flushQ, 8000); break;
       }
     }
   } finally { flushing = false; }
+  if (!SYNC_Q.length && typeof flushPhotos==='function') flushPhotos();   // v16.2 ใบงานถึงแล้ว → ส่งรูปที่รออยู่
 }
 // นำงานที่ยังส่งไม่สำเร็จมาทับข้อมูลจากเซิร์ฟเวอร์ (กันหน้าจอย้อนกลับ)
 function replayQ(){
@@ -407,7 +385,7 @@ function replayQ(){
     else { const t=DB.tickets.find(x=>x.id===j.id); if(t){ Object.assign(t, j.fields); if(j.entry && !(t.history||[]).some(h=>h.date===j.entry.date&&h.note===j.entry.note)) (t.history=t.history||[]).push(j.entry); } }
   });
 }
-window.addEventListener('online', ()=>flushQ());
+// v16.2: เหตุการณ์ online/offline อยู่ใน js/offline.js
 window.addEventListener('beforeunload', e=>{ if(SYNC_Q.length){ e.preventDefault(); e.returnValue=''; } });
 // session หมดอายุ → ให้ล็อกอินใหม่
 function handleAuthError(e){

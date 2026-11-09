@@ -1,8 +1,8 @@
-// Service worker — ระบบแจ้งซ่อมออนไลน์ (v16.1)
+// Service worker — ระบบแจ้งซ่อมออนไลน์ (v16.2)
 // หน้าเว็บ: ถามเซิร์ฟเวอร์ทุกครั้งว่ามีไฟล์ใหม่ไหม (ไม่ใช้แคชเบราว์เซอร์ค้าง) ถ้าออฟไลน์ใช้ฉบับที่เก็บไว้
 // ข้อมูลจาก Google Apps Script ไม่ผ่าน service worker (ไม่แคช)
-const CACHE = 'repair-v16-1';
-const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './css/app.css', './js/admin.js', './js/help.js', './js/core.js', './js/dashboard.js', './js/detail.js', './js/init.js', './js/report.js', './js/status.js', './js/workflow.js'];
+const CACHE = 'repair-v16-2';
+const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './css/app.css', './js/admin.js', './js/help.js', './js/offline.js', './js/core.js', './js/dashboard.js', './js/detail.js', './js/init.js', './js/report.js', './js/status.js', './js/workflow.js'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'reload' })))).catch(() => {}));
   self.skipWaiting();

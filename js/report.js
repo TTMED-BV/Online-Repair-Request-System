@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — report.js (v16.1) : หน้าแจ้งซ่อม · ใบที่ฉันแจ้ง · งานที่ฉันรับผิดชอบ · จุดซ่อมซ้ำ · รายงาน KPI
+// ระบบแจ้งซ่อมออนไลน์ — report.js (v16.2) : หน้าแจ้งซ่อม · ใบที่ฉันแจ้ง · งานที่ฉันรับผิดชอบ · จุดซ่อมซ้ำ · รายงาน KPI
 // โหลดตามลำดับใน index.html (classic script ใช้ตัวแปรร่วมกัน)
 // ════════════════════════ PAGE: REPORT ════════════════════════
 function pgReport() {
@@ -85,13 +85,17 @@ async function submitR() {
   DB.tickets.push(ticket);
   showLoader(pendingPhotos.length ? 'กำลังบันทึกและอัปโหลดรูป...' : 'กำลังบันทึก...');
   await syncAdd(ticket);
-  let photoN = 0;
+  let photoN = 0, photoWait = 0;
   if (pendingPhotos.length) {
+    photoWait = pendingPhotos.length;
     photoN = await uploadPendingPhotos(ticket.id, n, 'report');
+    photoWait = Math.max(0, photoWait - photoN);
     pendingPhotos = []; renderPendingPhotos();
   }
   hideLoader(); updApvCnt();
   msg.innerHTML=`<div class="notice n-green" style="margin:0"><i class="ti ti-circle-check ni"></i><div><b>ส่งแจ้งซ่อมสำเร็จ</b><br>รหัสใบแจ้งซ่อม: <span class="mono">${ticket.id}</span> — จดรหัสนี้ไว้ติดตามสถานะ<br>สถานะ: รอวิศวกรตรวจสอบและอนุมัติ${photoN?`<br>แนบรูปแล้ว ${photoN} รูป`:''}</div></div>`;
+  if(!navigator.onLine || SYNC_Q.some(j=>j.op==='add'&&j.ticket.id===ticket.id) || photoWait)   // v16.2 ยังไม่ถึงเซิร์ฟเวอร์
+    msg.innerHTML+=`<div class="notice n-amber" style="margin:8px 0 0"><i class="ti ti-wifi-off ni"></i><div><b>บันทึกไว้ในเครื่องนี้แล้ว</b>${photoWait?` (รวมรูป ${photoWait} รูป)`:''} — ยังไม่ถึงเซิร์ฟเวอร์เพราะไม่มีสัญญาณ ระบบจะส่งให้อัตโนมัติเมื่อกลับมาออนไลน์ <b>อย่าล้างข้อมูลเบราว์เซอร์</b> จนกว่าป้ายมุมขวาล่างจะหายไป</div></div>`;
   msg.innerHTML+=lineFollowBox(ticket.id, ticket.trackPin);   // v16.1
   rememberRequester({n,ph,d,e:v('fE')}, document.getElementById('fRemember')?.checked);
   addMine(ticket.id);
@@ -100,7 +104,7 @@ async function submitR() {
   document.getElementById('dupWarn').innerHTML='';
   document.getElementById('fB').value=''; document.getElementById('fC').value='';
   updFloorOptions();
-  showToast('บันทึกลง Google Sheet แล้ว');
+  showToast(navigator.onLine&&!SYNC_Q.some(j=>j.op==='add'&&j.ticket.id===ticket.id)?'บันทึกลง Google Sheet แล้ว':'บันทึกไว้ในเครื่องแล้ว — จะส่งให้เมื่อมีสัญญาณ',3000);
 }
 function v(id) { const el=document.getElementById(id); return el?el.value.trim():''; }
 // v15.9: ตำแหน่งผู้แจ้ง — เลือก อาจารย์ / บุคลากร / นักศึกษา / อื่นๆ (กรอกเอง)
@@ -363,7 +367,8 @@ function kpiCard(){
   return `<div class="card" style="margin-bottom:1rem">
     <div class="ctitle" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><span>📑 รายงาน KPI ปีงบประมาณ</span>
       <span style="display:flex;gap:6px;align-items:center"><select onchange="kpiFY=+this.value;rp()" style="width:auto;padding:4px 8px">${kpiYears().map(x=>`<option value="${x}" ${x===fy?'selected':''}>ปีงบ ${x}</option>`).join('')}</select>
-      <button class="btn btn-sm btn-p" onclick="printKPI(${fy})"><i class="ti ti-printer"></i> พิมพ์ / PDF</button></span></div>
+      <button class="btn btn-sm btn-p" onclick="printKPI(${fy})"><i class="ti ti-printer"></i> พิมพ์ / PDF</button>
+      ${cu?`<input type="month" id="mpdfM" value="${prevYm()}" max="${prevYm(0)}" style="width:auto;padding:3px 6px" title="เลือกเดือน"><button class="btn btn-sm" onclick="downloadMonthlyPdf(document.getElementById('mpdfM').value)" title="รายงานสรุปรายเดือน (ไฟล์เดียวกับที่แนบอีเมลวันที่ 1)"><i class="ti ti-file-type-pdf"></i> สรุปรายเดือน PDF</button>`:''}</span></div>
     <div style="font-size:12px;color:var(--tx3)">1 ต.ค. ${fy-1} – 30 ก.ย. ${fy} · นับเฉพาะใบที่ไม่ถูกยกเลิก${dfLabel(false)?` · <b style="color:var(--tx2)">ตัวกรอง: ${escHtml(dfLabel(false))}</b> (ตัวกรองช่วงเวลาไม่ใช้กับส่วนนี้ — ใช้ปีงบด้านขวาแทน)`:''}</div>
     <div class="kpi-grid">
       <div class="kpi-box ${kpiCls(y.onTimePct,o.kpiOnTime)}"><div class="kl">เสร็จทันกำหนด</div><div class="kv">${fmt(y.onTimePct,'%')}</div><div class="kt">เป้า ≥ ${o.kpiOnTime}%</div></div>

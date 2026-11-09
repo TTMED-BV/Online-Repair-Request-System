@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — detail.js (v16.1) : รายละเอียดใบงาน · รูปภาพ · แก้ไข/ยกเลิก · ประเมิน
+// ระบบแจ้งซ่อมออนไลน์ — detail.js (v16.2) : รายละเอียดใบงาน · รูปภาพ · แก้ไข/ยกเลิก · ประเมิน
 // โหลดตามลำดับใน index.html (classic script ใช้ตัวแปรร่วมกัน)
 // ════════════════════════ DETAIL MODAL ════════════════════════
 
@@ -79,6 +79,9 @@ function removePendingPhoto(i){ pendingPhotos.splice(i,1); renderPendingPhotos()
 // ส่งรูปที่แนบไว้ขึ้นเซิร์ฟเวอร์
 async function uploadPendingPhotos(ticketId, by, kind='report'){
   if(!GAS_URL || !pendingPhotos.length) return 0;
+  // v16.2: เก็บลงคิวในเครื่องก่อน แล้วค่อยส่ง (ออฟไลน์/สัญญาณหายก็ไม่หาย) — คืนจำนวนที่ "ส่งถึงแล้ว"
+  const q=await enqueuePhotos(ticketId, pendingPhotos, kind, by||'ผู้แจ้ง');
+  if(q>=0){ const before=(PHOTOS[ticketId]||[]).length; await flushPhotos(); return (PHOTOS[ticketId]||[]).length-before; }
   // ส่งทุกรูปพร้อมกัน (ขนานกัน) แทนการรอทีละรูป
   const results = await Promise.all(pendingPhotos.map(p=>
     api('uploadPhoto',{photo:{ticketId,data:p.base64,mimeType:p.mimeType,kind,by:by||'ผู้แจ้ง'}})
@@ -100,6 +103,20 @@ async function onAddTicketPhoto(input, ticketId, kind){
   const files=[...input.files].filter(f=>f.type.startsWith('image/')); input.value='';
   if(!files.length) return;
   if(!GAS_URL){ showToast('ยังไม่ได้เชื่อมต่อเซิร์ฟเวอร์'); return; }
+  // v16.2: เก็บลงคิวก่อน — ออฟไลน์ก็ถ่ายรูปได้ ส่งให้เองเมื่อมีสัญญาณ
+  if(window.indexedDB){
+    showLoader(navigator.onLine?'กำลังอัปโหลดรูป...':'กำลังบันทึกรูปไว้ในเครื่อง...');
+    const resized=(await Promise.all(files.map(f=>resizeImage(f).catch(()=>null)))).filter(Boolean);
+    const q=await enqueuePhotos(ticketId, resized, kind, cu?cu.name:'-');
+    if(q>=0){
+      const before=(PHOTOS[ticketId]||[]).length; await flushPhotos(); hideLoader();
+      const sent=(PHOTOS[ticketId]||[]).length-before;
+      if(sent>=resized.length) showToast('อัปโหลด '+sent+' รูปแล้ว');
+      else showToast((sent?'อัปโหลด '+sent+' รูป · ':'')+'เก็บไว้ในเครื่อง '+(resized.length-sent)+' รูป — จะส่งให้เมื่อมีสัญญาณ',3500);
+      openDet(ticketId); return;
+    }
+    hideLoader();
+  }
   showLoader('กำลังอัปโหลดรูป...');
   // ย่อขนาดทุกรูปพร้อมกัน แล้วอัปโหลดพร้อมกัน
   let n=0, errMsg='';

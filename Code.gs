@@ -1,11 +1,12 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════
- *  ระบบแจ้งซ่อมออนไลน์ — Google Apps Script Backend (v16.1)
+ *  ระบบแจ้งซ่อมออนไลน์ — Google Apps Script Backend (v16.2)
  *  เวอร์ชัน v15 (2026-10-26) — ต้องใช้คู่กับหน้าเว็บ index.html v15
  *  ประวัติ: v12 ฟิลเตอร์/ปฏิทินแถบ/วันคาดว่าเสร็จ/PM 5 แบบ/ประเมินแทน+อีเมล · v12.1–12.2 แก้ใบค้าง ใบรหัสซ้ำ
  *           v13 คาร์บอนที่ประหยัดได้รายเดือน · v14 แจ้งเตือนรายคน LINE OA/อีเมล
  *           v15 คลังอุปกรณ์+จุดสั่งซื้อ/แจ้งของใกล้หมด · สรุปรายเดือนอัตโนมัติ (วันที่ 1 08:00)
  *               · ตั้งค่าจุดซ่อมซ้ำ/เป้า KPI · บันทึกการเคลื่อนไหวคลัง (แท็บ InvLog)
+ *           v16.2 (9 พ.ย.) รายงานสรุปรายเดือน PDF (แนบอีเมล + ดาวน์โหลดจากเว็บ + เก็บใน Drive) · รองรับคิวรูปจากโหมดออฟไลน์
  *           v16.1 (9 พ.ย.) LINE: ผู้แจ้งติดตามใบงาน (เลขใบ+รหัส 4 หลัก) + แจ้งเมื่อสถานะเปลี่ยน · ปุ่มเริ่มซ่อม/เสร็จแล้วในการ์ด · Rich Menu 6 ปุ่ม
  *           v16.0 (9 พ.ย.) จัดโครงสร้างใหม่: ตารางเส้นทาง ROUTES (สิทธิ์ต่อ action ในที่เดียว) + ตัวช่วยอ่านตารางตามชื่อคอลัมน์ table_()
  *           v15.3 (9 พ.ย.) ความปลอดภัย: ซ่อนข้อมูลส่วนบุคคลจากผู้ไม่ล็อกอิน · กรองอักขระ HTML · ล็อกต้องได้จริง · กันเดารหัสผ่าน · รหัสผ่าน v2
@@ -217,6 +218,7 @@ var ROUTES = {
   getNotifyAll:    { auth:'engineer',             fn:function(){ return getNotifyAll_(); } },
   setUserNotify:   { auth:'engineer',             fn:function(b){ return setUserNotify_(b.username, b.fields); } },
   setupRichMenu:   { auth:'engineer',             fn:function(){ return setupRichMenu(); } },   // v16.1 ติดตั้งเมนู LINE
+  monthlyPdf:      { auth:'user',     read:true,  fn:function(b){ return monthlyPdfDownload_(b.ym); } },   // v16.2 ดาวน์โหลดรายงาน PDF
   monthlyTest:     { auth:'engineer',             fn:function(b, c){ return sendMonthlySummary({ onlyUser:c.username, force:true }); } }
 };
 
@@ -265,7 +267,7 @@ function doPost(e) {
 
 // รองรับการเปิด URL ตรง ๆ ด้วย GET (ไว้ทดสอบว่า deploy ติดไหม)
 function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({ ok:true, data:{ status:'online', version:'v16.1' } }))
+  return ContentService.createTextOutput(JSON.stringify({ ok:true, data:{ status:'online', version:'v16.2' } }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -1919,6 +1921,7 @@ function sendMonthlySummary(opts) {
   opts = opts || {};
   var st = monthlyStats_(prevMonth_(new Date()));
   var mail = monthlyMail_(st);
+  var pdf = null; try { pdf = monthlyPdf_(st, mail); if (!opts.onlyUser) saveMonthlyPdf_(pdf); } catch (e) { Logger.log('monthly pdf: ' + e); }   // v16.2 แนบ PDF
   var rows = opts.onlyUser ? allUserRows_().filter(function(r){ return String(r[0]) === String(opts.onlyUser); }) : managerRows_();
   var sent = [], skipped = [];
   rows.forEach(function(r){
@@ -1926,8 +1929,10 @@ function sendMonthlySummary(opts) {
     if (String(r[9]).toUpperCase() === 'FALSE') return;
     if (!opts.force && (info.notify === 'none' || info.events.indexOf('monthly') < 0)) { skipped.push(String(r[3])); return; }
     if (info.email) {   // สรุปรายเดือนส่งทางอีเมลเป็นหลัก (ตารางยาว ไม่เปลืองโควตา LINE)
-      MailApp.sendEmail({ to: info.email, subject: mail.subject, htmlBody: mail.body, name:'ระบบแจ้งซ่อม คณะการแพทย์แผนไทย' });
-      sent.push(String(r[3]) + ' (อีเมล)');
+      var m = { to: info.email, subject: mail.subject, htmlBody: mail.body, name:'ระบบแจ้งซ่อม คณะการแพทย์แผนไทย' };
+      if (pdf) m.attachments = [pdf];
+      MailApp.sendEmail(m);
+      sent.push(String(r[3]) + ' (อีเมล' + (pdf ? ' + PDF' : '') + ')');
     } else if (info.hasLine) {
       var ok = linePush_(String(r[11]), [flexCard_({ title:'📊 ' + mail.subject, color:'#1d4632', ticketId:'', link: siteLink_('dashboard'), linkLabel:'ดู Dashboard', rows: mail.shortRows })]);
       if (ok) sent.push(String(r[3]) + ' (LINE)'); else skipped.push(String(r[3]) + ' (ส่ง LINE ไม่ได้)');
@@ -1986,7 +1991,10 @@ function monthlyStats_(pm) {
     onTimePct: judged ? Math.round(onTime / judged * 100) : null, judged: judged,
     avgDays: doneM.length ? Math.round(days / doneM.length * 10) / 10 : null,
     avgRating: rated.length ? Math.round(avgR * 10) / 10 : null, rated: rated.length,
-    cost: cost, topCat: topCat, topB: topB, hot: hotList, low: low };
+    cost: cost, topCat: topCat, topB: topB, hot: hotList, low: low,
+    doneList: (function(){ var uName = {}; try { allUserRows_().forEach(function(r){ uName[String(r[0])] = String(r[3] || r[0]); }); } catch (e) {} return doneM.slice().sort(function(a, b){ return new Date(a.completedAt) - new Date(b.completedAt); }).map(function(t){   // v16.2 สำหรับรายงาน PDF
+      return { id:t.id, completedAt:t.completedAt, place:(bName[t.building] || t.building || '-') + ' — ' + String(t.room || '-'), category:String(t.category || '-').trim(),
+               who:(t.assignees || []).map(function(u){ return uName[u] || u; }).join(', '), cost:Number(t.actualCost) || 0, rating:Number(t.rating) || 0 }; }); })() };
 }
 // ห้อง: ตัดช่องว่างซ้ำ/ตัวพิมพ์ใหญ่เล็ก เพื่อนับเป็นจุดเดียวกัน
 function roomKey_(room) { return String(room || '').toLowerCase().replace(/\s+/g, ' ').replace(/\s*[—-]\s*/g, '-').trim(); }
@@ -2285,7 +2293,10 @@ function publicPhotoAllowed_(body) {
   if (verifyToken_(body.token)) return true;
   var p = body.photo || {}; if (p.kind && p.kind !== 'report') return false;
   var age = ticketAgeMin_(p.ticketId);
-  return age !== null && age <= 180;   // ผู้แจ้งแนบรูปได้ภายใน 3 ชั่วโมงหลังแจ้ง
+  if (age !== null && age <= 180) return true;   // ผู้แจ้งแนบรูปได้ภายใน 3 ชั่วโมงหลังแจ้ง
+  // v16.2: แจ้งตอนออฟไลน์ (ส่งถึงช้า) → ยังแนบได้ภายใน 24 ชม. ถ้าใบยังรออนุมัติ
+  var r = age !== null && age <= 1440 ? table_(TICKETS_SHEET).find('ID', p.ticketId) : null;
+  return !!r && String(r.get('Status')) === 'pending_approval';
 }
 
 // 4) กันเดารหัสผ่าน: ผิด 5 ครั้งต่อบัญชี → ล็อก 15 นาที (นับใน CacheService)
@@ -2505,4 +2516,53 @@ function replyHelp_(replyToken) {
     '👤 ผู้แจ้ง\n• แจ้งซ่อมในเว็บ → กด "รับแจ้งเตือนทาง LINE" → กดส่งข้อความ\n• หรือพิมพ์: ติดตาม REP-XXXX 1234\n• พิมพ์ "ใบของฉัน" ดูสถานะทุกใบที่ติดตาม\n\n' +
     '👷 เจ้าหน้าที่\n• ผูกบัญชี: เว็บ → กดชื่อตัวเอง 🔔 → ขอรหัสผูก LINE → พิมพ์รหัส 6 หลักที่นี่\n• พิมพ์ "งานค้าง" ดูงานที่รับผิดชอบ + กด เริ่มซ่อม/เสร็จแล้ว ได้จากการ์ด' +
     (siteLink_('') ? '\n\n📖 คู่มือแบบมีภาพ: ' + siteLink_('help') : ''));
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+//  v16.2: รายงานสรุปรายเดือนเป็น PDF (แนบไปกับอีเมลสรุปวันที่ 1 + ดาวน์โหลดจากหน้าเว็บ)
+//  เก็บสำเนาไว้ใน Google Drive โฟลเดอร์ "ระบบแจ้งซ่อม - รายงานรายเดือน"
+// ═══════════════════════════════════════════════════════════════
+var MONTHLY_PDF_FOLDER = 'ระบบแจ้งซ่อม - รายงานรายเดือน';
+function monthlyPdfHtml_(st, mail) {
+  var esc = function(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  var th = 'padding:5px 6px;border:1px solid #bfb79c;background:#efe9d6;font-size:9.5pt';
+  var td = 'padding:4px 6px;border:1px solid #d8d2bd;font-size:9.5pt;vertical-align:top';
+  var rows = (st.doneList || []).map(function(t, i){
+    return '<tr><td style="' + td + ';text-align:center">' + (i + 1) + '</td><td style="' + td + '">' + esc(t.id) + '</td><td style="' + td + ';white-space:nowrap">' + esc(thShortDate_(t.completedAt)) + '</td>'
+      + '<td style="' + td + '">' + esc(t.place) + '</td><td style="' + td + '">' + esc(t.category) + '</td><td style="' + td + '">' + esc(t.who) + '</td>'
+      + '<td style="' + td + ';text-align:right">' + (t.cost ? Number(t.cost).toLocaleString() : '-') + '</td><td style="' + td + ';text-align:center">' + (t.rating ? t.rating + '★' : '-') + '</td></tr>';
+  }).join('');
+  var made = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'd/M/') + (new Date().getFullYear() + 543) + ' ' + Utilities.formatDate(new Date(), 'Asia/Bangkok', 'HH:mm');
+  return '<html><head><meta charset="utf-8"><style>@page{size:A4;margin:14mm} body{font-family:Sarabun,"TH Sarabun New",Tahoma,sans-serif;color:#211d12;font-size:11pt} h1{font-size:16pt;margin:0} h2{font-size:12.5pt;margin:16px 0 6px;border-bottom:2px solid #c9a24d;padding-bottom:3px}</style></head><body>'
+    + '<table style="width:100%;border-collapse:collapse;margin-bottom:8px"><tr><td><h1>รายงานสรุปงานซ่อมบำรุงประจำเดือน ' + esc(st.label) + '</h1>'
+    + '<div style="color:#5e5844;font-size:10.5pt">งานอาคารสถานที่ คณะการแพทย์แผนไทย มหาวิทยาลัยสงขลานครินทร์ · ระบบแจ้งซ่อมออนไลน์</div></td>'
+    + '<td style="text-align:right;font-size:9pt;color:#777;vertical-align:top">พิมพ์เมื่อ ' + made + '</td></tr></table>'
+    + String(mail.body).replace(/<a [^>]*>[\s\S]*?<\/a>/g, '').replace(/<(div|p)[^>]*>[^<]*ส่งอัตโนมัติ[^<]*<\/(div|p)>/g, '')   // ตัดปุ่มลิงก์/ข้อความท้ายอีเมลออก
+    + '<h2>รายการงานที่ซ่อมเสร็จในเดือน (' + (st.doneList || []).length + ' งาน)</h2>'
+    + (rows ? '<table style="width:100%;border-collapse:collapse"><tr><th style="' + th + '">#</th><th style="' + th + '">เลขใบงาน</th><th style="' + th + '">วันที่เสร็จ</th><th style="' + th + '">สถานที่</th><th style="' + th + '">ประเภท</th><th style="' + th + '">ผู้รับผิดชอบ</th><th style="' + th + '">ค่าใช้จ่าย (บาท)</th><th style="' + th + '">ประเมิน</th></tr>' + rows + '</table>'
+            : '<div style="color:#777">ไม่มีงานที่ปิดในเดือนนี้</div>')
+    + '<table style="width:100%;margin-top:40px;font-size:10.5pt;text-align:center"><tr>'
+    + '<td>ลงชื่อ ..................................................<br>ผู้จัดทำรายงาน<br>วันที่ ........./........./.........</td>'
+    + '<td>ลงชื่อ ..................................................<br>หัวหน้างาน<br>วันที่ ........./........./.........</td></tr></table>'
+    + '</body></html>';
+}
+function monthlyPdf_(st, mail) {
+  mail = mail || monthlyMail_(st);
+  var name = 'สรุปงานซ่อม_' + st.label.replace(/\s+/g, '_') + '.pdf';
+  return Utilities.newBlob(monthlyPdfHtml_(st, mail), 'text/html', 'report.html').getAs('application/pdf').setName(name);
+}
+function saveMonthlyPdf_(pdf) {   // เก็บสำเนาใน Drive (ทับไฟล์ชื่อเดิม)
+  try {
+    var it = DriveApp.getFoldersByName(MONTHLY_PDF_FOLDER), f = it.hasNext() ? it.next() : DriveApp.createFolder(MONTHLY_PDF_FOLDER);
+    var old = f.getFilesByName(pdf.getName()); while (old.hasNext()) old.next().setTrashed(true);
+    return f.createFile(pdf).getUrl();
+  } catch (e) { Logger.log('save monthly pdf: ' + e); return ''; }
+}
+// หน้าเว็บ: ดาวน์โหลด PDF ของเดือนที่เลือก (ym = 'yyyy-mm', ไม่ระบุ = เดือนที่แล้ว)
+function monthlyPdfDownload_(ym) {
+  var pm = prevMonth_(new Date());
+  var m = String(ym || '').match(/^(\d{4})-(\d{1,2})$/); if (m) pm = { y: Number(m[1]), m: Number(m[2]) - 1 };
+  var st = monthlyStats_(pm), pdf = monthlyPdf_(st);
+  return { name: pdf.getName(), mimeType:'application/pdf', data: Utilities.base64Encode(pdf.getBytes()), label: st.label, url: saveMonthlyPdf_(pdf) };
 }
