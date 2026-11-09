@@ -1,11 +1,12 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════
- *  ระบบแจ้งซ่อมออนไลน์ — Google Apps Script Backend (v15.3)
+ *  ระบบแจ้งซ่อมออนไลน์ — Google Apps Script Backend (v16.0)
  *  เวอร์ชัน v15 (2026-10-26) — ต้องใช้คู่กับหน้าเว็บ index.html v15
  *  ประวัติ: v12 ฟิลเตอร์/ปฏิทินแถบ/วันคาดว่าเสร็จ/PM 5 แบบ/ประเมินแทน+อีเมล · v12.1–12.2 แก้ใบค้าง ใบรหัสซ้ำ
  *           v13 คาร์บอนที่ประหยัดได้รายเดือน · v14 แจ้งเตือนรายคน LINE OA/อีเมล
  *           v15 คลังอุปกรณ์+จุดสั่งซื้อ/แจ้งของใกล้หมด · สรุปรายเดือนอัตโนมัติ (วันที่ 1 08:00)
  *               · ตั้งค่าจุดซ่อมซ้ำ/เป้า KPI · บันทึกการเคลื่อนไหวคลัง (แท็บ InvLog)
+ *           v16.0 (9 พ.ย.) จัดโครงสร้างใหม่: ตารางเส้นทาง ROUTES (สิทธิ์ต่อ action ในที่เดียว) + ตัวช่วยอ่านตารางตามชื่อคอลัมน์ table_()
  *           v15.3 (9 พ.ย.) ความปลอดภัย: ซ่อนข้อมูลส่วนบุคคลจากผู้ไม่ล็อกอิน · กรองอักขระ HTML · ล็อกต้องได้จริง · กันเดารหัสผ่าน · รหัสผ่าน v2
  *           v15.2 (9 พ.ย.) แจ้งงานของฉันรายคนทาง LINE (ค้าง + เสร็จเดือนนี้) — ทุกเช้าวันทำการ 08:00 + พิมพ์ "งานค้าง" ในแชท OA
  *           v15.1 (29 ต.ค.) ล้างใบงานทดสอบก่อนเริ่มใช้งาน (resetTickets — สำรองเป็นชีตซ่อนก่อนลบ)
@@ -151,11 +152,83 @@ const DEFAULT_ROLES = [
 ];
 
 // ═══════════════════════════════════════════════════════════════
-//  ROUTER — รับทุกคำขอจากหน้าเว็บ
+//  ROUTER (v16) — ตารางเส้นทาง: action → สิทธิ์ที่ต้องมี + อ่าน/เขียน + ฟังก์ชันที่ทำงาน
+//  auth: 'public'   = ใครก็เรียกได้ (บางตัวมีด่านตรวจของตัวเองข้างใน)
+//        'user'     = ต้องล็อกอิน
+//        'engineer' = วิศวกร/แอดมินเท่านั้น
+//        'cap:<x>'  = บทบาทต้องมีสิทธิ์ x (วิศวกรผ่านทุกสิทธิ์)
+//  read: true = อ่านอย่างเดียว → ไม่ล็อก ไม่ล้างแคช (ทำงานพร้อมกันได้หลายคน)
+//  fn(body, ctx) — ctx.username = ผู้ที่ล็อกอิน (ถ้ามี), ctx.by = ชื่อที่แสดง (เฉพาะ cap:)
+//  เพิ่ม action ใหม่ = เพิ่ม 1 บรรทัดในตารางนี้ (ไม่ต้องแก้ doPost)
 // ═══════════════════════════════════════════════════════════════
-// คำขอที่ "อ่านอย่างเดียว" — ไม่ต้องล็อก ไม่ต้องล้างแคช (ทำงานพร้อมกันได้หลายคน)
-var READ_ACTIONS = ['bootstrap','getAll','getConfig','getUsers','getPhotos','getTicketPhotos',
-                    'getRoles','getRouting','getInventory','login','logout','ping','getInvLog'];
+var ROUTES = {
+  // ─── ระบบ ───
+  ping:            { auth:'public',   read:true,  fn:function(){ return { pong:true }; } },
+  init:            { auth:'engineer',             fn:function(){ return initSheets(); } },   // v16: เดิมเรียกได้ทุกคน
+  bootstrap:       { auth:'public',   read:true,  fn:function(b){ return bootstrapFor_(b.token); } },   // ไม่ล็อกอิน = ข้อมูลสาธารณะ
+  getAll:          { auth:'public',   read:true,  fn:function(b){ return verifyToken_(b.token) ? getAllTickets() : publicView_(getAllTickets()); } },
+  // ─── ใบแจ้งซ่อม ───
+  add:             { auth:'public',               fn:function(b){
+                       var r = addTicket(sanitizeObj_(b.ticket));
+                       if (b.entry && r && !r.error && !r.duplicate) addHistory(b.ticket.id, sanitizeObj_(b.entry));   // รวมประวัติแรกในคำขอเดียว
+                       return r; } },
+  update:          { auth:'user',                 fn:function(b){ return updateTicket(b.id, sanitizeObj_(b.fields)); } },
+  updateWithHistory:{ auth:'user',                fn:function(b){   // แก้ใบ + เพิ่มประวัติในคำขอเดียว
+                       var r = updateTicket(b.id, sanitizeObj_(b.fields || {}));
+                       if (r && r.error) return r;
+                       if (b.entry) addHistory(b.id, sanitizeObj_(b.entry));
+                       return r; } },
+  addHistory:      { auth:'public',               fn:function(b){ return publicHistoryAllowed_(b) ? addHistory(b.ticketId, sanitizeObj_(b.entry)) : { error:'AUTH_REQUIRED' }; } },
+  rateTicket:      { auth:'public',               fn:function(b){ return rateTicket(b.id, b.rating, b.comment, b.ratedBy); } },
+  approvePurchase: { auth:'cap:approve_purchase', fn:function(b, c){ return approvePurchase(b.id, c.by, b.note); } },
+  resetTickets:    { auth:'engineer',             fn:function(b){ return resetTickets_(b.confirm); } },
+  // ─── รูปภาพ ───
+  uploadPhoto:     { auth:'public',               fn:function(b){ return publicPhotoAllowed_(b) ? uploadPhoto(b.photo) : { error:'AUTH_REQUIRED' }; } },
+  getPhotos:       { auth:'public',   read:true,  fn:function(){ return getPhotos(); } },
+  getTicketPhotos: { auth:'public',   read:true,  fn:function(b){ return getTicketPhotos(b.id); } },
+  deletePhoto:     { auth:'user',                 fn:function(b){ return deletePhoto(b.fileId); } },
+  // ─── ตั้งค่า / PM ───
+  getConfig:       { auth:'public',   read:true,  fn:function(){ return getConfig(); } },
+  saveConfig:      { auth:'user',                 fn:function(b){ return saveConfig(b.config); } },
+  savePM:          { auth:'user',                 fn:function(b){ return savePM(b.list); } },
+  setFlag:         { auth:'engineer',             fn:function(b){ return setFlag(b.key, b.value); } },
+  // ─── ล็อกอิน / ผู้ใช้ / บทบาท ───
+  login:           { auth:'public',   read:true,  fn:function(b){ return loginGuarded_(b.username, b.password); } },   // ผิด 5 ครั้ง ล็อก 15 นาที
+  logout:          { auth:'public',   read:true,  fn:function(b){ return logout(b.token); } },
+  getUsers:        { auth:'public',   read:true,  fn:function(){ return getUsers(); } },
+  getRoles:        { auth:'public',   read:true,  fn:function(){ return getRoles(); } },
+  addUser:         { auth:'engineer',             fn:function(b){ return addUser(b.user); } },
+  updateUser:      { auth:'engineer',             fn:function(b){ return updateUser(b.username, b.fields); } },
+  deleteUser:      { auth:'engineer',             fn:function(b){ return deleteUser(b.username); } },
+  setPassword:     { auth:'engineer',             fn:function(b){ return setUserPassword(b.username, b.password); } },
+  saveRoles:       { auth:'engineer',             fn:function(b){ return saveRoles(b.roles); } },
+  getRouting:      { auth:'public',   read:true,  fn:function(){ return getRouting(); } },
+  saveRouting:     { auth:'engineer',             fn:function(b){ return saveRouting(b.routing); } },
+  // ─── คลังอุปกรณ์ ───
+  getInventory:    { auth:'public',   read:true,  fn:function(){ return getInventory(); } },
+  saveInventory:   { auth:'engineer',             fn:function(b, c){ var u = getUserByUsername_(c.username); return saveInventory(b.inventory, u ? u.name : ''); } },
+  withdrawItems:   { auth:'user',                 fn:function(b){ return withdrawItems(b.ticketId, b.items, b.by); } },
+  getInvLog:       { auth:'user',     read:true,  fn:function(b){ return getInvLog_(b.limit); } },
+  // ─── แจ้งเตือน LINE / อีเมล ───
+  myNotify:        { auth:'user',                 fn:function(b, c){ return myNotify_(c.username, b.fields); } },
+  testNotify:      { auth:'user',                 fn:function(b, c){ return testNotify_(c.username); } },
+  mineNow:         { auth:'user',                 fn:function(b, c){ return sendMineNow_(c.username); } },   // ส่งงานที่ฉันรับผิดชอบเข้า LINE ตอนนี้
+  getNotifyAll:    { auth:'engineer',             fn:function(){ return getNotifyAll_(); } },
+  setUserNotify:   { auth:'engineer',             fn:function(b){ return setUserNotify_(b.username, b.fields); } },
+  monthlyTest:     { auth:'engineer',             fn:function(b, c){ return sendMonthlySummary({ onlyUser:c.username, force:true }); } }
+};
+
+// ตรวจสิทธิ์ตามตาราง แล้วเรียกฟังก์ชัน (ใช้ด่านเดิม requireAuth / requireEngineer_ / requireCap_)
+function runRoute_(route, body) {
+  var ctx = { username: verifyToken_(body.token) || '' };
+  var call = function(by){ if (by) ctx.by = by; return route.fn(body, ctx); };
+  var a = route.auth || 'user';
+  if (a === 'public')   return call();
+  if (a === 'user')     return requireAuth(body.token, call);
+  if (a === 'engineer') return requireEngineer_(body.token, call);
+  if (a.indexOf('cap:') === 0) return requireCap_(body.token, a.substring(4), call);
+  return { error:'FORBIDDEN', message:'route config ผิด: ' + a };
+}
 
 function doPost(e) {
   var out = {};
@@ -165,69 +238,15 @@ function doPost(e) {
     // v14: Webhook จาก LINE OA (ไม่มี action แต่มี events) → ผูกบัญชีด้วยรหัส 6 หลัก
     if (!body.action && body.events) { handleLineWebhook_(body.events); return ContentService.createTextOutput('OK'); }
     var action = body.action;
-    var isRead = READ_ACTIONS.indexOf(action) >= 0;
+    var route = ROUTES.hasOwnProperty(action) ? ROUTES[action] : null;
+    var isRead = !route || !!route.read;   // action ที่ไม่รู้จัก = ไม่ล็อก (ตอบ error ทันที)
     if (!isRead) {   // ล็อกเฉพาะตอนเขียน — v15.3: ถ้าไม่ได้ล็อก ห้ามเขียนต่อ (กันข้อมูลทับกัน)
       lock = LockService.getScriptLock();
       if (!lock.tryLock(20000)) { lock = null; return ContentService.createTextOutput(JSON.stringify({ ok:false, error:'ระบบกำลังบันทึกข้อมูลอื่นอยู่ กรุณาลองใหม่อีกครั้ง' })).setMimeType(ContentService.MimeType.JSON); }
     }
     var result;
 
-    switch (action) {
-      case 'init':        result = initSheets();                               break;
-      case 'ping':        result = { pong: true };                             break;
-      case 'getAll':      result = verifyToken_(body.token) ? getAllTickets() : publicView_(getAllTickets()); break;
-      // รวม "แก้ใบ + เพิ่มประวัติ" เป็นคำขอเดียว (เร็วกว่าเรียก 2 ครั้ง)
-      case 'updateWithHistory': result = requireAuth(body.token, function(){
-                            var r = updateTicket(body.id, sanitizeObj_(body.fields || {}));
-                            if (r && r.error) return r;
-                            if (body.entry) addHistory(body.id, sanitizeObj_(body.entry));
-                            return r; }); break;
-      case 'getTicketPhotos': result = getTicketPhotos(body.id);               break;
-      case 'bootstrap':   result = bootstrapFor_(body.token);                  break;   // v15.3: ไม่ล็อกอิน = ข้อมูลสาธารณะ (ไม่มีเบอร์/อีเมล)
-      case 'add':         result = addTicket(sanitizeObj_(body.ticket));
-                          if (body.entry && result && !result.error && !result.duplicate) addHistory(body.ticket.id, sanitizeObj_(body.entry));  // รวมประวัติแรกในคำขอเดียว
-                          break;
-      case 'update':      result = requireAuth(body.token, function(){ return updateTicket(body.id, sanitizeObj_(body.fields)); }); break;
-      case 'addHistory':  result = publicHistoryAllowed_(body) ? addHistory(body.ticketId, sanitizeObj_(body.entry)) : { error:'AUTH_REQUIRED' }; break;   // v15.3
-      case 'getConfig':   result = getConfig();                                break;
-      case 'saveConfig':  result = requireAuth(body.token, function(){ return saveConfig(body.config); }); break;
-      case 'login':       result = loginGuarded_(body.username, body.password); break;   // v15.3: ผิด 5 ครั้ง ล็อก 15 นาที
-      case 'logout':      result = logout(body.token);                         break;
-      case 'getUsers':    result = getUsers();                                 break;
-      case 'uploadPhoto': result = publicPhotoAllowed_(body) ? uploadPhoto(body.photo) : { error:'AUTH_REQUIRED' }; break;   // v15.3
-      case 'getPhotos':   result = getPhotos();                                break;
-      case 'deletePhoto': result = requireAuth(body.token, function(){ return deletePhoto(body.fileId); }); break;
-      case 'rateTicket':  result = rateTicket(body.id, body.rating, body.comment, body.ratedBy); break;
-      case 'savePM':      result = requireAuth(body.token, function(){ return savePM(body.list); }); break;
-      // ─── ข้อ 4: จัดการผู้ใช้ + บทบาท/สิทธิ์ (เฉพาะวิศวกร/แอดมิน) ───
-      case 'getRoles':    result = getRoles();                                    break;
-      case 'addUser':     result = requireEngineer_(body.token, function(){ return addUser(body.user); }); break;
-      case 'updateUser':  result = requireEngineer_(body.token, function(){ return updateUser(body.username, body.fields); }); break;
-      case 'deleteUser':  result = requireEngineer_(body.token, function(){ return deleteUser(body.username); }); break;
-      case 'setPassword': result = requireEngineer_(body.token, function(){ return setUserPassword(body.username, body.password); }); break;
-      case 'saveRoles':   result = requireEngineer_(body.token, function(){ return saveRoles(body.roles); }); break;
-      // ─── ข้อ 5: กติกาการวิ่งงาน ───
-      case 'getRouting':  result = getRouting();                                break;
-      case 'saveRouting': result = requireEngineer_(body.token, function(){ return saveRouting(body.routing); }); break;
-      // ─── ข้อ 6: อนุมัติจัดซื้อ (ผู้มีสิทธิ์ approve_purchase) ───
-      case 'approvePurchase': result = requireCap_(body.token, 'approve_purchase', function(by){ return approvePurchase(body.id, by, body.note); }); break;
-      // ─── ข้อ 3: คลังอุปกรณ์ (ซ่อนไว้) ───
-      case 'getInventory':  result = getInventory();                            break;
-      case 'saveInventory': result = requireEngineer_(body.token, function(){ var u = getUserByUsername_(verifyToken_(body.token)); return saveInventory(body.inventory, u ? u.name : ''); }); break;
-      case 'withdrawItems': result = requireAuth(body.token, function(){ return withdrawItems(body.ticketId, body.items, body.by); }); break;
-      case 'myNotify':      result = requireAuth(body.token, function(){ return myNotify_(verifyToken_(body.token), body.fields); }); break;
-      case 'testNotify':    result = requireAuth(body.token, function(){ return testNotify_(verifyToken_(body.token)); }); break;
-      case 'mineNow':       result = requireAuth(body.token, function(){ return sendMineNow_(verifyToken_(body.token)); }); break;   // v15.2 ส่งงานของฉันตอนนี้
-      case 'getNotifyAll':  result = requireEngineer_(body.token, function(){ return getNotifyAll_(); }); break;
-      case 'setUserNotify': result = requireEngineer_(body.token, function(){ return setUserNotify_(body.username, body.fields); }); break;
-      case 'setFlag':       result = requireEngineer_(body.token, function(){ return setFlag(body.key, body.value); }); break;
-      // ─── v15 ───
-      case 'monthlyTest':   result = requireEngineer_(body.token, function(){ return sendMonthlySummary({ onlyUser: verifyToken_(body.token), force:true }); }); break;
-      case 'getInvLog':     result = requireAuth(body.token, function(){ return getInvLog_(body.limit); }); break;
-      // ─── v15.1: ล้างใบงานทดสอบก่อนเริ่มใช้งานจริง (สำรองก่อนลบ) ───
-      case 'resetTickets':  result = requireEngineer_(body.token, function(){ return resetTickets_(body.confirm); }); break;
-      default:            result = { error: 'Unknown action: ' + action };
-    }
+    result = route ? runRoute_(route, body) : { error: 'Unknown action: ' + action };
 
     if (result && result.error) out = { ok:false, error:result.error };
     else                        out = { ok:true,  data:result };
@@ -244,7 +263,7 @@ function doPost(e) {
 
 // รองรับการเปิด URL ตรง ๆ ด้วย GET (ไว้ทดสอบว่า deploy ติดไหม)
 function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({ ok:true, data:{ status:'online', version:'v15.3' } }))
+  return ContentService.createTextOutput(JSON.stringify({ ok:true, data:{ status:'online', version:'v16.0' } }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -278,6 +297,29 @@ function readRows_(name) {
   if (!sh) return [];
   var d = sh.getDataRange().getValues();
   return d.length > 1 ? d.slice(1) : [];
+}
+
+// v16: อ่านแท็บโดยอ้าง "ชื่อหัวคอลัมน์" แทนเลขคอลัมน์ (เพิ่ม/สลับคอลัมน์แล้วโค้ดไม่พัง)
+//   var T = table_(TICKETS_SHEET);
+//   T.rows.forEach(function(r){ r.get('Status') });       // อ่านค่า
+//   T.set(r, 'Status', 'done');                             // เขียนค่ากลับลงชีต (ทีละช่อง)
+//   T.objects()  → [{ID:..., Status:...}, ...]               // แปลงเป็น object ทั้งแท็บ
+//   T.find('ID', 'REP-0001')  → แถวแรกที่ตรง (หรือ null)
+function table_(name) {
+  var sh = ss_().getSheetByName(name);
+  var T = { sheet: sh, headers: [], idx: {}, rows: [] };
+  if (!sh || sh.getLastRow() < 1) { T.objects = function(){ return []; }; T.find = function(){ return null; }; T.set = function(){}; return T; }
+  var d = sh.getDataRange().getValues();
+  T.headers = d[0].map(function(h){ return String(h).trim(); });
+  T.headers.forEach(function(h, i){ var k = h.toLowerCase(); if (h && !(k in T.idx)) T.idx[k] = i; });   // ไม่สนตัวพิมพ์เล็ก/ใหญ่
+  T.col = function(h){ var k = String(h).toLowerCase(); return k in T.idx ? T.idx[k] : -1; };
+  T.rows = d.slice(1).map(function(v, i){
+    return { row: i + 2, values: v, get: function(h){ var c = T.col(h); return c < 0 ? undefined : v[c]; } };
+  });
+  T.objects = function(){ return T.rows.map(function(r){ var o = {}; T.headers.forEach(function(h, i){ if (h) o[h] = r.values[i]; }); return o; }); };
+  T.find = function(h, val){ var c = T.col(h); if (c < 0) return null; for (var i = 0; i < T.rows.length; i++) if (String(T.rows[i].values[c]) === String(val)) return T.rows[i]; return null; };
+  T.set = function(r, h, val){ var c = T.col(h); if (c < 0) throw new Error('ไม่พบคอลัมน์ ' + h + ' ในแท็บ ' + name); sh.getRange(r.row, c + 1).setValue(val); r.values[c] = val; };
+  return T;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2218,11 +2260,9 @@ function bootstrapFor_(token) {
 
 // 3) ผู้ไม่ล็อกอินเพิ่มประวัติ/รูปได้เฉพาะ "ใบที่เพิ่งแจ้ง" (กันคนนอกแก้ประวัติใบของผู้อื่น)
 function ticketAgeMin_(id) {
-  var rows = readRows_(TICKETS_SHEET);
-  for (var i = 0; i < rows.length; i++) if (String(rows[i][0]) === String(id)) {
-    var c = new Date(rows[i][1]); return isNaN(c) ? 1e9 : (Date.now() - c.getTime()) / 60000;
-  }
-  return null;
+  var r = table_(TICKETS_SHEET).find('ID', id);   // v16: อ้างตามชื่อคอลัมน์
+  if (!r) return null;
+  var c = new Date(r.get('CreatedAt')); return isNaN(c) ? 1e9 : (Date.now() - c.getTime()) / 60000;
 }
 function publicHistoryAllowed_(body) {
   if (verifyToken_(body.token)) return true;
