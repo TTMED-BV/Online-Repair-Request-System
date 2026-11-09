@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- ระบบแจ้งซ่อมออนไลน์ คณะการแพทย์แผนไทย — หน้าเว็บ v15.9 (2026-11-04) · v15.9 ตัวกรอง Dashboard + ตำแหน่งผู้แจ้งแบบเลือก + แก้ติดตามงานไม่ขึ้นเมื่อรายละเอียดเป็นตัวเลข · v15.6 โลโก้ · v15.7 เอาหน้า QR Code ออก · v15.8 ล้างใบงานทดสอบก่อนเริ่มใช้ · ต้องใช้คู่กับ Code.gs v15.1 · ไฟล์ PWA: manifest.json, sw.js, icon-192.png, icon-512.png -->
+<!-- ระบบแจ้งซ่อมออนไลน์ คณะการแพทย์แผนไทย — หน้าเว็บ v15.11 (2026-11-09) · v15.11 ชื่อแท็บใหม่ + ไทม์ไลน์ในจัดการงาน + เมนูครบทุกบทบาท + ความปลอดภัย (ต้องใช้ Code.gs v15.3) · v15.10 งานของฉันทาง LINE · v15.9 ตัวกรอง Dashboard + ตำแหน่งผู้แจ้งแบบเลือก + ชั้น PM รวมทุกอาคาร + แก้ติดตามงานไม่ขึ้นเมื่อรายละเอียดเป็นตัวเลข · v15.6 โลโก้ · v15.7 เอาหน้า QR Code ออก · v15.8 ล้างใบงานทดสอบก่อนเริ่มใช้ · ต้องใช้คู่กับ Code.gs v15.3 · ไฟล์ PWA: manifest.json, sw.js, icon-192.png, icon-512.png -->
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -513,6 +513,10 @@ textarea{resize:vertical;min-height:76px}
 .dfchip{display:inline-flex;align-items:center;gap:4px;background:var(--accent-soft,rgba(184,137,58,.15));border:1px solid var(--bd);border-radius:999px;padding:2px 4px 2px 10px}
 .dfchip button{border:none;background:transparent;cursor:pointer;color:var(--tx2);font-size:13px;line-height:1;padding:2px 5px;border-radius:50%}
 .dfchip button:hover{background:rgba(0,0,0,.12)}
+.tl-strip{display:flex;gap:6px 14px;flex-wrap:wrap;align-items:flex-end;background:var(--surf2);border-radius:8px;padding:6px 10px;margin:6px 0}
+.tl-step{display:inline-flex;flex-direction:column;min-width:72px}.tl-l{font-size:10.5px;color:var(--tx3)}.tl-v{font-size:12px}.tl-ar{color:var(--tx3)}
+@media(max-width:600px){.tl-strip{gap:4px 8px;padding:5px 8px}.tl-step{min-width:0}.tl-l{font-size:10px}.tl-v{font-size:11px}}
+.viewonly{display:flex;gap:8px;align-items:center;background:var(--surf2);border:1px dashed var(--bd);border-radius:10px;padding:8px 12px;font-size:12.5px;color:var(--tx2);margin-bottom:.9rem}
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:.6rem 0}
 .kpi-box{border-radius:10px;padding:10px;text-align:center;background:var(--surf2)}
 .kpi-box.pass{background:var(--green-bg)}.kpi-box.fail{background:var(--red-bg)}
@@ -543,12 +547,12 @@ textarea{resize:vertical;min-height:76px}
 
 <!-- NAV -->
 <nav class="nav">
-  <div class="nav-logo"><img class="nav-badge" src="data:image/webp;base64,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" alt="งานอาคารสถานที่ คณะการแพทย์แผนไทย"><div class="nav-txt"><b>คณะการแพทย์แผนไทย</b><small>ระบบแจ้งซ่อมออนไลน์ <span id="verTag" style="display:inline-block;margin-left:4px;padding:0 6px;border-radius:8px;background:rgba(255,255,255,.18);color:#fff;font-size:10px;font-weight:600;line-height:16px;vertical-align:1px">v15.9</span></small></div></div>
+  <div class="nav-logo"><img class="nav-badge" src="data:image/webp;base64,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" alt="งานอาคารสถานที่ คณะการแพทย์แผนไทย"><div class="nav-txt"><b>คณะการแพทย์แผนไทย</b><small>ระบบแจ้งซ่อมออนไลน์ <span id="verTag" style="display:inline-block;margin-left:4px;padding:0 6px;border-radius:8px;background:rgba(255,255,255,.18);color:#fff;font-size:10px;font-weight:600;line-height:16px;vertical-align:1px">v15.11</span></small></div></div>
   <div class="nav-tabs" id="navTabs">
     <button class="ntab on" data-p="report" onclick="gp('report')">แจ้งซ่อม</button>
     <button class="ntab" data-p="status" onclick="gp('status')">ติดตามงาน</button>
-    <button class="ntab" data-p="mine" id="nt-mine" style="display:none" onclick="gp('mine')">ใบของฉัน</button>
-    <button class="ntab" data-p="mywork" id="nt-my" style="display:none" onclick="gp('mywork')">👷 งานของฉัน <span class="badge-n" id="myCnt" style="display:none"></span></button>
+    <button class="ntab" data-p="mine" id="nt-mine" style="display:none" onclick="gp('mine')">🧾 ใบที่ฉันแจ้ง</button>
+    <button class="ntab" data-p="mywork" id="nt-my" style="display:none" onclick="gp('mywork')">👷 งานที่ฉันรับผิดชอบ <span class="badge-n" id="myCnt" style="display:none"></span></button>
     <button class="ntab" data-p="approve" id="nt-approve" style="display:none" onclick="gp('approve')">
       อนุมัติ <span id="apv-cnt" style="background:rgba(226,75,74,.3);color:#f09595;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:2px">0</span>
     </button>
@@ -609,9 +613,9 @@ textarea{resize:vertical;min-height:76px}
 // ═══════════════════════════════════════════
 // URL ของ Google Apps Script ฝังไว้ในโปรแกรม (แก้ได้ที่หน้า ⚙ ตั้งค่า)
 // ─── เวอร์ชันโปรแกรม (อัปเดตทุกครั้งที่ออกเวอร์ชันใหม่ — ต้องตรงกับ Code.gs) ───
-const APP_VERSION = 'v15.9';
-const SERVER_REQUIRED = 'v15.1';   // เวอร์ชัน Code.gs ที่หน้าเว็บนี้ต้องใช้
-const APP_BUILD   = '2026-11-04';
+const APP_VERSION = 'v15.11';
+const SERVER_REQUIRED = 'v15.3';   // เวอร์ชัน Code.gs ที่หน้าเว็บนี้ต้องใช้
+const APP_BUILD   = '2026-11-09';
 let SERVER_VERSION = '';   // อ่านจาก Code.gs ตอนเปิดเว็บ
 const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbyOsSEC8KI1bmWJpWoCXC18XEWRqNTyzN4sRQwc4UV_GAWOUlvnzTzaUCwVId-FmaY2/exec';
 // ถ้า URL ที่ฝังมาใหม่ไม่ตรงกับที่เคยบันทึกไว้ ให้ยึดตัวใหม่ (กันเครื่องเก่าค้าง URL เดิม)
@@ -902,7 +906,7 @@ async function loadAll(opts={}){
   if(!silent) showLoader('กำลังโหลดข้อมูล...');
   try{
     // เรียกครั้งเดียวได้ครบ (tickets+config+photos+users)
-    const d = await api('bootstrap');
+    const d = await api('bootstrap',{token:AUTH_TOKEN||''});   // v15.3: ล็อกอิน = ข้อมูลเต็ม · ไม่ล็อกอิน = ข้อมูลสาธารณะ
     applyBundle(d, true);
     cacheBundle(d);
     bootstrapped=true;
@@ -1215,10 +1219,8 @@ function updAuthUI() {
     b.style.display='inline-block'; b.textContent=cu.name+' 🔔'; b.style.cursor='pointer'; b.title='การแจ้งเตือนของฉัน'; b.onclick=openMyNotify;
     b.className='ubadge '+(cu.isEngineer?'ua':'ut');
     // แสดงเมนูตามสิทธิ์ของบทบาท (วิศวกรเห็นทุกเมนู)
-    if(can('approve_ticket')||can('approve_purchase')) document.getElementById('nt-approve').style.display='';
-    if(can('manage_tickets')) document.getElementById('nt-manage').style.display='';
-    if(can('manage_pm'))      document.getElementById('nt-pm').style.display='';
-    if(can('manage_tickets')) document.getElementById('nt-cal').style.display='';
+    // v15.11: ทุกคนที่เข้าสู่ระบบเห็นเมนูครบ (ทำได้ตามสิทธิ์ — หน้าที่ไม่มีสิทธิ์เป็นแบบดูอย่างเดียว) ยกเว้น "ตั้งค่า"
+    ['nt-approve','nt-manage','nt-pm','nt-cal'].forEach(id=>document.getElementById(id).style.display='');
     if(can('manage_config')||can('manage_users')||can('manage_routing')) document.getElementById('nt-cfg').style.display='';
     document.getElementById('nt-my').style.display='';
     document.getElementById('nt-mine').style.display='';
@@ -1231,8 +1233,8 @@ function updAuthUI() {
 const NAV_ITEMS = [
   {p:'report',   label:'แจ้งซ่อม',    icon:'ti-clipboard-plus', pub:true},
   {p:'status',   label:'ติดตามงาน',   icon:'ti-list-search',    pub:true},
-  {p:'mine',     label:'ใบของฉัน',     icon:'ti-file-text',      pub:false},
-  {p:'mywork',   label:'งานของฉันวันนี้', icon:'ti-briefcase',    pub:false},
+  {p:'mine',     label:'ใบที่ฉันแจ้ง',     icon:'ti-file-text',      pub:false},
+  {p:'mywork',   label:'งานที่ฉันรับผิดชอบ', icon:'ti-briefcase',    pub:false},
   {p:'approve',  label:'อนุมัติ',      icon:'ti-circle-check',   pub:false},
   {p:'manage',   label:'จัดการงาน',    icon:'ti-tool',           pub:false},
   {p:'pm',       label:'PM ซ่อมบำรุง',  icon:'ti-calendar-cog',   pub:false},
@@ -1271,12 +1273,10 @@ function toggleMenu() {
 function mNav(p){ toggleMenu(); gp(p); }
 
 // สิทธิ์เข้าหน้าแต่ละเมนู (ตามบทบาท)
+// v15.11: ป้าย "ดูอย่างเดียว" สำหรับหน้าที่บทบาทไม่มีสิทธิ์แก้ไข
+function viewOnlyNote(what){ return `<div class="viewonly"><i class="ti ti-eye"></i><div><b>ดูอย่างเดียว</b> — บทบาทของคุณ (${escHtml(roleLabel(cu&&cu.role))}) ไม่มีสิทธิ์${what} · ขอสิทธิ์ได้จากผู้ดูแลระบบ</div></div>`; }
 function navAllowed(p){
-  if(p==='approve') return can('approve_ticket')||can('approve_purchase');
-  if(p==='manage')  return can('manage_tickets');
-  if(p==='pm')      return can('manage_pm');
-  if(p==='calendar')return can('manage_tickets');
-  if(p==='mywork'||p==='mine')  return !!cu;
+  if(['approve','manage','pm','calendar','mywork','mine'].includes(p)) return !!cu;   // v15.11: เปิดดูได้ทุกบทบาท
   if(p==='config')  return can('manage_config')||can('manage_users')||can('manage_routing');
   return true;
 }
@@ -1413,7 +1413,7 @@ async function submitR() {
   msg.innerHTML=`<div class="notice n-green" style="margin:0"><i class="ti ti-circle-check ni"></i><div><b>ส่งแจ้งซ่อมสำเร็จ</b><br>รหัสใบแจ้งซ่อม: <span class="mono">${ticket.id}</span> — จดรหัสนี้ไว้ติดตามสถานะ<br>สถานะ: รอวิศวกรตรวจสอบและอนุมัติ${photoN?`<br>แนบรูปแล้ว ${photoN} รูป`:''}</div></div>`;
   rememberRequester({n,ph,d,e:v('fE')}, document.getElementById('fRemember')?.checked);
   addMine(ticket.id);
-  if(cu) msg.innerHTML+=`<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" onclick="gp('mine')"><i class="ti ti-file-text"></i> ดูใบของฉัน</button></div>`;
+  if(cu) msg.innerHTML+=`<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" onclick="gp('mine')"><i class="ti ti-file-text"></i> ดูใบที่ฉันแจ้ง</button></div>`;
   ['fR','fDesc'].concat(ME.n?[]:['fN','fP','fD','fE','fDo']).forEach(f=>{const el=document.getElementById(f);if(el)el.value='';}); if(!ME.n) deptToggle();
   document.getElementById('dupWarn').innerHTML='';
   document.getElementById('fB').value=''; document.getElementById('fC').value='';
@@ -1475,11 +1475,11 @@ function checkDuplicate(){
           <button class="btn btn-sm" style="padding:2px 8px" onclick="openDet('${t.id}')">ดู</button>
           <button class="btn btn-sm" style="padding:2px 8px" onclick="followTicket('${t.id}')">ติดตามใบนี้แทน</button></div>`;}).join('')}
       </div>
-      <div style="font-size:11.5px;color:var(--tx3);margin-top:6px">ถ้าเป็นคนละปัญหา แจ้งต่อได้ตามปกติ · กด "ติดตามใบนี้แทน" เพื่อเก็บไว้ในหน้า "ใบของฉัน" โดยไม่ต้องแจ้งใหม่</div>
+      <div style="font-size:11.5px;color:var(--tx3);margin-top:6px">ถ้าเป็นคนละปัญหา แจ้งต่อได้ตามปกติ · กด "ติดตามใบนี้แทน" เพื่อเก็บไว้ในหน้า "ใบที่ฉันแจ้ง" โดยไม่ต้องแจ้งใหม่</div>
     </div></div>`:''}
   ${hs?`<div class="notice n-info" style="margin-bottom:.9rem;font-size:12px"><i class="ti ti-flame ni"></i><div>จุดนี้ถูกแจ้งซ่อม <b>${hs.n} ครั้ง</b> ใน ${OPS.hotMonths} เดือนล่าสุด — ถ้าเป็นอาการเดิม ระบุในรายละเอียดว่า <b>"เสียซ้ำ"</b> เพื่อให้ช่างพิจารณาเปลี่ยนใหม่</div></div>`:''}`;
 }
-function followTicket(id){ addMine(id); showToast('เก็บใบ '+id+' ไว้ใน "ใบของฉัน" แล้ว'); }
+function followTicket(id){ addMine(id); showToast('เก็บใบ '+id+' ไว้ใน "ใบที่ฉันแจ้ง" แล้ว'); }
 
 // ─── v15: จำข้อมูลผู้แจ้ง + ใบของฉัน (เก็บในเครื่องนี้เท่านั้น) ───
 function lsGet(k,d){ try{ const v2=localStorage.getItem(k); return v2?JSON.parse(v2):d; }catch(e){ return d; } }
@@ -1511,7 +1511,7 @@ function pgMine(){
   const openN=list.filter(t=>!CLOSED_STATUS.includes(t.status)).length;
   return `<div style="max-width:760px;margin:0 auto">
     <div class="card" style="margin-bottom:1rem">
-      <div class="ctitle"><i class="ti ti-file-text" style="color:var(--accent)"></i> ใบแจ้งซ่อมของฉัน</div>
+      <div class="ctitle"><i class="ti ti-file-text" style="color:var(--accent)"></i> ใบที่ฉันแจ้ง</div>
       <div style="font-size:12.5px;color:var(--tx2);margin-bottom:.7rem">แสดงใบที่แจ้งจากเครื่องนี้ และใบที่ใช้เบอร์โทรเดียวกัน — ไม่ต้องจำรหัสใบ</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <input id="mineQ" type="tel" placeholder="ค้นด้วยเบอร์โทรที่ใช้แจ้ง" value="${escAttr(mineQuery||ME.ph||'')}" style="flex:1;min-width:180px" onkeydown="if(event.key==='Enter'){mineQuery=this.value;rp();}">
@@ -1559,7 +1559,7 @@ function pgMyWork(){
     </div>
     <div class="mw-stats dash-stats">
       <div class="stat stat-grad-d"><div class="stat-lbl">ด่วน/ครบกำหนด</div><div class="stat-n">${urgent.length}</div></div>
-      <div class="stat stat-grad-b"><div class="stat-lbl">งานของฉันทั้งหมด</div><div class="stat-n">${mine.length}</div></div>
+      <div class="stat stat-grad-b"><div class="stat-lbl">ที่ฉันรับผิดชอบทั้งหมด</div><div class="stat-n">${mine.length}</div></div>
       <div class="stat stat-grad-c"><div class="stat-lbl">เสร็จวันนี้</div><div class="stat-n">${doneToday}</div></div>
       <div class="stat stat-grad-e"><div class="stat-lbl">PM ถึงรอบ</div><div class="stat-n">${pmDueList.length}</div></div>
     </div>
@@ -1588,18 +1588,19 @@ function myWorkCard(t,dd){
     <div class="mw-meta">${escHtml(b.short||b.name)} · ${escHtml(t.category)} · <span class="mono" style="font-size:11px">${t.id}</span></div>
     ${t.desc?`<div style="font-size:13.5px;margin-top:6px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${escHtml(t.desc)}</div>`:''}
     <div class="mw-meta" style="margin-top:6px"><i class="ti ti-user"></i> ${escHtml(t.name||'-')}${t.dept?' · '+escHtml(t.dept):''}</div>
+    ${timelineStrip(t)}
     ${hotspotOf(t.building,t.room)?`<div style="font-size:12px;color:var(--red-tx);margin-top:4px">🔥 จุดซ่อมซ้ำ — พิจารณาเปลี่ยนใหม่</div>`:''}
     <div class="mw-acts">
       ${tel.length>=9?`<a class="btn" href="tel:${tel}"><i class="ti ti-phone"></i> โทร</a>`:`<button class="btn" disabled><i class="ti ti-phone-off"></i> ไม่มีเบอร์</button>`}
       <button class="btn" onclick="openDet('${t.id}')"><i class="ti ti-eye"></i> ดูใบ</button>
-      ${nextSt?`<button class="btn btn-p" onclick="quickStatus('${t.id}','working')"><i class="ti ti-player-play"></i> เริ่มซ่อม</button>`:`<button class="btn btn-p" onclick="openStatusUpdate('${t.id}')"><i class="ti ti-checklist"></i> อัปเดต/ปิดงาน</button>`}
+      ${!can('manage_tickets')?'':nextSt?`<button class="btn btn-p" onclick="quickStatus('${t.id}','working')"><i class="ti ti-player-play"></i> เริ่มซ่อม</button>`:`<button class="btn btn-p" onclick="openStatusUpdate('${t.id}')"><i class="ti ti-checklist"></i> อัปเดต/ปิดงาน</button>`}
     </div>
   </div>`;
 }
 async function quickStatus(id, ns){
   const t=DB.tickets.find(x=>x.id===id); if(!t||!cu) return;
   t.status=ns;
-  const entry={status:ns,date:now(),note:'เริ่มดำเนินการซ่อม (จากหน้างานของฉัน)',by:cu.name};
+  const entry={status:ns,date:now(),note:'เริ่มดำเนินการซ่อม (จากหน้างานที่ฉันรับผิดชอบ)',by:cu.name};
   (t.history=t.history||[]).push(entry);
   rp(); showToast('อัปเดตเป็น "'+getSI(ns).label+'" แล้ว');
   await syncUpdate(id,{status:ns},entry);
@@ -1814,7 +1815,7 @@ function exportPDF(){
   const cols=Object.keys(rows[0]).filter(c=>!['โทรศัพท์','หน่วยงาน','อีเมล','วันที่อนุมัติ','สถานะกำหนดส่ง','นับ SLA(วัน)'].includes(c));
   const d=new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
   const head=cols.map(c=>`<th>${c}</th>`).join('');
-  const body=rows.map(r=>`<tr>${cols.map(c=>`<td>${(r[c]===0?'0':(r[c]||''))}</td>`).join('')}</tr>`).join('');
+  const body=rows.map(r=>`<tr>${cols.map(c=>`<td>${escHtml(r[c]===0?'0':(r[c]||''))}</td>`).join('')}</tr>`).join('');
   const w=window.open('','_blank');
   w.document.write(`<html><head><meta charset="utf-8"><title>รายงานแจ้งซ่อม</title>
   <style>
@@ -1923,8 +1924,8 @@ function renderStatusTable(tickets){
         <td class="mono">${t.id}</td>
         <td style="white-space:nowrap">${fd(t.createdAt)}</td>
         <td>${b.icon} ${b.short}</td>
-        <td>${t.room}</td>
-        <td>${t.category}</td>
+        <td>${escHtml(t.room)}</td>
+        <td>${escHtml(t.category)}</td>
         <td><span class="badge ${pCls[t.priority]} nodot">${pLbl[t.priority]}</span></td>
         <td><span class="badge ${s.cls}">${s.label}</span>${over?' <span class="badge b-red">เกิน SLA</span>':''}</td>
         ${cu?(()=>{const di=dueInfo(t);return `<td style="white-space:nowrap"><span class="badge ${di.cls}">${di.text}</span>${di.sub?`<div style="font-size:10.5px;color:var(--tx3);margin-top:2px">${di.sub}</div>`:''}</td>`;})():''}
@@ -1957,6 +1958,16 @@ function lastNote(t){
   const h=(t.history||[]).slice().reverse().find(x=>x.note && x.note!=='-' && x.note!=='รับแจ้งซ่อมเข้าระบบ');
   return h||null;
 }
+// v15.11: แถบไทม์ไลน์ แจ้ง → อนุมัติ → เสร็จจริง/คาดว่าเสร็จ (ใช้ร่วมหน้า ใบที่ฉันแจ้ง / ติดตามงาน / จัดการงาน / งานที่ฉันรับผิดชอบ)
+function timelineStrip(t){
+  const di=dueInfo(t), doneAt=t.status==='done'?doneAtOf(t):null, closed=CLOSED_STATUS.includes(t.status);
+  const step=(lbl,val,on)=>`<span class="tl-step"><span class="tl-l">${lbl}</span><span class="tl-v" style="font-weight:${on?600:400};color:${on?'var(--tx)':'var(--tx3)'}">${val}</span></span>`;
+  const last = doneAt ? step('เสร็จจริง',fdShort(doneAt),true)
+    : closed ? step(escHtml(getSI(t.status).label),t.completedAt?fdShort(t.completedAt):'-',true)
+    : !t.approvedAt ? step('คาดว่าเสร็จ','หลังอนุมัติ',false)
+    : step('คาดว่าเสร็จ',`<span class="badge ${di.cls}" style="font-size:10.5px">${di.text}${di.sub?' · '+di.sub:''}</span>`,true);
+  return `<div class="tl-strip">${step('แจ้ง',fdShort(t.createdAt),true)}<span class="tl-ar">→</span>${step('อนุมัติ',t.approvedAt?fdShort(t.approvedAt):'รออนุมัติ',!!t.approvedAt)}<span class="tl-ar">→</span>${last}</div>`;
+}
 function renderStatusList(tickets) {
   if (!tickets.length) return `<div class="empty"><div class="empty-ic"><i class="ti ti-clipboard-search"></i></div><div class="empty-ttl">ไม่พบรายการ</div><div class="empty-sub">ลองเปลี่ยนตัวกรอง — เมื่อมีการแจ้งซ่อมเข้ามา รายการจะแสดงที่นี่</div></div>`;
   return `<div style="display:flex;flex-direction:column;gap:.6rem">${tickets.map(t=>{
@@ -1966,8 +1977,7 @@ function renderStatusList(tickets) {
     const over=isOverSLA(t);
     const peCls=over?'pe-over':t.priority==='high'?'pe-high':t.priority==='med'?'pe-med':'pe-low';
     const di=dueInfo(t), ln=lastNote(t);
-    const doneAt=t.status==='done'?doneAtOf(t):null;
-    const step=(lbl,val,on)=>`<span style="display:inline-flex;flex-direction:column;min-width:72px"><span style="font-size:10.5px;color:var(--tx3)">${lbl}</span><span style="font-size:12px;font-weight:${on?600:400};color:${on?'var(--tx)':'var(--tx3)'}">${val}</span></span>`;
+
     return `<div class="rowc ${peCls}" style="align-items:flex-start">
         <div style="flex:1;min-width:0">
           <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px;align-items:center">
@@ -1980,16 +1990,10 @@ function renderStatusList(tickets) {
             ${carbonBadge(t)}
           </div>
           <div style="font-weight:700;font-size:15.5px;line-height:1.35;margin-bottom:3px">${b.icon} ${escHtml(t.room)}</div>
-          <div style="font-size:12px;color:var(--tx3);margin-bottom:6px">${b.name} · ${t.category}</div>
+          <div style="font-size:12px;color:var(--tx3);margin-bottom:6px">${b.name} · ${escHtml(t.category)}</div>
           <div style="font-size:13px;margin-bottom:4px"><i class="ti ti-user" style="color:var(--tx3)"></i> <b>${escHtml(t.name)}</b>${t.dept?` <span style="color:var(--tx2)">· ${escHtml(t.dept)}</span>`:''}${cu&&t.phone&&t.phone!=='-'?` <span style="color:var(--tx2)">· <i class="ti ti-phone"></i> ${escHtml(t.phone)}</span>`:''}</div>
           ${t.desc?`<div style="font-size:12.5px;color:var(--tx2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:6px">${escHtml(t.desc)}</div>`:''}
-          <div style="display:flex;gap:6px 14px;flex-wrap:wrap;align-items:flex-end;background:var(--surf2);border-radius:8px;padding:6px 10px;margin-bottom:6px">
-            ${step('แจ้ง',fdShort(t.createdAt),true)}
-            <span style="color:var(--tx3)">→</span>
-            ${step('อนุมัติ',t.approvedAt?fdShort(t.approvedAt):'รอ',!!t.approvedAt)}
-            <span style="color:var(--tx3)">→</span>
-            ${doneAt?step('เสร็จจริง',fdShort(doneAt),true):step('คาดว่าเสร็จ',`<span class="badge ${di.cls}" style="font-size:10.5px">${di.text}${di.sub?' · '+di.sub:''}</span>`,true)}
-          </div>
+          ${timelineStrip(t)}
           ${ln?`<div style="font-size:12px;color:var(--tx2);margin-bottom:5px"><i class="ti ti-message-2" style="color:var(--tx3)"></i> ล่าสุด: ${escHtml(ln.note)} <span style="color:var(--tx3)">— ${escHtml(ln.by||'')} · ${fdShort(ln.date)}</span></div>`:''}
           <div style="font-size:12px">${assigneeChips(t.assignees)}</div>
         </div>
@@ -2028,9 +2032,9 @@ function loadScript(src){ if(_scripts[src]) return _scripts[src];
 // ════════════════════════ PAGE: APPROVE ════════════════════════
 function pgApprove() {
   if (!cu) return `<div class="empty">กรุณาเข้าสู่ระบบ</div>`;
-  const showTicket = can('approve_ticket');
-  const showPurchase = can('approve_purchase');
-  const pending=(showTicket?DB.tickets.filter(t=>t.status==='pending_approval'&&canApproveCat(t.category)):[]).sort((a,b)=>{
+  const showTicket = true, showPurchase = true;   // v15.11: ทุกบทบาทเห็นคิว — ปุ่มขึ้นตามสิทธิ์
+  const canT = can('approve_ticket'), canP = can('approve_purchase');
+  const pending=(showTicket?DB.tickets.filter(t=>t.status==='pending_approval'&&(!canT||canApproveCat(t.category))):[]).sort((a,b)=>{
     if(a.priority==='high'&&b.priority!=='high') return -1;
     if(b.priority==='high'&&a.priority!=='high') return 1;
     return new Date(a.createdAt)-new Date(b.createdAt);
@@ -2044,12 +2048,12 @@ function pgApprove() {
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.5rem">
           <div style="flex:1">
             <div style="margin-bottom:3px"><span class="mono">${t.id}</span></div>
-            <div style="font-weight:600">${b.icon} ${b.name} — ${t.room}</div>
-            <div style="font-size:12px;color:var(--tx2)">${t.category} · ประมาณการ <b>${(t.approvedBudget||t.estimatedCost||0).toLocaleString()}</b> บาท</div>
+            <div style="font-weight:600">${b.icon} ${escHtml(b.name)} — ${escHtml(t.room)}</div>
+            <div style="font-size:12px;color:var(--tx2)">${escHtml(t.category)} · ประมาณการ <b>${(t.approvedBudget||t.estimatedCost||0).toLocaleString()}</b> บาท</div>
             <div style="font-size:12px;color:var(--tx2);margin-top:2px">ผู้รับผิดชอบ: ${assigneeChips(t.assignees)}</div>
           </div>
           <div style="display:flex;flex-direction:column;gap:5px">
-            <button class="btn btn-sm btn-green" onclick="doApprovePurchase('${t.id}')">✓ อนุมัติจัดซื้อ</button>
+            ${canP?`<button class="btn btn-sm btn-green" onclick="doApprovePurchase('${t.id}')">✓ อนุมัติจัดซื้อ</button>`:''}
             <button class="btn btn-sm" onclick="openDet('${t.id}')">ดูรายละเอียด</button>
           </div>
         </div>
@@ -2061,6 +2065,7 @@ function pgApprove() {
       <div style="font-size:12px;color:var(--tx3)">${showTicket?('ใบแจ้งซ่อม '+pending.length):''}${showTicket&&showPurchase?' · ':''}${showPurchase?('จัดซื้อ '+purchaseQ.length):''}</div></div>
       <button class="btn btn-sm" onclick="loadAll().then(rp)">🔄 รีเฟรช</button>
     </div>
+    ${!canT&&!canP?viewOnlyNote('อนุมัติ'):''}
     ${purchaseCard}
     ${showTicket?`<div style="font-size:14px;font-weight:700;margin:.25rem 0 .6rem;display:flex;align-items:center;gap:6px">📝 รออนุมัติใบแจ้งซ่อม <span class="badge b-amber">${pending.length}</span></div>`:''}
     ${showTicket&&!pending.length?`<div class="empty" style="padding:2rem"><div class="empty-ic" style="color:var(--green)"><i class="ti ti-circle-check"></i></div><div class="empty-ttl">เคลียร์คิวหมดแล้ว</div><div class="empty-sub">ไม่มีใบแจ้งซ่อมรออนุมัติในขณะนี้</div></div>`:''}
@@ -2076,18 +2081,18 @@ function pgApprove() {
               <span class="mono">${t.id}</span><span class="badge ${pCls}">${pLbl}</span>
               ${t._local?'<span class="badge b-red nodot" style="cursor:pointer" onclick="openSyncPanel()">⚠️ ยังไม่ถึงเซิร์ฟเวอร์ — กดดู</span>':''}
             </div>
-            <div style="font-weight:600;margin-bottom:3px">${b.icon} ${b.name} — ${t.room}</div>
-            <div style="font-size:12px;color:var(--tx2)">${t.category} | ผู้แจ้ง: ${t.name} (${t.dept})</div>
-            <div style="font-size:12px;color:var(--tx2);margin:2px 0">${t.desc.substring(0,90)}${t.desc.length>90?'...':''}</div>
+            <div style="font-weight:600;margin-bottom:3px">${b.icon} ${escHtml(b.name)} — ${escHtml(t.room)}</div>
+            <div style="font-size:12px;color:var(--tx2)">${escHtml(t.category)} | ผู้แจ้ง: ${escHtml(t.name)} (${escHtml(t.dept)})</div>
+            <div style="font-size:12px;color:var(--tx2);margin:2px 0">${escHtml(String(t.desc||'').substring(0,90))}${String(t.desc||'').length>90?'...':''}</div>
             ${t.estimatedCost?`<div style="font-size:12px">ประมาณการ: <b>${t.estimatedCost.toLocaleString()} บาท</b></div>`:''}
             <div style="font-size:12px;background:var(--teal-bg);color:var(--teal-tx);padding:4px 8px;border-radius:6px;margin-top:6px;display:inline-block">
               ระบบแนะนำ: <b>${suggested.map(u=>getUserName(u).split(' ')[0]).join(', ')}</b>
             </div>
           </div>
           <div style="display:flex;flex-direction:column;gap:5px">
-            <button class="btn btn-sm btn-green" onclick="openAssign('${t.id}')">✓ อนุมัติ + มอบหมาย</button>
+            ${canT?`<button class="btn btn-sm btn-green" onclick="openAssign('${t.id}')">✓ อนุมัติ + มอบหมาย</button>`:''}
             <button class="btn btn-sm" onclick="openDet('${t.id}')">ดูรายละเอียด</button>
-            <button class="btn btn-sm btn-red" onclick="doReject('${t.id}')">✕ ส่งกลับ</button>
+            ${canT?`<button class="btn btn-sm btn-red" onclick="doReject('${t.id}')">✕ ส่งกลับ</button>`:''}
           </div>
         </div>
       </div>`;
@@ -2107,14 +2112,14 @@ function openAssign(id) {
     return `<div class="cb-item ${(t.assignees||[]).includes(u)?'selected':''}" onclick="toggleCb(this,'${u}')">
       <input type="checkbox" id="cb_${u}" ${(t.assignees||[]).includes(u)?'checked':''} style="pointer-events:none">
       <div class="tech-av" style="background:${usr.color}22;color:${usr.color};width:28px;height:28px;font-size:11px">${usr.initials}</div>
-      <div class="cb-label"><b>${usr.name}</b>${sugg?` <span class="badge b-teal" style="font-size:10px">${sugg}</span>`:''}</div>
+      <div class="cb-label"><b>${escHtml(usr.name)}</b>${sugg?` <span class="badge b-teal" style="font-size:10px">${sugg}</span>`:''}</div>
       <div class="cb-sub">งานคงค้าง: ${wl}</div>
     </div>`;
   }).join('');
   document.getElementById('assignContent').innerHTML=`
     <div class="modal-title">อนุมัติและมอบหมายงาน <button class="mc" onclick="cm('assignMd')">✕</button></div>
     <div style="background:var(--surf2);border-radius:8px;padding:.75rem;margin-bottom:1rem;font-size:13px">
-      <b>${getBI(t.building).name}</b> — ${t.room}<br><span style="color:var(--tx2)">${t.category}</span>
+      <b>${escHtml(getBI(t.building).name)}</b> — ${escHtml(t.room)}<br><span style="color:var(--tx2)">${escHtml(t.category)}</span>
     </div>
     <div class="ff">
       <label>เลือกผู้รับผิดชอบ (เลือกได้ 1–3 คน ทำงานพร้อมกันได้)</label>
@@ -2218,13 +2223,13 @@ function manageCard(t){
           ${over?'<span class="badge b-red">เกิน SLA</span>':''}
         </div>
         <div style="font-weight:600;font-size:13px">${b.icon} ${b.name} — ${escHtml(t.room)}</div>
-        <div style="font-size:12px;color:var(--tx2)">${t.category} | ${escHtml(t.name)} | นับ SLA ${el} วัน / ${sla} วัน${pd>0?` <span style="color:var(--purple-tx)">(พัก ${pd} วัน)</span>`:''}</div>
-        <div style="font-size:12px;margin-top:4px;display:flex;align-items:center;gap:5px;flex-wrap:wrap"><span style="color:var(--tx3)">คาดว่าเสร็จ:</span><span class="badge ${di.cls}">${di.text}${di.sub?' · '+di.sub:''}</span></div>
+        <div style="font-size:12px;color:var(--tx2)">${escHtml(t.category)} | ${escHtml(t.name)} | นับ SLA ${el} วัน / ${sla} วัน${pd>0?` <span style="color:var(--purple-tx)">(พัก ${pd} วัน)</span>`:''}</div>
+        ${timelineStrip(t)}
         <div style="margin-top:4px">${assigneeChips(t.assignees)}</div>
       </div>
       <div style="display:flex;gap:5px">
         <button class="btn btn-sm" onclick="openDet('${t.id}')">ดู</button>
-        ${CLOSED_STATUS.includes(t.status)?'':`<button class="btn btn-sm btn-p" onclick="openStatusUpdate('${t.id}')">อัปเดต</button>`}
+        ${CLOSED_STATUS.includes(t.status)||!can('manage_tickets')?'':`<button class="btn btn-sm btn-p" onclick="openStatusUpdate('${t.id}')">อัปเดต</button>`}
       </div>
     </div>
   </div>`;
@@ -2253,6 +2258,7 @@ function pgManage() {
   const fls=MF.bld?floorsOf(MF.bld):Array.from(new Set(FLOORS.map(f=>f.floor)));
   setTimeout(renderManageList,0);
   return `<div>
+    ${can('manage_tickets')?'':viewOnlyNote('อัปเดตงาน')}
     <div class="card" style="margin-bottom:1rem">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <input placeholder="🔍 ค้นหารหัส / ผู้แจ้ง / ห้อง / รายละเอียด" value="${escAttr(MF.q||'')}" oninput="mfSet('q',this.value)" style="flex:1;min-width:200px">
@@ -2261,7 +2267,7 @@ function pgManage() {
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
         <select style="width:auto" onchange="mfSet('who',this.value)">
           <option value="">👷 ทุกผู้รับผิดชอบ</option>
-          <option value="me" ${sel('who','me')}>⭐ งานของฉัน</option>
+          <option value="me" ${sel('who','me')}>⭐ งานที่ฉันรับผิดชอบ</option>
           <option value="none" ${sel('who','none')}>ยังไม่มอบหมาย</option>
           ${assignableEntries().map(([u,usr])=>`<option value="${u}" ${sel('who',u)}>${escHtml(usr.name)}</option>`).join('')}
         </select>
@@ -2299,7 +2305,7 @@ function openStatusUpdate(id) {
   document.getElementById('statusContent').innerHTML=`
     <div class="modal-title">อัปเดตสถานะ <button class="mc" onclick="cm('statusMd')">✕</button></div>
     <div style="background:var(--surf2);padding:.75rem;border-radius:8px;margin-bottom:1rem;font-size:13px">
-      <b>${getBI(t.building).name}</b> — ${t.room}<br>${t.category}
+      <b>${escHtml(getBI(t.building).name)}</b> — ${escHtml(t.room)}<br>${escHtml(t.category)}
     </div>
     ${t.needsPurchase?`<div class="notice ${t.purchaseApprovedBy?'n-green':'n-warn'}" style="margin-bottom:1rem;font-size:12px"><i class="ti ti-shopping-cart ni"></i><div>${t.purchaseApprovedBy?'บริหารอนุมัติจัดซื้อแล้ว — เริ่มจัดซื้อได้':'งานนี้ต้องจัดซื้อ — ต้องให้บริหารอนุมัติก่อน (เลือก “รออนุมัติจัดซื้อ” เพื่อส่งให้บริหาร)'}</div></div>`:''}
     <div class="ff"><label>สถานะใหม่</label>
@@ -2471,7 +2477,7 @@ function pgPM(){
     const fls=floorsOf(p.building);
     return `<tr>
       <td><input value="${escAttr(p.name||'')}" placeholder="เช่น ล้างแอร์ชั้น 3" onchange="pmEdit(${i},'name',this.value)" style="min-width:150px"></td>
-      <td><select onchange="pmEdit(${i},'floor',this.value)">${fls.length?fls.map(f=>`<option value="${f}" ${p.floor===f?'selected':''}>${f}</option>`).join(''):'<option value="">-</option>'}</select></td>
+      <td><select onchange="pmFloorPick(${i},this.value)">${pmFloorOptions(p)}</select></td>
       <td><select onchange="pmEdit(${i},'category',this.value)">${CATS.map(c=>`<option value="${c}" ${p.category===c?'selected':''}>${c}</option>`).join('')}</select></td>
       <td>${pmSchedCell(p,i)}</td>
       <td style="font-size:12px;white-space:nowrap">${p.lastDone?fdShort(p.lastDone):'—'}</td>
@@ -2491,14 +2497,15 @@ function pgPM(){
     <div class="card">
       <div class="ctitle" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
         <span>รายการ PM (${d.length})</span>
-        <button class="btn btn-sm" onclick="pmAdd()"><i class="ti ti-plus"></i> เพิ่มรายการ</button>
+        ${can('manage_pm')?`<button class="btn btn-sm" onclick="pmAdd()"><i class="ti ti-plus"></i> เพิ่มรายการ</button>`:''}
       </div>
-      <div style="overflow-x:auto"><table class="tbl xls">
+      ${can('manage_pm')?'':viewOnlyNote('แก้ไขแผน PM')}
+      <fieldset ${can('manage_pm')?'':'disabled'} style="border:0;padding:0;margin:0;min-width:0"><div style="overflow-x:auto"><table class="tbl xls">
         <thead><tr><th>ชื่องาน</th><th>ชั้น</th><th>ประเภท</th><th>กำหนดวัน</th><th>ทำล่าสุด</th><th>รอบถัดไป</th><th>เปิด</th><th>ลบ</th></tr></thead>
         <tbody>${rows||'<tr><td colspan="8" style="text-align:center;color:var(--tx3);padding:16px">ยังไม่มีรายการ PM — กด “เพิ่มรายการ”</td></tr>'}</tbody>
-      </table></div>
+      </table></div></fieldset>
       <div id="pmMsg" style="margin-top:.9rem"></div>
-      <button class="btn btn-accent" style="margin-top:.5rem" onclick="savePMList()"><i class="ti ti-device-floppy"></i> บันทึกแผน PM</button>
+      ${can('manage_pm')?`<button class="btn btn-accent" style="margin-top:.5rem" onclick="savePMList()"><i class="ti ti-device-floppy"></i> บันทึกแผน PM</button>`:''}
     </div>
   </div>`;
 }
@@ -2515,6 +2522,20 @@ function pmEdit(i,field,val){
   if(field==='mode'){ d[i].schedule=d[i].schedule||{}; }
   if(field==='active'||field==='intervalDays'||field==='mode') rp();
 }
+// v15.9: ชั้นของ PM — รวมชั้นทุกอาคารเป็นรายการเดียว เรียง B → 1 … 7 → ดาดฟ้า และเลือกอาคารให้อัตโนมัติ
+function floorRank(f){ const x=String(f||'').replace(/^ชั้น\s*/,'').trim(); if(/^B\d*$/i.test(x)) return -10+(parseInt(x.slice(1))||0)*-1; const n=parseFloat(x); if(!isNaN(n)) return n; if(/ดาดฟ้า/.test(x)) return 999; return 500; }
+function pmFloorList(){
+  const vis=FLOORS.filter(f=>!f.hidden && BUILDINGS.some(b=>b.id===f.building&&!b.hidden));
+  const dup={}; vis.forEach(f=>dup[f.floor]=(dup[f.floor]||0)+1);
+  return vis.map(f=>({b:f.building,f:f.floor,lbl:f.floor+(dup[f.floor]>1?' ('+(getBI(f.building).short||getBI(f.building).name)+')':'')}))
+    .sort((a,c)=>floorRank(a.f)-floorRank(c.f));
+}
+function pmFloorOptions(p){
+  const L=pmFloorList(); if(!L.length) return '<option value="">-</option>';
+  const has=L.some(x=>x.b===p.building&&x.f===p.floor);
+  return (has?'':`<option value="" selected>-- เลือกชั้น --</option>`)+L.map(x=>`<option value="${escAttr(x.b+'|'+x.f)}" ${x.b===p.building&&x.f===p.floor?'selected':''}>${escHtml(x.lbl)}</option>`).join('');
+}
+function pmFloorPick(i,val){ const d=ensurePMDraft(); const k=String(val).indexOf('|'); if(k<0) return; d[i].building=val.slice(0,k); d[i].floor=val.slice(k+1); }
 function pmRemove(i){ const d=ensurePMDraft(); d.splice(i,1); rp(); }
 async function savePMList(){
   const d=ensurePMDraft();
@@ -3014,7 +3035,7 @@ async function saveRoleMatrix(){
 
 // ═══ v14: การแจ้งเตือนรายคน (LINE OA / อีเมล) ═══
 const NOTIFY_LBL={both:'LINE + อีเมล',line:'LINE',email:'อีเมล',none:'ไม่รับ'};
-const NOTIFY_EVT={new:'มีใบแจ้งซ่อมใหม่ (เฉพาะที่ตนเกี่ยวข้อง)',assigned:'ถูกมอบหมายงาน',purchase:'มีงานรออนุมัติจัดซื้อ (บริหาร)',stock:'อุปกรณ์ใกล้หมด (วิศวกร/บริหาร)',monthly:'สรุปงานรายเดือน ทุกวันที่ 1 (วิศวกร/บริหาร)'};
+const NOTIFY_EVT={new:'มีใบแจ้งซ่อมใหม่ (เฉพาะที่ตนเกี่ยวข้อง)',assigned:'ถูกมอบหมายงาน',purchase:'มีงานรออนุมัติจัดซื้อ (บริหาร)',stock:'อุปกรณ์ใกล้หมด (วิศวกร/บริหาร)',monthly:'สรุปงานรายเดือน ทุกวันที่ 1 (วิศวกร/บริหาร)',daily:'งานที่ฉันรับผิดชอบ (ค้าง + เสร็จเดือนนี้) ทุกเช้าวันทำการ 08:00'};
 function notifyIcons(u){
   if(u.notify==='none') return '<span class="badge b-gray nodot">ไม่รับ</span>';
   const l=(u.notify!=='email')?(u.hasLine?'<span class="badge b-green nodot">LINE ✓</span>':'<span class="badge b-amber nodot" title="ยังไม่ผูก LINE">LINE —</span>'):'';
@@ -3053,6 +3074,7 @@ async function openMyNotify(extra){
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-accent" style="flex:1" onclick="saveMyNotify()"><i class="ti ti-device-floppy"></i> บันทึก</button>
       <button class="btn" onclick="testMyNotify()">ส่งทดสอบ</button>
+      <button class="btn" onclick="sendMineNow()" title="ส่งรายการงานค้างและงานที่เสร็จเดือนนี้ของคุณเข้า LINE ตอนนี้">📋 ส่งงานที่ฉันรับผิดชอบเข้า LINE</button>
     </div>`;
   document.getElementById('userMd').style.display='flex';
 }
@@ -3061,6 +3083,14 @@ async function saveMyNotify(){
   showLoader('กำลังบันทึก...');
   try{ await api('myNotify',{token:AUTH_TOKEN,fields:f}); hideLoader(); showToast('บันทึกการแจ้งเตือนแล้ว'); cm('userMd'); loadAll({silent:true}).then(rp); }
   catch(e){ hideLoader(); showToast('ไม่สำเร็จ: '+e.message,3000); }
+}
+// v15.10: ส่งรายการงานของฉัน (ค้าง + เสร็จเดือนนี้) เข้า LINE ตอนนี้
+async function sendMineNow(){
+  showLoader('กำลังส่งงานที่ฉันรับผิดชอบ...');
+  try{ const r=await api('mineNow',{token:AUTH_TOKEN}); hideLoader();
+    const m={line:'ส่งเข้า LINE แล้ว',email:'ส่งทางอีเมลแล้ว (ยังไม่ได้ผูก LINE หรือโควตาเต็ม)',empty:'ไม่มีงานค้างและงานที่เสร็จเดือนนี้ — ไม่ได้ส่ง',none:'ส่งไม่ได้ — ยังไม่ได้ผูก LINE และไม่มีอีเมล',off:'บัญชีถูกปิดใช้งาน'};
+    showToast((m[r.result]||r.result)+` · ค้าง ${r.open} · เสร็จเดือนนี้ ${r.done}`,5000);
+  }catch(e){ hideLoader(); if(!handleAuthError(e)) showToast(/Unknown action/.test(e.message)?'ต้อง Deploy Code.gs v15.2 ก่อน':'ส่งไม่สำเร็จ: '+e.message,4000); }
 }
 async function testMyNotify(){
   await saveMyNotify();
@@ -3743,8 +3773,9 @@ function openEdit(id){
   document.getElementById('detMd').style.display='none';
   document.getElementById('editMd').style.display='flex';
 }
-function escAttr(s){return (s==null?'':String(s)).replace(/"/g,'&quot;');}
-function escHtml(s){return (s==null?'':String(s)).replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+const _ESC={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
+function escAttr(s){return (s==null?'':String(s)).replace(/[&<>"']/g,c=>_ESC[c]);}   // v15.11: escape ครบ 5 ตัว
+function escHtml(s){return (s==null?'':String(s)).replace(/[&<>"']/g,c=>_ESC[c]);}
 
 async function saveEdit(id){
   const t=DB.tickets.find(t=>t.id===id); if(!t) return;
@@ -3939,7 +3970,7 @@ function openDet(id) {
     ${statusPipe(t.status)}
     ${(()=>{const h=cu?hotspotOf(t.building,t.room):null; return h?`<div class="notice n-red" style="margin-bottom:.8rem;font-size:12px"><i class="ti ti-flame ni"></i><div><b>จุดซ่อมซ้ำ</b> — ห้องนี้ถูกแจ้ง ${h.n} ครั้งใน ${OPS.hotMonths} เดือน (${Object.entries(h.cats).map(([c,n])=>escHtml(c)+' '+n).join(', ')}) ควรพิจารณาเปลี่ยนใหม่แทนการซ่อม</div></div>`:'';})()}
     <table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:1rem">
-    ${[['อาคาร',b.icon+' '+b.name],['ห้อง',t.room],['ประเภท',t.category],['ผู้แจ้ง',t.name],
+    ${[['อาคาร',b.icon+' '+b.name],['ห้อง',escHtml(t.room)],['ประเภท',escHtml(t.category)],['ผู้แจ้ง',escHtml(t.name)],
        ...(cu?[['โทร',escHtml(t.phone)]]:[]),['หน่วยงาน',escHtml(t.dept)],['วันที่แจ้ง',fd(t.createdAt)],
        ...(cu?[['วันที่อนุมัติ',t.approvedAt?fd(t.approvedAt):'ยังไม่อนุมัติ'],
               ['คาดว่าเสร็จ',(()=>{const di=dueInfo(t);return `<span class="badge ${di.cls}">${di.text}</span>${di.sub?` <span style="font-size:11px;color:var(--tx3)">${di.sub}</span>`:''}${cu.isEngineer&&!CLOSED_STATUS.includes(t.status)?` <button class="btn btn-sm" style="margin-left:4px;padding:2px 8px" onclick="openDueEdit('${t.id}')">📅 แก้วันคาดว่าเสร็จ</button>`:''}`;})()]]:[]),
@@ -3950,7 +3981,7 @@ function openDet(id) {
     ].map(([l,v2])=>`<tr><td style="color:var(--tx3);padding:4px 0;width:110px;font-size:12px;vertical-align:top">${l}</td><td style="padding:4px 0">${v2}</td></tr>`).join('')}
     </table>
     <div style="font-size:12px;color:var(--tx3);margin-bottom:4px">รายละเอียด</div>
-    <div style="font-size:13px;background:var(--surf2);border-radius:8px;padding:.75rem;margin-bottom:1rem;line-height:1.6">${t.desc}</div>
+    <div style="font-size:13px;background:var(--surf2);border-radius:8px;padding:.75rem;margin-bottom:1rem;line-height:1.6;white-space:pre-wrap">${escHtml(t.desc)}</div>
     ${renderTicketPhotos(t)}
     <div style="height:12px"></div>
     ${ratingBlock(t)}
@@ -3968,8 +3999,8 @@ function openDet(id) {
       </div>
       <div style="padding-bottom:12px;flex:1">
         <span class="badge ${si.cls}" style="font-size:10px">${si.label}</span>
-        ${h.note&&h.note!=='-'?`<div style="font-size:12px;color:var(--tx2);margin-top:3px">${h.note}</div>`:''}
-        <div style="font-size:11px;color:var(--tx3);margin-top:2px">${fd(h.date)} — ${h.by}</div>
+        ${h.note&&h.note!=='-'?`<div style="font-size:12px;color:var(--tx2);margin-top:3px">${escHtml(h.note)}</div>`:''}
+        <div style="font-size:11px;color:var(--tx3);margin-top:2px">${fd(h.date)} — ${escHtml(h.by)}</div>
       </div>
     </div>`;}).join('')}`;
   const _md=document.getElementById('detMd'); _md.dataset.tid=id; _md.style.display='flex';

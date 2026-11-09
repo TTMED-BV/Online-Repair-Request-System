@@ -1,11 +1,13 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════
- *  ระบบแจ้งซ่อมออนไลน์ — Google Apps Script Backend (v15.1)
+ *  ระบบแจ้งซ่อมออนไลน์ — Google Apps Script Backend (v15.3)
  *  เวอร์ชัน v15 (2026-10-26) — ต้องใช้คู่กับหน้าเว็บ index.html v15
  *  ประวัติ: v12 ฟิลเตอร์/ปฏิทินแถบ/วันคาดว่าเสร็จ/PM 5 แบบ/ประเมินแทน+อีเมล · v12.1–12.2 แก้ใบค้าง ใบรหัสซ้ำ
  *           v13 คาร์บอนที่ประหยัดได้รายเดือน · v14 แจ้งเตือนรายคน LINE OA/อีเมล
  *           v15 คลังอุปกรณ์+จุดสั่งซื้อ/แจ้งของใกล้หมด · สรุปรายเดือนอัตโนมัติ (วันที่ 1 08:00)
  *               · ตั้งค่าจุดซ่อมซ้ำ/เป้า KPI · บันทึกการเคลื่อนไหวคลัง (แท็บ InvLog)
+ *           v15.3 (9 พ.ย.) ความปลอดภัย: ซ่อนข้อมูลส่วนบุคคลจากผู้ไม่ล็อกอิน · กรองอักขระ HTML · ล็อกต้องได้จริง · กันเดารหัสผ่าน · รหัสผ่าน v2
+ *           v15.2 (9 พ.ย.) แจ้งงานของฉันรายคนทาง LINE (ค้าง + เสร็จเดือนนี้) — ทุกเช้าวันทำการ 08:00 + พิมพ์ "งานค้าง" ในแชท OA
  *           v15.1 (29 ต.ค.) ล้างใบงานทดสอบก่อนเริ่มใช้งาน (resetTickets — สำรองเป็นชีตซ่อนก่อนลบ)
  *           (27 ต.ค.) ข้อความตอบกลับใน LINE ไม่ส่งลิงก์ "ใบของฉัน" แล้ว (หน้านี้เฉพาะผู้ที่ล็อกอิน)
  *  รวมทุกฟีเจอร์: แจ้งซ่อม + ตั้งค่า + วันหยุด + LINE + Auth + รูปภาพ
@@ -164,32 +166,35 @@ function doPost(e) {
     if (!body.action && body.events) { handleLineWebhook_(body.events); return ContentService.createTextOutput('OK'); }
     var action = body.action;
     var isRead = READ_ACTIONS.indexOf(action) >= 0;
-    if (!isRead) { lock = LockService.getScriptLock(); lock.tryLock(20000); }   // ล็อกเฉพาะตอนเขียน
+    if (!isRead) {   // ล็อกเฉพาะตอนเขียน — v15.3: ถ้าไม่ได้ล็อก ห้ามเขียนต่อ (กันข้อมูลทับกัน)
+      lock = LockService.getScriptLock();
+      if (!lock.tryLock(20000)) { lock = null; return ContentService.createTextOutput(JSON.stringify({ ok:false, error:'ระบบกำลังบันทึกข้อมูลอื่นอยู่ กรุณาลองใหม่อีกครั้ง' })).setMimeType(ContentService.MimeType.JSON); }
+    }
     var result;
 
     switch (action) {
       case 'init':        result = initSheets();                               break;
       case 'ping':        result = { pong: true };                             break;
-      case 'getAll':      result = getAllTickets();                            break;
+      case 'getAll':      result = verifyToken_(body.token) ? getAllTickets() : publicView_(getAllTickets()); break;
       // รวม "แก้ใบ + เพิ่มประวัติ" เป็นคำขอเดียว (เร็วกว่าเรียก 2 ครั้ง)
       case 'updateWithHistory': result = requireAuth(body.token, function(){
-                            var r = updateTicket(body.id, body.fields || {});
+                            var r = updateTicket(body.id, sanitizeObj_(body.fields || {}));
                             if (r && r.error) return r;
-                            if (body.entry) addHistory(body.id, body.entry);
+                            if (body.entry) addHistory(body.id, sanitizeObj_(body.entry));
                             return r; }); break;
       case 'getTicketPhotos': result = getTicketPhotos(body.id);               break;
-      case 'bootstrap':   result = bootstrap();                                break;
-      case 'add':         result = addTicket(body.ticket);
-                          if (body.entry && result && !result.error && !result.duplicate) addHistory(body.ticket.id, body.entry);  // รวมประวัติแรกในคำขอเดียว
+      case 'bootstrap':   result = bootstrapFor_(body.token);                  break;   // v15.3: ไม่ล็อกอิน = ข้อมูลสาธารณะ (ไม่มีเบอร์/อีเมล)
+      case 'add':         result = addTicket(sanitizeObj_(body.ticket));
+                          if (body.entry && result && !result.error && !result.duplicate) addHistory(body.ticket.id, sanitizeObj_(body.entry));  // รวมประวัติแรกในคำขอเดียว
                           break;
-      case 'update':      result = requireAuth(body.token, function(){ return updateTicket(body.id, body.fields); }); break;
-      case 'addHistory':  result = addHistory(body.ticketId, body.entry);      break;
+      case 'update':      result = requireAuth(body.token, function(){ return updateTicket(body.id, sanitizeObj_(body.fields)); }); break;
+      case 'addHistory':  result = publicHistoryAllowed_(body) ? addHistory(body.ticketId, sanitizeObj_(body.entry)) : { error:'AUTH_REQUIRED' }; break;   // v15.3
       case 'getConfig':   result = getConfig();                                break;
       case 'saveConfig':  result = requireAuth(body.token, function(){ return saveConfig(body.config); }); break;
-      case 'login':       result = login(body.username, body.password);        break;
+      case 'login':       result = loginGuarded_(body.username, body.password); break;   // v15.3: ผิด 5 ครั้ง ล็อก 15 นาที
       case 'logout':      result = logout(body.token);                         break;
       case 'getUsers':    result = getUsers();                                 break;
-      case 'uploadPhoto': result = uploadPhoto(body.photo);                    break;
+      case 'uploadPhoto': result = publicPhotoAllowed_(body) ? uploadPhoto(body.photo) : { error:'AUTH_REQUIRED' }; break;   // v15.3
       case 'getPhotos':   result = getPhotos();                                break;
       case 'deletePhoto': result = requireAuth(body.token, function(){ return deletePhoto(body.fileId); }); break;
       case 'rateTicket':  result = rateTicket(body.id, body.rating, body.comment, body.ratedBy); break;
@@ -212,6 +217,7 @@ function doPost(e) {
       case 'withdrawItems': result = requireAuth(body.token, function(){ return withdrawItems(body.ticketId, body.items, body.by); }); break;
       case 'myNotify':      result = requireAuth(body.token, function(){ return myNotify_(verifyToken_(body.token), body.fields); }); break;
       case 'testNotify':    result = requireAuth(body.token, function(){ return testNotify_(verifyToken_(body.token)); }); break;
+      case 'mineNow':       result = requireAuth(body.token, function(){ return sendMineNow_(verifyToken_(body.token)); }); break;   // v15.2 ส่งงานของฉันตอนนี้
       case 'getNotifyAll':  result = requireEngineer_(body.token, function(){ return getNotifyAll_(); }); break;
       case 'setUserNotify': result = requireEngineer_(body.token, function(){ return setUserNotify_(body.username, body.fields); }); break;
       case 'setFlag':       result = requireEngineer_(body.token, function(){ return setFlag(body.key, body.value); }); break;
@@ -238,7 +244,7 @@ function doPost(e) {
 
 // รองรับการเปิด URL ตรง ๆ ด้วย GET (ไว้ทดสอบว่า deploy ติดไหม)
 function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({ ok:true, data:{ status:'online', version:'v15.1' } }))
+  return ContentService.createTextOutput(JSON.stringify({ ok:true, data:{ status:'online', version:'v15.3' } }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -600,7 +606,20 @@ function sha256_(text) {
   return bytes.map(function(b){ return ('0' + (b & 0xFF).toString(16)).slice(-2); }).join('');
 }
 function makeSalt_() { return Utilities.getUuid().replace(/-/g,'').substring(0,16); }
-function hashPassword_(password, salt) { return sha256_(salt + '::' + password + '::vetrepair'); }
+function hashPassword_(password, salt) { return sha256_(salt + '::' + password + '::vetrepair'); }   // v1 (เดิม) — ใช้ตรวจของเก่าเท่านั้น
+// v15.3: รหัสผ่าน v2 — วนแฮชซ้ำ (key stretching) ให้เดารหัสได้ช้าลงมาก · เก็บเป็น "v2$<hex>"
+var PW_ROUNDS = 2000;
+function hashPasswordV2_(password, salt) {
+  var h = sha256_(salt + '::' + password + '::ttmed');
+  for (var i = 0; i < PW_ROUNDS; i++) h = sha256_(h + ':' + salt);
+  return 'v2$' + h;
+}
+function makePasswordHash_(password, salt) { return hashPasswordV2_(password, salt); }
+function checkPassword_(password, salt, stored) {
+  stored = String(stored || '');
+  if (stored.indexOf('v2$') === 0) return hashPasswordV2_(password, salt) === stored;
+  return hashPassword_(password, salt) === stored;
+}
 
 // ⬇️ แก้รหัสผ่านตรงนี้ แล้วกด Run ฟังก์ชันนี้หนึ่งครั้ง (ตอนติดตั้ง)
 function setupUsers() {
@@ -625,7 +644,7 @@ function setupUsers() {
 
   SEED.forEach(function(u){
     var salt = makeSalt_();
-    sh.appendRow([ u[0], hashPassword_(u[1], salt), salt, u[2], u[3], u[4]?'TRUE':'FALSE', u[5], u[6], u[7], 'TRUE' ]);
+    sh.appendRow([ u[0], makePasswordHash_(u[1], salt), salt, u[2], u[3], u[4]?'TRUE':'FALSE', u[5], u[6], u[7], 'TRUE' ]);
   });
 
   sh.hideColumns(2, 2);   // ซ่อนคอลัมน์ hash + salt
@@ -645,7 +664,7 @@ function changePassword() {
   for (var i = 1; i < d.length; i++) {
     if (String(d[i][0]) === USERNAME) {
       var salt = makeSalt_();
-      sh.getRange(i+1, 2).setValue(hashPassword_(NEW_PASSWORD, salt));
+      sh.getRange(i+1, 2).setValue(makePasswordHash_(NEW_PASSWORD, salt));
       sh.getRange(i+1, 3).setValue(salt);
       Logger.log('เปลี่ยนรหัสผ่านของ ' + USERNAME + ' เรียบร้อย');
       return { ok:true };
@@ -681,7 +700,8 @@ function login(username, password) {
 
     var stored = String(d[i][1]);
     var salt   = String(d[i][2]);
-    if (hashPassword_(password, salt) !== stored) return { error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' };
+    if (!checkPassword_(password, salt, stored)) return { error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' };
+    if (stored.indexOf('v2$') !== 0) { try { sh.getRange(i + 1, 2).setValue(hashPasswordV2_(password, salt)); } catch (e) {} }   // อัปเกรดเป็น v2 เงียบ ๆ
 
     var token = Utilities.getUuid().replace(/-/g,'');
     var exp   = Date.now() + SESSION_HOURS * 3600 * 1000;
@@ -812,7 +832,7 @@ function addUser(user) {
   var salt = makeSalt_();
   var specialty = Array.isArray(user.specialty) ? user.specialty.join(', ') : String(user.specialty||'');
   sh.appendRow([
-    username, hashPassword_(password, salt), salt,
+    username, makePasswordHash_(password, salt), salt,
     String(user.name||username), role, roleIsEngineer_(role)?'TRUE':'FALSE',
     String(user.color||'#9fb4cc'), String(user.initials|| username.substring(0,2).toUpperCase()),
     specialty, (user.active===false?'FALSE':'TRUE')
@@ -858,7 +878,7 @@ function setUserPassword(username, password) {
   if (!u) return { error:'ไม่พบผู้ใช้ ' + username };
   var sh = ss_().getSheetByName(USERS_SHEET);
   var salt = makeSalt_();
-  sh.getRange(u._row, 2).setValue(hashPassword_(String(password), salt));
+  sh.getRange(u._row, 2).setValue(makePasswordHash_(String(password), salt));
   sh.getRange(u._row, 3).setValue(salt);
   return { ok:true, username: username };
 }
@@ -1527,7 +1547,8 @@ function runDuePMDaily() {
 // ข้อ 10: ปลุก Apps Script + เตรียมแคชไว้ล่วงหน้า (เฉพาะเวลาทำการ จ.–ศ. 07:00–19:00)
 function keepWarm() {
   var now = new Date(), h = now.getHours(), d = now.getDay();
-  try { maybeSendMonthly_(now); } catch (e) { Logger.log('monthly: ' + e); }   // v15: วันที่ 1 ตั้งแต่ 08:00 ส่งสรุปเดือนก่อน (ครั้งเดียว)
+  try { maybeSendMonthly_(now); } catch (e) { Logger.log('monthly: ' + e); }
+  try { maybeSendDailyMine_(now); } catch (e) { Logger.log('daily mine: ' + e); }   // v15.2: วันทำการ 08:00 ส่งงานของฉันรายคน   // v15: วันที่ 1 ตั้งแต่ 08:00 ส่งสรุปเดือนก่อน (ครั้งเดียว)
   if (d === 0 || d === 6 || h < 7 || h >= 19) return 'off-hours';
   if (!cacheGet_(CACHE_KEY)) cachePut_(CACHE_KEY, JSON.stringify(buildBootstrap_()));
   return 'warm';
@@ -1572,8 +1593,9 @@ function archiveOldTickets() {
 // ═══════════════════════════════════════════════════════════════
 //  v14: แจ้งเตือนรายคน รายรายการ (LINE OA ใหม่ และ/หรือ อีเมล)
 // ═══════════════════════════════════════════════════════════════
-var NOTIFY_EVENTS = ['new','assigned','purchase','stock','monthly'];   // ใบใหม่ / ถูกมอบหมาย / รออนุมัติจัดซื้อ / ของใกล้หมด / สรุปรายเดือน
-var NOTIFY_V15 = ['stock','monthly'];   // เหตุการณ์ใหม่ v15 — ผู้ใช้ที่ตั้งค่าไว้ก่อน v15 ได้รับโดยอัตโนมัติ
+var NOTIFY_EVENTS = ['new','assigned','purchase','stock','monthly','daily'];   // v15.2: daily = งานของฉัน (ค้าง/เสร็จ) ทุกเช้าวันทำการ   // ใบใหม่ / ถูกมอบหมาย / รออนุมัติจัดซื้อ / ของใกล้หมด / สรุปรายเดือน
+var NOTIFY_V15 = ['stock','monthly'];
+var NOTIFY_V152 = ['daily'];   // v15.2 — ผู้ใช้ที่ตั้งค่าไว้ก่อนหน้าได้รับโดยอัตโนมัติ (ปิดเองได้)   // เหตุการณ์ใหม่ v15 — ผู้ใช้ที่ตั้งค่าไว้ก่อน v15 ได้รับโดยอัตโนมัติ
 
 // ตั้งค่า OA ใหม่ (Run หนึ่งครั้ง) — token เก็บใน Script Properties ไม่อยู่ในโค้ด
 function setupLineOA() {
@@ -1619,8 +1641,9 @@ function handleLineWebhook_(events) {
       if (ev.type === 'follow') { lineReply_(ev.replyToken, 'สวัสดีครับ 👋 ระบบแจ้งซ่อมออนไลน์\nเจ้าหน้าที่: เปิดเว็บ → กดชื่อผู้ใช้มุมขวาบน → "การแจ้งเตือนของฉัน" แล้วพิมพ์รหัส 6 หลักที่เห็นส่งมาที่นี่'); return; }
       if (ev.type !== 'message' || !ev.message || ev.message.type !== 'text' || !uid) return;
       var txt = String(ev.message.text || '').replace(/\s/g, '');
+      if (/^(งานค้าง|งานของฉัน|งานฉัน|งาน|สถานะงาน|mine|myjobs?)$/i.test(txt)) { replyMine_(ev.replyToken, uid); return; }   // v15.2
       if (!/^\d{6}$/.test(txt)) { var st = siteLink_('');
-        lineReply_(ev.replyToken, 'ระบบนี้ใช้ส่งแจ้งเตือนงานซ่อม' + (st ? '\n\n📝 แจ้งซ่อม: ' + siteLink_('report') + '\n🔎 ติดตามงาน: ' + siteLink_('status') : '') + '\n\nผูกบัญชีเจ้าหน้าที่: พิมพ์รหัส 6 หลักจากหน้าเว็บ'); return; }
+        lineReply_(ev.replyToken, 'ระบบนี้ใช้ส่งแจ้งเตือนงานซ่อม' + (st ? '\n\n📝 แจ้งซ่อม: ' + siteLink_('report') + '\n🔎 ติดตามงาน: ' + siteLink_('status') : '') + '\n\nผูกบัญชีเจ้าหน้าที่: พิมพ์รหัส 6 หลักจากหน้าเว็บ\nเจ้าหน้าที่ที่ผูกแล้ว: พิมพ์ "งานค้าง" เพื่อดูงานของตัวเอง'); return; }
       var sh = ss_().getSheetByName(USERS_SHEET); ensureSheet_(USERS_SHEET, USER_HEADERS);
       var d = sh.getDataRange().getValues();
       for (var i = 1; i < d.length; i++) {
@@ -1631,7 +1654,7 @@ function handleLineWebhook_(events) {
           sh.getRange(i + 1, 12).setValue(uid);
           sh.getRange(i + 1, 15).setValue('');
           invalidateCache_();
-          lineReply_(ev.replyToken, '✅ ผูก LINE กับบัญชี ' + d[i][3] + ' แล้ว\nจากนี้จะได้รับแจ้งเตือนงานซ่อมที่นี่');
+          lineReply_(ev.replyToken, '✅ ผูก LINE กับบัญชี ' + d[i][3] + ' แล้ว\nจากนี้จะได้รับแจ้งเตือนงานซ่อมที่นี่\n\n💡 พิมพ์ "งานค้าง" เมื่อไหร่ก็ได้ เพื่อดูงานค้างและงานที่เสร็จแล้วของคุณ');
           return;
         }
       }
@@ -1651,8 +1674,9 @@ function notifyInfo_(r) {
   var raw = String(r[13] || ''), ev;
   if (!raw) ev = NOTIFY_EVENTS.slice();
   else {
-    ev = raw.split(',').filter(function(e){ return e && e !== '_v15'; });
+    ev = raw.split(',').filter(function(e){ return e && e.charAt(0) !== '_'; });
     if (raw.indexOf('_v15') < 0) NOTIFY_V15.forEach(function(e){ if (ev.indexOf(e) < 0) ev.push(e); });   // ตั้งค่าไว้ก่อน v15
+    if (raw.indexOf('_v152') < 0) NOTIFY_V152.forEach(function(e){ if (ev.indexOf(e) < 0) ev.push(e); });   // ตั้งค่าไว้ก่อน v15.2
   }
   return { email:String(r[10] || ''), hasLine:!!String(r[11] || ''), notify:String(r[12] || 'both'), events: ev };
 }
@@ -1664,7 +1688,7 @@ function applyNotifyFields_(x, fields) {
     x.sh.getRange(x.row, 11).setValue(em);
   }
   if (fields.notify !== undefined && ['line','email','both','none'].indexOf(fields.notify) >= 0) x.sh.getRange(x.row, 13).setValue(fields.notify);
-  if (fields.events !== undefined) x.sh.getRange(x.row, 14).setValue((fields.events || []).filter(function(e){ return NOTIFY_EVENTS.indexOf(e) >= 0; }).concat(['_v15']).join(','));
+  if (fields.events !== undefined) x.sh.getRange(x.row, 14).setValue((fields.events || []).filter(function(e){ return NOTIFY_EVENTS.indexOf(e) >= 0; }).concat(['_v15','_v152']).join(','));
   if (fields.unlinkLine) x.sh.getRange(x.row, 12).setValue('');
   return null;
 }
@@ -1969,4 +1993,256 @@ function resetTickets_(confirm) {
   });
   invalidateCache_();
   return out;
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+//  v15.2: งานของฉัน — แจ้งช่างทาง LINE ว่างานที่ตัวเองรับผิดชอบ "ยังไม่เสร็จ" และ "เสร็จแล้ว (เดือนนี้)" มีอะไรบ้าง
+//   1) ทุกเช้าวันทำการ 08:00 (ผ่าน keepWarm) ส่งถึงทุกคนที่มีงาน และเปิดรับเหตุการณ์ "daily"
+//   2) พิมพ์ "งานค้าง" ในแชท OA → ตอบกลับทันที (reply ไม่นับโควตา)
+// ═══════════════════════════════════════════════════════════════
+var MINE_MAX_OPEN = 10, MINE_MAX_DONE = 5;
+function lineReplyMsgs_(replyToken, messages) {
+  var token = lineOAToken_(); if (!token || !replyToken) return;
+  UrlFetchApp.fetch('https://api.line.me/v2/bot/message/reply', {
+    method:'post', contentType:'application/json', headers:{ Authorization:'Bearer ' + token },
+    payload: JSON.stringify({ replyToken: replyToken, messages: messages }), muteHttpExceptions:true });
+}
+function isWorkday_(d, hol) { var w = d.getDay(); return w !== 0 && w !== 6 && !hol[ymd_(d)]; }
+function workDaysBetween_(a, b, hol) {   // จำนวนวันทำการจาก a ถึง b (ติดลบถ้า b อยู่ก่อน a)
+  var s = new Date(a), e = new Date(b); s.setHours(0,0,0,0); e.setHours(0,0,0,0);
+  var sign = e >= s ? 1 : -1, n = 0, d = new Date(s);
+  while (sign > 0 ? d < e : d > e) { d.setDate(d.getDate() + sign); if (isWorkday_(d, hol)) n += sign; }
+  return n;
+}
+// อ่านชีตครั้งเดียวแล้วใช้ร่วมกันทุกคน
+function mineCtx_() {
+  var cfg = getConfig();
+  var sla = {}; (cfg.categories || []).forEach(function(c){ sla[String(c.name).trim()] = Number(c.sla) || 14; });
+  var hol = {}; (cfg.holidays || []).forEach(function(h){ hol[h.date] = 1; });
+  var bName = {}; (cfg.buildings || []).forEach(function(b){ bName[b.id] = b.short || b.name; });
+  var st = {}, closed = {}, paused = {};
+  (cfg.statuses || []).forEach(function(x){ st[x.id] = x.label; if (x.closed) closed[x.id] = 1; if (x.paused) paused[x.id] = 1; });
+  ['done','cannot','cancelled'].forEach(function(k){ closed[k] = 1; });
+  return { sla:sla, hol:hol, bName:bName, st:st, closed:closed, paused:paused, tickets:getAllTickets().tickets };
+}
+function isMine_(t, username) { return (t.assignees || []).indexOf(String(username)) >= 0; }
+// งานที่ยังไม่เสร็จ: เกินกำหนดขึ้นก่อน → เร่งด่วน → ใกล้ครบกำหนด
+function myOpenTickets_(username, C) {
+  var today = new Date(); today.setHours(0,0,0,0);
+  var rank = { high:0, med:1, low:2 };
+  return C.tickets.filter(function(t){ return !C.closed[t.status] && isMine_(t, username); })
+    .map(function(t){
+      var due = t.dueOverride ? parseYmd_(t.dueOverride) : (t.approvedAt ? workDaysAdd_(new Date(t.approvedAt), C.sla[String(t.category).trim()] || 14, C.hol) : null);
+      return { t:t, due:due, left: due ? workDaysBetween_(today, due, C.hol) : null, paused: !!C.paused[t.status] };
+    })
+    .sort(function(a, b){
+      var oa = mineOver_(a) ? 0 : 1, ob = mineOver_(b) ? 0 : 1;
+      if (oa !== ob) return oa - ob;
+      var pa = rank[a.t.priority] != null ? rank[a.t.priority] : 2, pb = rank[b.t.priority] != null ? rank[b.t.priority] : 2;
+      if (pa !== pb) return pa - pb;
+      return (a.left == null ? 9999 : a.left) - (b.left == null ? 9999 : b.left);
+    });
+}
+// งานที่เสร็จแล้ว (สถานะ "เสร็จเรียบร้อย") ที่ปิดในเดือนนี้ — ล่าสุดขึ้นก่อน
+function myDoneTickets_(username, C) {
+  var n = new Date(), start = new Date(n.getFullYear(), n.getMonth(), 1);
+  return C.tickets.filter(function(t){ return t.status === 'done' && isMine_(t, username) && t.completedAt && new Date(t.completedAt) >= start; })
+    .sort(function(a, b){ return new Date(b.completedAt) - new Date(a.completedAt); });
+}
+function mineOver_(x) { return !x.paused && x.left !== null && x.left < 0; }
+function mineDueText_(x) {
+  if (x.paused) return '⏸ พักรอภายนอก';
+  if (x.left === null) return 'ยังไม่มีกำหนด';
+  if (x.left < 0) return '⚠️ เกินกำหนด ' + (-x.left) + ' วันทำการ';
+  if (x.left === 0) return '⏰ ครบกำหนดวันนี้';
+  return 'เหลือ ' + x.left + ' วันทำการ';
+}
+function thShortDate_(iso) { var d = new Date(iso); return d.getDate() + ' ' + ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][d.getMonth()]; }
+function placeOf_(t, C) { return (C.bName[t.building] || t.building || '-') + ' — ' + String(t.room || '-'); }
+function mineFlex_(name, open, done, C) {
+  var over = open.filter(mineOver_).length, high = open.filter(function(x){ return x.t.priority === 'high'; }).length;
+  var color = over ? '#c0392b' : high ? '#d9822b' : '#29914f';
+  var items = [];
+  var section = function(text, col){ items.push({ type:'text', text:text, weight:'bold', size:'md', color:col, margin: items.length ? 'xl' : 'none' }); };
+  // ── ยังไม่เสร็จ ──
+  section('🔧 ยังไม่เสร็จ ' + open.length + ' งาน', open.length ? '#c0392b' : '#29914f');
+  if (!open.length) items.push({ type:'text', text:'ไม่มีงานค้าง 🎉', size:'sm', color:'#777777', margin:'sm' });
+  open.slice(0, MINE_MAX_OPEN).forEach(function(x, i){
+    var t = x.t, pri = t.priority === 'high' ? '🔴' : t.priority === 'med' ? '🟡' : '🟢';
+    items.push({ type:'separator', margin:'md' });
+    var box = { type:'box', layout:'vertical', margin:'md', spacing:'xs', contents:[
+      { type:'text', text: pri + ' ' + t.id, weight:'bold', size:'sm', color:'#333333' },
+      { type:'text', text: placeOf_(t, C), size:'sm', wrap:true, color:'#333333' },
+      { type:'text', text: String(t.category || '-').trim() + ' · ' + (C.st[t.status] || t.status), size:'xs', wrap:true, color:'#777777' },
+      { type:'text', text: mineDueText_(x), size:'xs', color: mineOver_(x) ? '#c0392b' : (x.left === 0 ? '#d9822b' : '#777777'), weight: (mineOver_(x) || x.left === 0) ? 'bold' : 'regular' } ] };
+    var link = ticketLink_(t.id); if (link) box.action = { type:'uri', label:'เปิด', uri: link };
+    items.push(box);
+  });
+  if (open.length > MINE_MAX_OPEN) items.push({ type:'text', text:'+ อีก ' + (open.length - MINE_MAX_OPEN) + ' งาน — ดูทั้งหมดในเว็บ', size:'xs', color:'#777777', margin:'md' });
+  // ── เสร็จแล้ว (เดือนนี้) ──
+  section('✅ เสร็จแล้วเดือนนี้ ' + done.length + ' งาน', '#29914f');
+  if (!done.length) items.push({ type:'text', text:'ยังไม่มีงานที่ปิดในเดือนนี้', size:'sm', color:'#777777', margin:'sm' });
+  done.slice(0, MINE_MAX_DONE).forEach(function(t){
+    var row = { type:'box', layout:'baseline', margin:'sm', spacing:'sm', contents:[
+      { type:'text', text: thShortDate_(t.completedAt), size:'xs', color:'#29914f', flex:2 },
+      { type:'text', text: t.id + ' · ' + placeOf_(t, C), size:'xs', color:'#555555', wrap:true, flex:7 } ] };
+    var link = ticketLink_(t.id); if (link) row.action = { type:'uri', label:'เปิด', uri: link };
+    items.push(row);
+  });
+  if (done.length > MINE_MAX_DONE) items.push({ type:'text', text:'+ อีก ' + (done.length - MINE_MAX_DONE) + ' งาน', size:'xs', color:'#777777', margin:'sm' });
+  var sub = 'ค้าง ' + open.length + (over ? ' (เกินกำหนด ' + over + ')' : '') + ' · เสร็จเดือนนี้ ' + done.length;
+  var bubble = { type:'bubble', size:'mega',
+    header:{ type:'box', layout:'vertical', backgroundColor: color, paddingAll:'14px', contents:[
+      { type:'text', text:'📋 งานของ ' + name, color:'#FFFFFF', weight:'bold', size:'lg', wrap:true },
+      { type:'text', text: sub, color:'#FFFFFFDD', size:'sm', wrap:true } ] },
+    body:{ type:'box', layout:'vertical', contents: items } };
+  var site = siteLink_('mywork');
+  if (site) bubble.footer = { type:'box', layout:'vertical', contents:[{ type:'button', style:'primary', color: color, height:'sm',
+    action:{ type:'uri', label:'เปิดงานที่ฉันรับผิดชอบ', uri: site } }] };
+  return { type:'flex', altText:'📋 งานของคุณ: ' + sub, contents: bubble };
+}
+function mineMailHtml_(name, open, done, C) {
+  var esc = function(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  var td = 'padding:6px 8px;border-bottom:1px solid #eee;vertical-align:top';
+  var openRows = open.map(function(x){ var t = x.t;
+    return '<tr><td style="' + td + '">' + priorityLabel_(t.priority) + '<br><b>' + esc(t.id) + '</b></td><td style="' + td + '">' + esc(placeOf_(t, C))
+      + '<br><span style="color:#777">' + esc(String(t.category || '-').trim() + ' · ' + (C.st[t.status] || t.status)) + '</span></td>'
+      + '<td style="' + td + ';white-space:nowrap;color:' + (mineOver_(x) ? '#c0392b' : '#555') + '">' + esc(mineDueText_(x)) + '</td></tr>'; }).join('');
+  var doneRows = done.map(function(t){
+    return '<tr><td style="' + td + ';color:#29914f;white-space:nowrap">' + esc(thShortDate_(t.completedAt)) + '</td><td style="' + td + '"><b>' + esc(t.id) + '</b> · ' + esc(placeOf_(t, C)) + '</td><td style="' + td + '">' + esc(String(t.category || '-').trim()) + '</td></tr>'; }).join('');
+  var site = siteLink_('mywork');
+  return '<div style="font-family:Tahoma,sans-serif;max-width:640px"><h3 style="color:#1d4632;margin-bottom:4px">📋 งานของ ' + esc(name) + '</h3>'
+    + '<h4 style="color:#c0392b;margin:14px 0 4px">🔧 ยังไม่เสร็จ ' + open.length + ' งาน</h4>'
+    + (open.length ? '<table style="border-collapse:collapse;font-size:13px;width:100%">' + openRows + '</table>' : '<p style="color:#777">ไม่มีงานค้าง 🎉</p>')
+    + '<h4 style="color:#29914f;margin:16px 0 4px">✅ เสร็จแล้วเดือนนี้ ' + done.length + ' งาน</h4>'
+    + (done.length ? '<table style="border-collapse:collapse;font-size:13px;width:100%">' + doneRows + '</table>' : '<p style="color:#777">ยังไม่มีงานที่ปิดในเดือนนี้</p>')
+    + (site ? '<p style="margin-top:16px"><a href="' + site + '" style="background:#29914f;color:#fff;padding:9px 18px;border-radius:8px;text-decoration:none">เปิดงานที่ฉันรับผิดชอบ</a></p>' : '')
+    + '<p style="color:#999;font-size:11px">ส่งอัตโนมัติทุกเช้าวันทำการ — ปิดได้ที่เว็บ: กดชื่อผู้ใช้ → การแจ้งเตือนของฉัน</p></div>';
+}
+// ส่งให้หนึ่งคน — คืน 'line' | 'email' | 'none' | 'empty' | 'off'
+function sendMineTo_(r, C, force) {
+  if (String(r[9]).toUpperCase() === 'FALSE') return 'off';
+  var info = notifyInfo_(r);
+  if (!force && (info.notify === 'none' || info.events.indexOf('daily') < 0)) return 'off';
+  var u = String(r[0]), open = myOpenTickets_(u, C), done = myDoneTickets_(u, C);
+  if (!open.length && !done.length) return 'empty';   // ไม่มีงานเลย ไม่ส่ง (ประหยัดโควตา)
+  var name = String(r[3] || u);
+  var wantLine = force || info.notify === 'line' || info.notify === 'both';
+  var wantMail = info.notify === 'email' || info.notify === 'both';
+  if (wantLine && info.hasLine && linePush_(String(r[11]), [mineFlex_(name, open, done, C)])) return 'line';
+  if ((wantMail || wantLine) && info.email) {
+    MailApp.sendEmail({ to: info.email, subject: 'งานของคุณ: ค้าง ' + open.length + ' · เสร็จเดือนนี้ ' + done.length + ' — ' + Utilities.formatDate(new Date(), 'Asia/Bangkok', 'd/M/yyyy'),
+      htmlBody: mineMailHtml_(name, open, done, C), name:'ระบบแจ้งซ่อม คณะการแพทย์แผนไทย' });
+    return 'email';
+  }
+  return 'none';
+}
+function maybeSendDailyMine_(now) {
+  if (now.getHours() < 8) return 'not-yet';
+  var hol = {};
+  try { (getConfig().holidays || []).forEach(function(h){ hol[h.date] = 1; }); } catch (e) {}
+  if (!isWorkday_(now, hol)) return 'holiday';
+  var key = 'DAILY_MINE_' + ymd_(now), p = PropertiesService.getScriptProperties();
+  if (p.getProperty(key)) return 'sent';
+  p.setProperty(key, new Date().toISOString());   // กันส่งซ้ำ (keepWarm รันทุก 10 นาที)
+  return sendDailyMine();
+}
+// Run เองในหน้า Apps Script ได้ — ส่งงานของฉันให้ทุกคนตอนนี้
+function sendDailyMine() {
+  var C = mineCtx_(), out = {};
+  allUserRows_().forEach(function(r){ try { out[String(r[0])] = sendMineTo_(r, C, false); } catch (e) { out[String(r[0])] = 'error: ' + e; } });
+  Logger.log('งานของฉันรายวัน: ' + JSON.stringify(out));
+  return out;
+}
+// ปุ่มในหน้าเว็บ "ส่งงานของฉันเข้า LINE ตอนนี้"
+function sendMineNow_(username) {
+  var x = userRowFull_(username); if (!x) return { error:'ไม่พบผู้ใช้' };
+  var C = mineCtx_(), res = sendMineTo_(x.r, C, true);
+  return { result: res, open: myOpenTickets_(username, C).length, done: myDoneTickets_(username, C).length };
+}
+// พิมพ์ "งานค้าง" ในแชท OA
+function replyMine_(replyToken, uid) {
+  var rows = allUserRows_().filter(function(r){ return String(r[11]) === String(uid); });
+  if (!rows.length) { lineReply_(replyToken, 'บัญชี LINE นี้ยังไม่ได้ผูกกับผู้ใช้ในระบบ\nเปิดเว็บ → กดชื่อผู้ใช้มุมขวาบน → "การแจ้งเตือนของฉัน" → ขอรหัสผูก LINE แล้วพิมพ์รหัส 6 หลักที่นี่'); return; }
+  var C = mineCtx_();
+  lineReplyMsgs_(replyToken, rows.slice(0, 5).map(function(r){
+    var u = String(r[0]); return mineFlex_(String(r[3] || u), myOpenTickets_(u, C), myDoneTickets_(u, C), C); }));
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+//  v15.3: ความปลอดภัย
+// ═══════════════════════════════════════════════════════════════
+// 1) กรองอักขระ HTML (< >) ออกจากข้อความที่ผู้ใช้พิมพ์ — กันฝังสคริปต์ (XSS) ตั้งแต่ต้นทาง
+//    (หน้าเว็บก็ escape ซ้ำอีกชั้น — ป้องกัน 2 ชั้น)
+function sanitizeStr_(v) { return typeof v === 'string' ? v.replace(/[<>]/g, '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '') : v; }
+function sanitizeObj_(o) {
+  if (!o || typeof o !== 'object') return sanitizeStr_(o);
+  if (Array.isArray(o)) return o.map(sanitizeObj_);
+  var r = {}; Object.keys(o).forEach(function(k){ r[k] = sanitizeObj_(o[k]); }); return r;
+}
+
+// 2) ข้อมูลสาธารณะ — ผู้ที่ไม่ได้ล็อกอินไม่ได้รับเบอร์โทร อีเมล หน่วยงาน ค่าใช้จ่าย ความเห็น และหมายเหตุภายใน
+var PUBLIC_TICKET_FIELDS = ['id','createdAt','approvedAt','completedAt','building','room','floor','category','priority','status',
+  'assignees','rating','ratedBy','source','needsPurchase','dueOverride','carbonFlags','purchaseApprovedAt'];
+function maskName_(n) {
+  var p = String(n || '').trim().split(/\s+/);
+  if (!p[0]) return '-';
+  return p[0] + (p[1] ? ' ' + p[1].charAt(0) + '.' : '');
+}
+function publicTicket_(t) {
+  var o = {}; PUBLIC_TICKET_FIELDS.forEach(function(k){ if (t[k] !== undefined) o[k] = t[k]; });
+  o.name = maskName_(t.name);
+  o.desc = String(t.desc || '').substring(0, 300);   // รายละเอียดอาการยังแสดงได้ (ช่วยให้รู้ว่าใบไหนเป็นของตน)
+  if (o.ratedBy) o.ratedBy = maskName_(o.ratedBy);
+  return o;
+}
+function publicHistory_(h) {   // คงขั้นตอน/วันที่ไว้ให้ผู้แจ้งติดตามได้ ตัดหมายเหตุภายในออก
+  var out = {};
+  Object.keys(h || {}).forEach(function(id){
+    out[id] = (h[id] || []).map(function(e){ return { status:e.status, date:e.date, note:'', by:e.by }; });
+  });
+  return out;
+}
+function publicView_(all) { return { tickets: (all.tickets || []).map(publicTicket_), history: publicHistory_(all.history) }; }
+function bootstrapFor_(token) {
+  var data = bootstrap();
+  if (token && verifyToken_(token)) { data.view = 'staff'; return data; }
+  var pv = publicView_(data);
+  data.tickets = pv.tickets; data.history = pv.history;
+  data.inventory = [];   // ข้อมูลภายใน
+  data.view = 'public';
+  return data;
+}
+
+// 3) ผู้ไม่ล็อกอินเพิ่มประวัติ/รูปได้เฉพาะ "ใบที่เพิ่งแจ้ง" (กันคนนอกแก้ประวัติใบของผู้อื่น)
+function ticketAgeMin_(id) {
+  var rows = readRows_(TICKETS_SHEET);
+  for (var i = 0; i < rows.length; i++) if (String(rows[i][0]) === String(id)) {
+    var c = new Date(rows[i][1]); return isNaN(c) ? 1e9 : (Date.now() - c.getTime()) / 60000;
+  }
+  return null;
+}
+function publicHistoryAllowed_(body) {
+  if (verifyToken_(body.token)) return true;
+  var e = body.entry || {}, age = ticketAgeMin_(body.ticketId);
+  return age !== null && age <= 30 && (e.status === 'pending_approval' || !e.status);
+}
+function publicPhotoAllowed_(body) {
+  if (verifyToken_(body.token)) return true;
+  var p = body.photo || {}; if (p.kind && p.kind !== 'report') return false;
+  var age = ticketAgeMin_(p.ticketId);
+  return age !== null && age <= 180;   // ผู้แจ้งแนบรูปได้ภายใน 3 ชั่วโมงหลังแจ้ง
+}
+
+// 4) กันเดารหัสผ่าน: ผิด 5 ครั้งต่อบัญชี → ล็อก 15 นาที (นับใน CacheService)
+function loginGuarded_(username, password) {
+  var c = CacheService.getScriptCache(), key = 'FAIL_' + String(username || '').trim().toLowerCase();
+  var fails = Number(c.get(key) || 0);
+  if (fails >= 5) return { error:'ใส่รหัสผ่านผิดหลายครั้ง กรุณารอ 15 นาทีแล้วลองใหม่ (หรือติดต่อผู้ดูแลระบบ)' };
+  var r = login(username, password);
+  if (r && r.error && /ไม่ถูกต้อง/.test(r.error)) c.put(key, String(fails + 1), 900);
+  else if (r && !r.error) c.remove(key);
+  return r;
 }
