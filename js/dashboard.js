@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — dashboard.js (v16.0) : Dashboard · PM · ปฏิทิน · ตัวกรอง
+// ระบบแจ้งซ่อมออนไลน์ — dashboard.js (v16.1) : Dashboard · PM · ปฏิทิน · ตัวกรอง
 // โหลดตามลำดับใน index.html (classic script ใช้ตัวแปรร่วมกัน)
 // ════════════════════════ PAGE: DASHBOARD ════════════════════════
 // สร้าง donut chart เป็น SVG (ไล่สีตามสถานะ)

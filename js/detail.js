@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — detail.js (v16.0) : รายละเอียดใบงาน · รูปภาพ · แก้ไข/ยกเลิก · ประเมิน
+// ระบบแจ้งซ่อมออนไลน์ — detail.js (v16.1) : รายละเอียดใบงาน · รูปภาพ · แก้ไข/ยกเลิก · ประเมิน
 // โหลดตามลำดับใน index.html (classic script ใช้ตัวแปรร่วมกัน)
 // ════════════════════════ DETAIL MODAL ════════════════════════
 
@@ -432,6 +432,7 @@ function openDet(id) {
        ...(t.status==='done'?[['คาร์บอนที่ประหยัด',(()=>{const c=carbonOf(t);return c.total?`<b>🌱 ${fmtKg(c.total)} kgCO2e</b><div style="font-size:11.5px;color:var(--tx3)">${carbonTip(c)}</div>`:'—';})()]]:[]),
     ].map(([l,v2])=>`<tr><td style="color:var(--tx3);padding:4px 0;width:110px;font-size:12px;vertical-align:top">${l}</td><td style="padding:4px 0">${v2}</td></tr>`).join('')}
     </table>
+    ${!CLOSED_STATUS.includes(t.status)&&pinFor(t.id)?lineFollowBox(t.id,pinFor(t.id),true):''}
     <div style="font-size:12px;color:var(--tx3);margin-bottom:4px">รายละเอียด</div>
     <div style="font-size:13px;background:var(--surf2);border-radius:8px;padding:.75rem;margin-bottom:1rem;line-height:1.6;white-space:pre-wrap">${escHtml(t.desc)}</div>
     ${renderTicketPhotos(t)}

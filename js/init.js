@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — init.js (v16.0) : เริ่มต้นโปรแกรม · ธีม · ตรวจเวอร์ชันใหม่
+// ระบบแจ้งซ่อมออนไลน์ — init.js (v16.1) : เริ่มต้นโปรแกรม · ธีม · ตรวจเวอร์ชันใหม่
 // โหลดตามลำดับใน index.html (classic script ใช้ตัวแปรร่วมกัน)
 // ════════════════════════ INIT ════════════════════════
 // กู้คืน session เดิม (ถ้ามี) — เซิร์ฟเวอร์จะปฏิเสธเองถ้า token หมดอายุ
@@ -91,7 +91,7 @@ updAuthUI();
 
 // เลือกอาคาร/ชั้นจาก QR param หลังหน้า report พร้อม
 let rateLinkDone=false, pageLinkDone=false, pendingPage=null;
-const LINK_PAGES=['report','status','mine','dashboard','mywork','approve','manage','pm','calendar'];
+const LINK_PAGES=['report','status','mine','dashboard','mywork','approve','manage','pm','calendar','help'];
 function applyQrParams(){
   const params=new URLSearchParams(window.location.search);
   // v15: ?page=report|status|mine|mywork|dashboard … (ใช้กับ Rich menu ของ LINE OA / ลิงก์ในอีเมล)

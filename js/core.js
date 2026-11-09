@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — core.js (v16.0) : ค่าตั้งต้น · สถานะ · API · คาร์บอน · สิทธิ์ · คิวบันทึก · ตัวช่วย · ล็อกอิน · เราเตอร์
+// ระบบแจ้งซ่อมออนไลน์ — core.js (v16.1) : ค่าตั้งต้น · สถานะ · API · คาร์บอน · สิทธิ์ · คิวบันทึก · ตัวช่วย · ล็อกอิน · เราเตอร์
 // โหลดตามลำดับใน index.html (classic script ใช้ตัวแปรร่วมกัน)
 // ═══════════════════════════════════════════
 // CONFIG — แก้ GAS_URL หลัง Deploy Apps Script
@@ -6,7 +6,7 @@
 // URL ของ Google Apps Script ฝังไว้ในโปรแกรม (แก้ได้ที่หน้า ⚙ ตั้งค่า)
 // ─── เวอร์ชันโปรแกรม (อัปเดตทุกครั้งที่ออกเวอร์ชันใหม่ — ต้องตรงกับ Code.gs) ───
 // APP_VERSION อยู่ใน index.html (ให้ตัวตรวจเวอร์ชันใหม่อ่านได้จากไฟล์เดียว)
-const SERVER_REQUIRED = 'v16.0';   // เวอร์ชัน Code.gs ที่หน้าเว็บนี้ต้องใช้
+const SERVER_REQUIRED = 'v16.1';   // เวอร์ชัน Code.gs ที่หน้าเว็บนี้ต้องใช้
 const APP_BUILD   = '2026-11-09';
 let SERVER_VERSION = '';   // อ่านจาก Code.gs ตอนเปิดเว็บ
 const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbyOsSEC8KI1bmWJpWoCXC18XEWRqNTyzN4sRQwc4UV_GAWOUlvnzTzaUCwVId-FmaY2/exec';
@@ -423,6 +423,29 @@ function handleAuthError(e){
 }
 
 // ─── HELPERS ───
+// ─── v16.1: LINE OA + รหัสติดตามใบงาน (4 หลัก) ───
+const LINE_OA_ID = '@450hgdry';   // บัญชี LINE OA ของระบบ
+const LINE_ADD_URL = 'https://line.me/R/ti/p/'+encodeURIComponent(LINE_OA_ID);
+function genPin(){ try{ const a=new Uint16Array(1); crypto.getRandomValues(a); return String(a[0]%10000).padStart(4,'0'); }catch(e){ return String(Math.floor(Math.random()*10000)).padStart(4,'0'); } }
+function pinFor(id){ try{ return (JSON.parse(localStorage.getItem('vr3_pins')||'{}'))[id]||''; }catch(e){ return ''; } }
+function savePinLocal(id,pin){ try{ const m=JSON.parse(localStorage.getItem('vr3_pins')||'{}'); m[id]=pin; const k=Object.keys(m); if(k.length>150) delete m[k[0]]; localStorage.setItem('vr3_pins',JSON.stringify(m)); }catch(e){} }
+function lineFollowText(id,pin){ return 'ติดตาม '+id+' '+pin; }
+function lineFollowUrl(id,pin){ return 'https://line.me/R/oaMessage/'+encodeURIComponent(LINE_OA_ID)+'/?'+encodeURIComponent(lineFollowText(id,pin)); }
+// กล่อง "รับแจ้งเตือนทาง LINE" (ใช้หลังส่งแจ้งซ่อม และในหน้ารายละเอียดใบ)
+function lineFollowBox(id,pin,compact){
+  if(!pin) return '';
+  return html`<div class="lfb${compact?' lfb-c':''}">
+    <div class="lfb-h"><span class="lfb-ic">LINE</span><div><b>รับแจ้งเตือนสถานะใบนี้ทาง LINE</b><small>แจ้งเมื่อ รับเรื่อง · ช่างเริ่มซ่อม · ซ่อมเสร็จ</small></div></div>
+    <div class="lfb-pin">เลขใบงาน <b class="mono">${id}</b> · รหัสติดตาม <b class="mono lfb-code">${pin}</b></div>
+    <div class="lfb-btns">
+      <a class="btn btn-line" href="${lineFollowUrl(id,pin)}" target="_blank" rel="noopener"><i class="ti ti-bell-ringing"></i> รับแจ้งเตือนทาง LINE</a>
+      <a class="btn btn-sm" href="${LINE_ADD_URL}" target="_blank" rel="noopener"><i class="ti ti-user-plus"></i> เพิ่มเพื่อน ${LINE_OA_ID}</a>
+      <button class="btn btn-sm" onclick="copyText('${lineFollowText(id,pin)}')"><i class="ti ti-copy"></i> คัดลอกข้อความ</button>
+    </div>
+    ${compact?'':raw(`<div class="lfb-note">กดปุ่มเขียว → แอป LINE จะเปิดแชทพร้อมข้อความ <b>${escHtml(lineFollowText(id,pin))}</b> → กด <b>ส่ง</b> · ต้องเพิ่มเพื่อนบัญชีนี้ไว้ด้วยจึงจะได้รับแจ้งเตือน · <a href="?page=help#req" onclick="gp('help');return false">ดูวิธีแบบละเอียด</a></div>`)}
+  </div>`;
+}
+function copyText(t){ try{ navigator.clipboard.writeText(t).then(()=>showToast('คัดลอกแล้ว: '+t)); }catch(e){ prompt('คัดลอกข้อความนี้',t); } }
 function genId() { return 'REP-'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).substr(2,4).toUpperCase(); }
 function now() { return new Date().toISOString(); }
 function fd(iso) { if(!iso) return '-'; return new Date(iso).toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}); }
@@ -640,6 +663,7 @@ const NAV_ITEMS = [
   {p:'pm',       label:'PM ซ่อมบำรุง',  icon:'ti-calendar-cog',   pub:false},
   {p:'calendar', label:'ปฏิทินงาน',    icon:'ti-calendar-event', pub:false},
   {p:'dashboard',label:'Dashboard',   icon:'ti-chart-bar',      pub:true},
+  {p:'help',     label:'วิธีใช้',       icon:'ti-help-circle',    pub:true},
   {p:'config',   label:'ตั้งค่า',      icon:'ti-settings',       pub:false},
 ];
 function buildMobileMenu() {
@@ -702,6 +726,7 @@ function rp() {
   else if(curPage==='calendar')  c.innerHTML=pgCalendar();
   else if(curPage==='dashboard') { c.innerHTML=pgDashboard(); setTimeout(runCountUp,60); }
   else if(curPage==='config')    c.innerHTML=pgConfig();
+  else if(curPage==='help')      { c.innerHTML=pgHelp(); helpAfterRender(); }
 }
 // ตัวเลขนับขึ้น (count-up) สำหรับการ์ดสถิติ Dashboard
 function runCountUp(){

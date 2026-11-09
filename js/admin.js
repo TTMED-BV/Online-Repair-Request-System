@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — admin.js (v16.0) : ตั้งค่า · ผู้ใช้/บทบาท · แจ้งเตือน · กติกาวิ่งงาน · คลัง · จัดการระบบ
+// ระบบแจ้งซ่อมออนไลน์ — admin.js (v16.1) : ตั้งค่า · ผู้ใช้/บทบาท · แจ้งเตือน · กติกาวิ่งงาน · คลัง · จัดการระบบ
 // โหลดตามลำดับใน index.html (classic script ใช้ตัวแปรร่วมกัน)
 // ════════════════════════ PAGE: CONFIG ════════════════════════
 function pgConfig() {
@@ -382,6 +382,7 @@ function renderOpsConfig(){
     <div style="display:flex;gap:8px;margin-top:.9rem;flex-wrap:wrap">
       <button class="btn btn-accent btn-sm" onclick="saveOps()"><i class="ti ti-device-floppy"></i> บันทึก</button>
       <button class="btn btn-sm" onclick="testMonthly()"><i class="ti ti-mail"></i> ส่งสรุปรายเดือนทดสอบ (ถึงฉัน)</button>
+      <button class="btn btn-sm" onclick="installRichMenu()" title="ต้องอัปโหลด richmenu.png ขึ้นเว็บก่อน"><i class="ti ti-layout-grid"></i> ติดตั้งเมนู LINE (Rich Menu)</button>
     </div>
   </div>`;
 }
@@ -391,6 +392,12 @@ async function saveOps(){
   showLoader('กำลังบันทึก...');
   try{ await api('saveConfig',{config:{ops},token:AUTH_TOKEN}); OPS=Object.assign({},OPS_DEFAULT,ops); _hsCache=null; await loadAll({silent:true}); hideLoader(); showToast('บันทึกการตั้งค่าแล้ว'); rp(); }
   catch(e){ hideLoader(); showToast('ไม่สำเร็จ: '+e.message,3000); }
+}
+async function installRichMenu(){
+  if(!confirm('ติดตั้งเมนู 6 ปุ่มด้านล่างแชท LINE OA ให้ทุกคน?\n(ต้องอัปโหลดไฟล์ richmenu.png ขึ้นเว็บแล้ว)')) return;
+  showLoader('กำลังติดตั้งเมนู LINE...');
+  try{ const r=await api('setupRichMenu',{token:AUTH_TOKEN}); hideLoader(); showToast(r&&r.message?r.message:'ติดตั้งแล้ว',4000); }
+  catch(e){ hideLoader(); showToast('ไม่สำเร็จ: '+e.message,5000); }
 }
 async function testMonthly(){
   showLoader('กำลังส่งสรุปรายเดือน...');

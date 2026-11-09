@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — report.js (v16.0) : หน้าแจ้งซ่อม · ใบที่ฉันแจ้ง · งานที่ฉันรับผิดชอบ · จุดซ่อมซ้ำ · รายงาน KPI
+// ระบบแจ้งซ่อมออนไลน์ — report.js (v16.1) : หน้าแจ้งซ่อม · ใบที่ฉันแจ้ง · งานที่ฉันรับผิดชอบ · จุดซ่อมซ้ำ · รายงาน KPI
 // โหลดตามลำดับใน index.html (classic script ใช้ตัวแปรร่วมกัน)
 // ════════════════════════ PAGE: REPORT ════════════════════════
 function pgReport() {
@@ -78,8 +78,10 @@ async function submitR() {
     priority:v('fPr'), estimatedCost:0,   // v15.1: ผู้แจ้งไม่ต้องประมาณราคา — ช่างใส่งบตอนส่งขออนุมัติจัดซื้อ
     actualCost:0, desc, status:'pending_approval',
     assignees:[], approvedAt:null, approvedBy:null, approvedBudget:0,
-    history:[{status:'pending_approval',date:now(),note:'รับแจ้งซ่อมเข้าระบบ',by:'ระบบ'}]
+    history:[{status:'pending_approval',date:now(),note:'รับแจ้งซ่อมเข้าระบบ',by:'ระบบ'}],
+    trackPin:genPin()   // v16.1 รหัสติดตามทาง LINE (เซิร์ฟเวอร์เก็บแยก ไม่แสดงสาธารณะ)
   };
+  savePinLocal(ticket.id, ticket.trackPin);
   DB.tickets.push(ticket);
   showLoader(pendingPhotos.length ? 'กำลังบันทึกและอัปโหลดรูป...' : 'กำลังบันทึก...');
   await syncAdd(ticket);
@@ -90,6 +92,7 @@ async function submitR() {
   }
   hideLoader(); updApvCnt();
   msg.innerHTML=`<div class="notice n-green" style="margin:0"><i class="ti ti-circle-check ni"></i><div><b>ส่งแจ้งซ่อมสำเร็จ</b><br>รหัสใบแจ้งซ่อม: <span class="mono">${ticket.id}</span> — จดรหัสนี้ไว้ติดตามสถานะ<br>สถานะ: รอวิศวกรตรวจสอบและอนุมัติ${photoN?`<br>แนบรูปแล้ว ${photoN} รูป`:''}</div></div>`;
+  msg.innerHTML+=lineFollowBox(ticket.id, ticket.trackPin);   // v16.1
   rememberRequester({n,ph,d,e:v('fE')}, document.getElementById('fRemember')?.checked);
   addMine(ticket.id);
   if(cu) msg.innerHTML+=`<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" onclick="gp('mine')"><i class="ti ti-file-text"></i> ดูใบที่ฉันแจ้ง</button></div>`;

@@ -1,11 +1,12 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════
- *  ระบบแจ้งซ่อมออนไลน์ — Google Apps Script Backend (v16.0)
+ *  ระบบแจ้งซ่อมออนไลน์ — Google Apps Script Backend (v16.1)
  *  เวอร์ชัน v15 (2026-10-26) — ต้องใช้คู่กับหน้าเว็บ index.html v15
  *  ประวัติ: v12 ฟิลเตอร์/ปฏิทินแถบ/วันคาดว่าเสร็จ/PM 5 แบบ/ประเมินแทน+อีเมล · v12.1–12.2 แก้ใบค้าง ใบรหัสซ้ำ
  *           v13 คาร์บอนที่ประหยัดได้รายเดือน · v14 แจ้งเตือนรายคน LINE OA/อีเมล
  *           v15 คลังอุปกรณ์+จุดสั่งซื้อ/แจ้งของใกล้หมด · สรุปรายเดือนอัตโนมัติ (วันที่ 1 08:00)
  *               · ตั้งค่าจุดซ่อมซ้ำ/เป้า KPI · บันทึกการเคลื่อนไหวคลัง (แท็บ InvLog)
+ *           v16.1 (9 พ.ย.) LINE: ผู้แจ้งติดตามใบงาน (เลขใบ+รหัส 4 หลัก) + แจ้งเมื่อสถานะเปลี่ยน · ปุ่มเริ่มซ่อม/เสร็จแล้วในการ์ด · Rich Menu 6 ปุ่ม
  *           v16.0 (9 พ.ย.) จัดโครงสร้างใหม่: ตารางเส้นทาง ROUTES (สิทธิ์ต่อ action ในที่เดียว) + ตัวช่วยอ่านตารางตามชื่อคอลัมน์ table_()
  *           v15.3 (9 พ.ย.) ความปลอดภัย: ซ่อนข้อมูลส่วนบุคคลจากผู้ไม่ล็อกอิน · กรองอักขระ HTML · ล็อกต้องได้จริง · กันเดารหัสผ่าน · รหัสผ่าน v2
  *           v15.2 (9 พ.ย.) แจ้งงานของฉันรายคนทาง LINE (ค้าง + เสร็จเดือนนี้) — ทุกเช้าวันทำการ 08:00 + พิมพ์ "งานค้าง" ในแชท OA
@@ -215,6 +216,7 @@ var ROUTES = {
   mineNow:         { auth:'user',                 fn:function(b, c){ return sendMineNow_(c.username); } },   // ส่งงานที่ฉันรับผิดชอบเข้า LINE ตอนนี้
   getNotifyAll:    { auth:'engineer',             fn:function(){ return getNotifyAll_(); } },
   setUserNotify:   { auth:'engineer',             fn:function(b){ return setUserNotify_(b.username, b.fields); } },
+  setupRichMenu:   { auth:'engineer',             fn:function(){ return setupRichMenu(); } },   // v16.1 ติดตั้งเมนู LINE
   monthlyTest:     { auth:'engineer',             fn:function(b, c){ return sendMonthlySummary({ onlyUser:c.username, force:true }); } }
 };
 
@@ -263,7 +265,7 @@ function doPost(e) {
 
 // รองรับการเปิด URL ตรง ๆ ด้วย GET (ไว้ทดสอบว่า deploy ติดไหม)
 function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({ ok:true, data:{ status:'online', version:'v16.0' } }))
+  return ContentService.createTextOutput(JSON.stringify({ ok:true, data:{ status:'online', version:'v16.1' } }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -468,7 +470,7 @@ function addTicket(ticket) {
   var ts = ensureSheet_(TICKETS_SHEET, TICKET_HEADERS, '#12233b');
   // v12.1: กันใบซ้ำ — ถ้าหน้าเว็บส่งซ้ำ (เน็ตช้า/หมดเวลารอ) แต่ใบนี้บันทึกไปแล้ว ไม่ต้องเพิ่มแถวใหม่
   var ids = ts.getLastRow() > 1 ? ts.getRange(2, 1, ts.getLastRow() - 1, 1).getValues() : [];
-  for (var k = 0; k < ids.length; k++) if (String(ids[k][0]) === String(ticket.id)) return { inserted: k + 2, duplicate: true };
+  for (var k = 0; k < ids.length; k++) if (String(ids[k][0]) === String(ticket.id)) { try { savePin_(ticket.id, ticket.trackPin); } catch (e) {} return { inserted: k + 2, duplicate: true }; }
   var row = [
     ticket.id, ticket.createdAt, ticket.name, ticket.phone, ticket.dept,
     ticket.email, ticket.building, ticket.room, ticket.category, ticket.priority,
@@ -485,6 +487,7 @@ function addTicket(ticket) {
   var lastRow = ts.getLastRow();
   ts.getRange(lastRow, 1, 1, TICKET_HEADERS.length).setBackground('#FFF8E6');
 
+  try { savePin_(ticket.id, ticket.trackPin); } catch (e) { Logger.log('track pin: ' + e); }   // v16.1 รหัสติดตามทาง LINE
   try { notifyNewTicket(ticket); } catch (e) { Logger.log('notify error: ' + e); }
   try { notifyPeopleNewTicket_(ticket); } catch (e) { Logger.log('notify people error: ' + e); }
   try { emailRequesterReceived_(ticket); } catch (e) { Logger.log('requester email error: ' + e); }
@@ -545,6 +548,8 @@ function updateTicket(id, fields) {
     catch (e) { Logger.log('rating email error: ' + e); }
     try { if (!fields.__dup) notifyPeopleOnUpdate_(id, fields, data[i], rowVals); }
     catch (e) { Logger.log('rating email error: ' + e); }
+    try { if (fields.status && !fields.__dup) notifyFollowers_(id, fields.status, String(data[i][13])); }   // v16.1 แจ้งผู้แจ้งทาง LINE
+    catch (e) { Logger.log('follower notify error: ' + e); }
 
     lastResult = { updated: rowNum };   // v12.1: ไม่ return ทันที — ถ้ามีแถวซ้ำ (ข้อมูลเก่า) อัปเดตให้ครบทุกแถว
     fields = JSON.parse(JSON.stringify(fields)); if (fields.status) { /* แจ้งเตือน/อีเมลครั้งเดียวพอ */ fields.__dup = true; }
@@ -1680,12 +1685,18 @@ function handleLineWebhook_(events) {
   (events || []).forEach(function(ev){
     try {
       var uid = ev.source && ev.source.userId;
-      if (ev.type === 'follow') { lineReply_(ev.replyToken, 'สวัสดีครับ 👋 ระบบแจ้งซ่อมออนไลน์\nเจ้าหน้าที่: เปิดเว็บ → กดชื่อผู้ใช้มุมขวาบน → "การแจ้งเตือนของฉัน" แล้วพิมพ์รหัส 6 หลักที่เห็นส่งมาที่นี่'); return; }
+      if (ev.type === 'follow') { lineReply_(ev.replyToken, 'สวัสดีครับ 👋 ระบบแจ้งซ่อมออนไลน์ คณะการแพทย์แผนไทย\n\n👤 ผู้แจ้ง: ส่ง "ติดตาม เลขใบงาน รหัส4หลัก" เช่น\nติดตาม REP-XXXX 1234\nเพื่อรับแจ้งเตือนเมื่อสถานะเปลี่ยน\n\n👷 เจ้าหน้าที่: เปิดเว็บ → กดชื่อตัวเอง 🔔 → ขอรหัสผูก LINE แล้วพิมพ์รหัส 6 หลักส่งมาที่นี่\n\nใช้เมนูด้านล่างได้เลย ⬇️'); return; }
+      if (ev.type === 'postback' && uid) { handleJobPostback_(ev, uid); return; }   // v16.1 ปุ่มเริ่มซ่อม/เสร็จแล้ว
       if (ev.type !== 'message' || !ev.message || ev.message.type !== 'text' || !uid) return;
       var txt = String(ev.message.text || '').replace(/\s/g, '');
-      if (/^(งานค้าง|งานของฉัน|งานฉัน|งาน|สถานะงาน|mine|myjobs?)$/i.test(txt)) { replyMine_(ev.replyToken, uid); return; }   // v15.2
+      if (/^(งานค้าง|งานของฉัน|งานฉัน|งาน|สถานะงาน|งานที่ฉันรับผิดชอบ|mine|myjobs?)$/i.test(txt)) { replyMine_(ev.replyToken, uid); return; }   // v15.2
+      var rawTxt = String(ev.message.text || '').trim();   // v16.1 ผู้แจ้งติดตามใบงาน
+      var mt = rawTxt.match(/^ติดตาม\s*(REP-[A-Za-z0-9]+)\s+(\d{4})$/i); if (mt) { trackFollow_(ev.replyToken, uid, mt[1], mt[2]); return; }
+      var mu = rawTxt.match(/^เลิกติดตาม\s*(REP-[A-Za-z0-9]+)$/i); if (mu) { trackUnfollow_(ev.replyToken, uid, mu[1]); return; }
+      if (/^(ใบของฉัน|ใบที่ฉันแจ้ง|ติดตามงาน|สถานะ|สถานะใบงาน)$/.test(txt)) { trackList_(ev.replyToken, uid); return; }
+      if (/^(วิธีใช้|ช่วยเหลือ|help|เมนู)$/i.test(txt)) { replyHelp_(ev.replyToken); return; }
       if (!/^\d{6}$/.test(txt)) { var st = siteLink_('');
-        lineReply_(ev.replyToken, 'ระบบนี้ใช้ส่งแจ้งเตือนงานซ่อม' + (st ? '\n\n📝 แจ้งซ่อม: ' + siteLink_('report') + '\n🔎 ติดตามงาน: ' + siteLink_('status') : '') + '\n\nผูกบัญชีเจ้าหน้าที่: พิมพ์รหัส 6 หลักจากหน้าเว็บ\nเจ้าหน้าที่ที่ผูกแล้ว: พิมพ์ "งานค้าง" เพื่อดูงานของตัวเอง'); return; }
+        lineReply_(ev.replyToken, 'ระบบนี้ใช้ส่งแจ้งเตือนงานซ่อม' + (st ? '\n\n📝 แจ้งซ่อม: ' + siteLink_('report') + '\n🔎 ติดตามงาน: ' + siteLink_('status') : '') + '\n\nติดตามใบงาน: ติดตาม REP-XXXX 1234\nผูกบัญชีเจ้าหน้าที่: พิมพ์รหัส 6 หลักจากหน้าเว็บ\nเจ้าหน้าที่ที่ผูกแล้ว: พิมพ์ "งานค้าง" เพื่อดูงานของตัวเอง'); return; }
       var sh = ss_().getSheetByName(USERS_SHEET); ensureSheet_(USERS_SHEET, USER_HEADERS);
       var d = sh.getDataRange().getValues();
       for (var i = 1; i < d.length; i++) {
@@ -2119,6 +2130,7 @@ function mineFlex_(name, open, done, C) {
       { type:'text', text: String(t.category || '-').trim() + ' · ' + (C.st[t.status] || t.status), size:'xs', wrap:true, color:'#777777' },
       { type:'text', text: mineDueText_(x), size:'xs', color: mineOver_(x) ? '#c0392b' : (x.left === 0 ? '#d9822b' : '#777777'), weight: (mineOver_(x) || x.left === 0) ? 'bold' : 'regular' } ] };
     var link = ticketLink_(t.id); if (link) box.action = { type:'uri', label:'เปิด', uri: link };
+    box.contents.push(jobButtons_(t));   // v16.1
     items.push(box);
   });
   if (open.length > MINE_MAX_OPEN) items.push({ type:'text', text:'+ อีก ' + (open.length - MINE_MAX_OPEN) + ' งาน — ดูทั้งหมดในเว็บ', size:'xs', color:'#777777', margin:'md' });
@@ -2285,4 +2297,212 @@ function loginGuarded_(username, password) {
   if (r && r.error && /ไม่ถูกต้อง/.test(r.error)) c.put(key, String(fails + 1), 900);
   else if (r && !r.error) c.remove(key);
   return r;
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+//  v16.1: ผู้แจ้งติดตามใบงานทาง LINE (เลขใบงาน + รหัส 4 หลัก)
+//  - หน้าเว็บสุ่มรหัส 4 หลักตอนแจ้ง → เก็บในแท็บ LineTrack (ไม่อยู่ในแท็บ Tickets / ไม่ส่งออกสาธารณะ)
+//  - ผู้แจ้งส่ง "ติดตาม REP-XXXX 1234" ในแชท OA → ผูก LINE กับใบนั้น
+//  - สถานะเปลี่ยน (รับเรื่อง / ช่างเริ่มซ่อม / เสร็จ / ซ่อมไม่ได้ / ยกเลิก) → แจ้งผู้ติดตาม
+// ═══════════════════════════════════════════════════════════════
+var TRACK_SHEET = 'LineTrack';
+var TRACK_HEADERS = ['TicketId','Pin','LineUid','FollowedAt','Active'];
+var TRACK_MAX_PER_TICKET = 5;   // ผูกได้สูงสุด 5 บัญชีต่อใบ (กันโควตาหมด)
+function trackSheet_() { return ensureSheet_(TRACK_SHEET, TRACK_HEADERS, '#06c755'); }
+function savePin_(id, pin) {
+  if (!/^\d{4}$/.test(String(pin || ''))) pin = ('000' + Math.floor(Math.random() * 10000)).slice(-4);
+  var sh = trackSheet_(), T = table_(TRACK_SHEET);
+  for (var i = 0; i < T.rows.length; i++) { var r = T.rows[i];
+    if (String(r.get('TicketId')) === String(id) && !r.get('LineUid')) return String(r.get('Pin')); }
+  sh.appendRow([id, "'" + pin, '', '', '']);   // ' นำหน้า = เก็บเป็นข้อความ (เลข 0 นำหน้าไม่หาย)
+  return pin;
+}
+function pinOf_(id) {
+  var T = table_(TRACK_SHEET);
+  for (var i = 0; i < T.rows.length; i++) { var r = T.rows[i];
+    if (String(r.get('TicketId')) === String(id) && !r.get('LineUid')) return ('000' + String(r.get('Pin')).replace(/\D/g, '')).slice(-4); }
+  return '';
+}
+function followersOf_(id) {
+  return table_(TRACK_SHEET).rows.filter(function(r){
+    return String(r.get('TicketId')) === String(id) && r.get('LineUid') && String(r.get('Active')).toUpperCase() !== 'FALSE';
+  }).map(function(r){ return String(r.get('LineUid')); });
+}
+function followedBy_(uid) {
+  return table_(TRACK_SHEET).rows.filter(function(r){
+    return String(r.get('LineUid')) === String(uid) && String(r.get('Active')).toUpperCase() !== 'FALSE';
+  }).map(function(r){ return String(r.get('TicketId')); });
+}
+function ticketById_(id) {
+  var all = getAllTickets().tickets;
+  for (var i = 0; i < all.length; i++) if (String(all[i].id) === String(id)) return all[i];
+  return null;
+}
+// "ติดตาม REP-XXXX 1234"
+function trackFollow_(replyToken, uid, id, pin) {
+  id = String(id).toUpperCase();
+  var t = ticketById_(id);
+  var fails = CacheService.getScriptCache(), fk = 'TRK_' + uid, nf = Number(fails.get(fk) || 0);
+  if (nf >= 8) { lineReply_(replyToken, 'ใส่รหัสผิดหลายครั้ง กรุณารอ 15 นาทีแล้วลองใหม่'); return; }
+  if (!t || pinOf_(id) !== String(pin)) {
+    fails.put(fk, String(nf + 1), 900);
+    lineReply_(replyToken, '❌ เลขใบงานหรือรหัส 4 หลักไม่ถูกต้อง\nตรวจจากหน้าจอหลังส่งแจ้งซ่อม หรือหน้า "ใบที่ฉันแจ้ง"\nรูปแบบ: ติดตาม REP-XXXX 1234'); return;
+  }
+  var C = mineCtx_();
+  if (followedBy_(uid).indexOf(id) < 0) {
+    if (followersOf_(id).length >= TRACK_MAX_PER_TICKET) { lineReply_(replyToken, 'ใบนี้มีผู้ติดตามครบ ' + TRACK_MAX_PER_TICKET + ' บัญชีแล้ว'); return; }
+    var lock = LockService.getScriptLock(); if (!lock.tryLock(15000)) { lineReply_(replyToken, 'ระบบไม่ว่าง ลองส่งใหม่อีกครั้ง'); return; }
+    try { trackSheet_().appendRow([id, '', uid, new Date().toISOString(), 'TRUE']); } finally { lock.releaseLock(); }
+  }
+  lineReplyMsgs_(replyToken, [trackFlex_(t, C, '🔔 ติดตามใบงานนี้แล้ว', 'จะแจ้งเตือนที่นี่เมื่อ รับเรื่อง · ช่างเริ่มซ่อม · ซ่อมเสร็จ', '#06c755'),
+    { type:'text', text:'💡 พิมพ์ "ใบของฉัน" เพื่อดูสถานะทุกใบที่ติดตาม\nเลิกติดตาม: พิมพ์ "เลิกติดตาม ' + id + '"\n\n⚠️ ต้อง "เพิ่มเพื่อน" บัญชีนี้ไว้ จึงจะได้รับแจ้งเตือน' }]);
+}
+function trackUnfollow_(replyToken, uid, id) {
+  id = String(id).toUpperCase();
+  var T = table_(TRACK_SHEET), n = 0;
+  T.rows.forEach(function(r){ if (String(r.get('TicketId')) === id && String(r.get('LineUid')) === String(uid) && String(r.get('Active')).toUpperCase() !== 'FALSE') { T.set(r, 'Active', 'FALSE'); n++; } });
+  lineReply_(replyToken, n ? '🔕 เลิกติดตาม ' + id + ' แล้ว' : 'ไม่พบใบ ' + id + ' ในรายการที่คุณติดตาม');
+}
+// "ใบของฉัน" — สถานะทุกใบที่ LINE นี้ติดตาม (reply ฟรี)
+function trackList_(replyToken, uid) {
+  var ids = followedBy_(uid);
+  if (!ids.length) { lineReply_(replyToken, 'ยังไม่ได้ติดตามใบงานใด\n\nหลังส่งแจ้งซ่อมในเว็บ กดปุ่ม "รับแจ้งเตือนทาง LINE" หรือพิมพ์\nติดตาม REP-XXXX 1234\n(เลขใบงาน + รหัส 4 หลักที่ได้ตอนแจ้ง)'); return; }
+  var C = mineCtx_(), list = [];
+  ids.slice(-20).reverse().forEach(function(id){ var t = ticketById_(id); if (t) list.push(t); });
+  var rows = [];
+  list.forEach(function(t, i){
+    if (i) rows.push({ type:'separator', margin:'md' });
+    var b = { type:'box', layout:'vertical', margin:'md', spacing:'xs', contents:[
+      { type:'text', text: t.id + ' · ' + (C.st[t.status] || t.status), weight:'bold', size:'sm', color: C.closed[t.status] ? '#29914f' : '#d9822b', wrap:true },
+      { type:'text', text: placeOf_(t, C) + ' · ' + String(t.category || '-'), size:'xs', color:'#777777', wrap:true } ] };
+    var link = ticketLink_(t.id); if (link) b.action = { type:'uri', label:'เปิด', uri: link };
+    rows.push(b);
+  });
+  lineReplyMsgs_(replyToken, [{ type:'flex', altText:'🧾 ใบที่คุณติดตาม ' + list.length + ' ใบ', contents:{ type:'bubble', size:'mega',
+    header:{ type:'box', layout:'vertical', backgroundColor:'#12233b', paddingAll:'14px', contents:[{ type:'text', text:'🧾 ใบที่ฉันแจ้ง (' + list.length + ')', color:'#FFFFFF', weight:'bold', size:'lg' }] },
+    body:{ type:'box', layout:'vertical', contents: rows.length ? rows : [{ type:'text', text:'ไม่พบข้อมูล', size:'sm' }] } } }]);
+}
+function trackFlex_(t, C, title, sub, color) {
+  var rows = [['เลขใบงาน', t.id], ['สถานที่', placeOf_(t, C)], ['ประเภท', t.category], ['สถานะ', C.st[t.status] || t.status]];
+  var bubble = { type:'bubble', size:'mega',
+    header:{ type:'box', layout:'vertical', backgroundColor: color, paddingAll:'14px', contents:[
+      { type:'text', text:title, color:'#FFFFFF', weight:'bold', size:'lg', wrap:true },
+      { type:'text', text:sub, color:'#FFFFFFDD', size:'sm', wrap:true } ] },
+    body:{ type:'box', layout:'vertical', spacing:'sm', contents: rows.map(function(kv){ return { type:'box', layout:'baseline', spacing:'sm', contents:[
+      { type:'text', text:kv[0], color:'#888888', size:'sm', flex:2 },
+      { type:'text', text:String(kv[1] || '-').substring(0, 200), wrap:true, color:'#333333', size:'sm', flex:5 } ] }; }) } };
+  return { type:'flex', altText: title + ' — ' + t.id, contents: bubble };
+}
+// เรียกจาก updateTicket เมื่อสถานะเปลี่ยน
+var TRACK_EVENTS = {
+  assigned:  ['✅ รับเรื่องแล้ว', 'อนุมัติและมอบหมายช่างแล้ว', '#2b6cb0'],
+  working:   ['🔧 ช่างเริ่มซ่อมแล้ว', 'ช่างกำลังดำเนินการ', '#d9822b'],
+  done:      ['🎉 ซ่อมเสร็จแล้ว', 'ขอบคุณที่แจ้ง — ช่วยประเมินความพึงพอใจด้วยนะครับ', '#29914f'],
+  cannot:    ['⚠️ ซ่อมไม่ได้', 'ดูรายละเอียด/เหตุผลในเว็บ', '#c0392b'],
+  cancelled: ['🚫 ยกเลิกใบงาน', 'ใบงานนี้ถูกยกเลิก', '#777777']
+};
+function notifyFollowers_(id, newStatus, oldStatus) {
+  if (!newStatus || newStatus === oldStatus || !TRACK_EVENTS[newStatus]) return 0;
+  var uids = followersOf_(id); if (!uids.length) return 0;
+  var t = ticketById_(id); if (!t) return 0;
+  var C = mineCtx_(), ev = TRACK_EVENTS[newStatus];
+  var msg = trackFlex_(t, C, ev[0], ev[1], ev[2]);
+  var site = siteLink_('');
+  if (newStatus === 'done' && site) msg.contents.footer = { type:'box', layout:'vertical', contents:[{ type:'button', style:'primary', color:'#29914f', height:'sm',
+    action:{ type:'uri', label:'⭐ ประเมินความพึงพอใจ', uri: site + '?rate=' + encodeURIComponent(id) } }] };
+  else { var link = ticketLink_(id); if (link) msg.contents.footer = { type:'box', layout:'vertical', contents:[{ type:'button', style:'secondary', height:'sm', action:{ type:'uri', label:'ดูรายละเอียด', uri: link } }] }; }
+  var n = 0; uids.forEach(function(u){ if (linePush_(u, [msg])) n++; });
+  return n;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  v16.1: ปุ่ม "เริ่มซ่อม / เสร็จแล้ว" ในการ์ดงาน LINE (postback)
+//  ตรวจว่า LINE นี้ผูกกับผู้ใช้ที่ "รับผิดชอบใบนั้น" (หรือวิศวกร) ก่อนแก้สถานะ
+// ═══════════════════════════════════════════════════════════════
+function jobButtons_(t) {
+  var btn = function(label, act, style, color){ var b = { type:'button', height:'sm', style:style, flex:1,
+    action:{ type:'postback', label:label, data:'act=' + act + '&id=' + t.id, displayText: label + ' ' + t.id } }; if (color) b.color = color; return b; };
+  var c = [];
+  if (t.status !== 'working') c.push(btn('▶ เริ่มซ่อม', 'start', 'secondary'));
+  c.push(btn('✅ เสร็จแล้ว', 'done', 'primary', '#29914f'));
+  return { type:'box', layout:'horizontal', spacing:'sm', margin:'sm', contents: c };
+}
+function parseQs_(s) { var o = {}; String(s || '').split('&').forEach(function(p){ var kv = p.split('='); if (kv[0]) o[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1] || ''); }); return o; }
+function handleJobPostback_(ev, uid) {
+  var q = parseQs_(ev.postback && ev.postback.data), id = String(q.id || '');
+  if (!/^(start|done|doneok)$/.test(q.act || '') || !id) return;
+  var users = allUserRows_().filter(function(r){ return String(r[11]) === String(uid); });
+  if (!users.length) { lineReply_(ev.replyToken, 'บัญชี LINE นี้ยังไม่ได้ผูกกับผู้ใช้ในระบบ'); return; }
+  var t = ticketById_(id); if (!t) { lineReply_(ev.replyToken, 'ไม่พบใบงาน ' + id); return; }
+  var me = null;
+  users.forEach(function(r){ if (!me && (isMine_(t, r[0]) || String(r[5]).toUpperCase() === 'TRUE')) me = r; });
+  if (!me) { lineReply_(ev.replyToken, '⛔ ใบ ' + id + ' ไม่ได้อยู่ในความรับผิดชอบของคุณ'); return; }
+  var C = mineCtx_(), name = String(me[3] || me[0]);
+  if (C.closed[t.status]) { lineReply_(ev.replyToken, 'ใบ ' + id + ' ปิดแล้ว (' + (C.st[t.status] || t.status) + ')'); return; }
+  if (q.act === 'done') {   // ขอยืนยันก่อนปิดงาน (กันกดพลาด)
+    lineReplyMsgs_(ev.replyToken, [{ type:'text', text:'ยืนยันปิดงาน ' + id + '\n' + placeOf_(t, C) + ' ?',
+      quickReply:{ items:[
+        { type:'action', action:{ type:'postback', label:'✅ ยืนยันเสร็จแล้ว', data:'act=doneok&id=' + id, displayText:'ยืนยันปิดงาน ' + id } },
+        { type:'action', action:{ type:'message', label:'ยกเลิก', text:'งานค้าง' } } ] } }]);
+    return;
+  }
+  if (q.act === 'start' && t.status === 'working') { lineReply_(ev.replyToken, 'ใบ ' + id + ' อยู่ในสถานะกำลังซ่อมอยู่แล้ว'); return; }
+  var lock = LockService.getScriptLock(); if (!lock.tryLock(20000)) { lineReply_(ev.replyToken, 'ระบบกำลังบันทึกข้อมูลอื่นอยู่ ลองกดใหม่อีกครั้ง'); return; }
+  var now = new Date().toISOString(), st = q.act === 'start' ? 'working' : 'done';
+  try {
+    var f = { status: st }; if (st === 'done') f.completedAt = now;
+    var r = updateTicket(id, f);
+    if (r && r.error) { lineReply_(ev.replyToken, 'บันทึกไม่สำเร็จ: ' + r.error); return; }
+    addHistory(id, { status: st, date: now, note: st === 'working' ? 'เริ่มซ่อม (กดจาก LINE)' : 'ซ่อมเสร็จ (กดจาก LINE)', by: name });
+    invalidateCache_();
+  } finally { lock.releaseLock(); }
+  lineReply_(ev.replyToken, (st === 'working' ? '🔧 บันทึกแล้ว: เริ่มซ่อม ' : '✅ บันทึกแล้ว: ปิดงาน ') + id + '\n' + placeOf_(t, C) +
+    (st === 'done' ? '\n\nถ้ามีค่าใช้จ่าย/รูปหลังซ่อม เพิ่มได้ในเว็บ' : '') + '\n💡 พิมพ์ "งานค้าง" เพื่อดูรายการล่าสุด');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  v16.1: Rich Menu (เมนู 6 ปุ่มด้านล่างแชท LINE OA)
+//  วิธีติดตั้ง: อัปโหลด richmenu.png ขึ้นเว็บ (GitHub) ก่อน → แอดมินกดปุ่ม "ติดตั้งเมนู LINE" ในหน้าจัดการระบบ
+//  (หรือ Run setupRichMenu ในหน้านี้)
+// ═══════════════════════════════════════════════════════════════
+function setupRichMenu() {
+  var token = lineOAToken_(); if (!token) return { error:'ยังไม่ได้ตั้งค่า LINE_OA_TOKEN' };
+  var site = siteLink_(''); if (!site) return { error:'ยังไม่ได้ตั้งค่า SITE_URL' };
+  var base = site.replace(/[^\/]*$/, '');
+  var img = UrlFetchApp.fetch(base + 'richmenu.png?_v=' + Date.now(), { muteHttpExceptions:true });
+  if (img.getResponseCode() !== 200) return { error:'ไม่พบไฟล์ ' + base + 'richmenu.png — อัปโหลดรูปเมนูขึ้นเว็บก่อน' };
+  var W = 2500, H = 1686, w = Math.floor(W / 3), h = H / 2;
+  var acts = [
+    { type:'message', label:'งานที่ฉันรับผิดชอบ', text:'งานค้าง' },
+    { type:'uri', label:'แจ้งซ่อม', uri: site + '?page=report' },
+    { type:'uri', label:'ติดตามงาน', uri: site + '?page=status' },
+    { type:'message', label:'ใบที่ฉันแจ้ง', text:'ใบของฉัน' },
+    { type:'uri', label:'Dashboard', uri: site + '?page=dashboard' },
+    { type:'uri', label:'วิธีใช้', uri: site + '?page=help' } ];
+  var areas = acts.map(function(a, i){ var c = i % 3, r = Math.floor(i / 3);
+    return { bounds:{ x: c * w, y: r * h, width: c === 2 ? W - 2 * w : w, height: h }, action: a }; });
+  var H_ = { Authorization:'Bearer ' + token };
+  var call = function(url, method, payload, ct){ var o = { method:method, headers:H_, muteHttpExceptions:true };
+    if (payload !== undefined) { o.payload = payload; o.contentType = ct || 'application/json'; }
+    var res = UrlFetchApp.fetch(url, o); return { code: res.getResponseCode(), body: res.getContentText() }; };
+  // ลบเมนูเดิมที่ระบบนี้สร้างไว้ (ชื่อขึ้นต้น TTMED-)
+  var old = call('https://api.line.me/v2/bot/richmenu/list', 'get');
+  try { (JSON.parse(old.body).richmenus || []).forEach(function(m){ if (/^TTMED-/.test(m.name)) call('https://api.line.me/v2/bot/richmenu/' + m.richMenuId, 'delete'); }); } catch (e) {}
+  var cr = call('https://api.line.me/v2/bot/richmenu', 'post', JSON.stringify({ size:{ width:W, height:H }, selected:true,
+    name:'TTMED-' + Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyyMMdd-HHmm'), chatBarText:'เมนูระบบแจ้งซ่อม', areas: areas }));
+  if (cr.code !== 200) return { error:'สร้างเมนูไม่สำเร็จ (' + cr.code + '): ' + cr.body };
+  var id = JSON.parse(cr.body).richMenuId;
+  var up = call('https://api-data.line.me/v2/bot/richmenu/' + id + '/content', 'post', img.getBlob().getBytes(), 'image/png');
+  if (up.code !== 200) return { error:'อัปโหลดรูปเมนูไม่สำเร็จ (' + up.code + '): ' + up.body };
+  var df = call('https://api.line.me/v2/bot/user/all/richmenu/' + id, 'post');
+  if (df.code !== 200) return { error:'ตั้งเป็นเมนูหลักไม่สำเร็จ (' + df.code + '): ' + df.body };
+  return { ok:true, richMenuId:id, message:'ติดตั้งเมนู LINE แล้ว — ปิดแล้วเปิดแชท OA ใหม่เพื่อดูเมนู' };
+}
+// ข้อความ "วิธีใช้" ในแชท
+function replyHelp_(replyToken) {
+  lineReply_(replyToken, '❓ วิธีใช้ระบบแจ้งซ่อม\n\n' +
+    '👤 ผู้แจ้ง\n• แจ้งซ่อมในเว็บ → กด "รับแจ้งเตือนทาง LINE" → กดส่งข้อความ\n• หรือพิมพ์: ติดตาม REP-XXXX 1234\n• พิมพ์ "ใบของฉัน" ดูสถานะทุกใบที่ติดตาม\n\n' +
+    '👷 เจ้าหน้าที่\n• ผูกบัญชี: เว็บ → กดชื่อตัวเอง 🔔 → ขอรหัสผูก LINE → พิมพ์รหัส 6 หลักที่นี่\n• พิมพ์ "งานค้าง" ดูงานที่รับผิดชอบ + กด เริ่มซ่อม/เสร็จแล้ว ได้จากการ์ด' +
+    (siteLink_('') ? '\n\n📖 คู่มือแบบมีภาพ: ' + siteLink_('help') : ''));
 }
