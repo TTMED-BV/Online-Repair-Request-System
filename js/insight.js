@@ -1,10 +1,10 @@
-// ระบบแจ้งซ่อมออนไลน์ — insight.js (v17.5) : Kanban · แผนผังจุดซ่อม (Heatmap) · โหมดจอทีวี · ค้นหาด่วน (Ctrl+K)
+// ระบบแจ้งซ่อมออนไลน์ — insight.js (v17.6) : Kanban · แผนผังจุดซ่อม (Heatmap) · โหมดจอทีวี · ค้นหาด่วน (Ctrl+K)
 // ═══════════════════════════════════════════
 
 function isLate(t){ const di=dueInfo(t); return !CLOSED_STATUS.includes(t.status) && /เกิน/.test(di.sub||''); }
 function dueMs(t){ const d=dueDate(t); return d?new Date(d).getTime():9e15; }
 // ════════ 1) Kanban ในหน้าจัดการงาน ════════
-let MG_VIEW = (()=>{ try{ return localStorage.getItem('vr3_mgview')||'list'; }catch(e){ return 'list'; } })();
+let MG_VIEW = (()=>{ try{ return localStorage.getItem('vr3_mgview')||'grid'; }catch(e){ return 'grid'; } })();   // v17.6 ค่าเริ่มต้น = การ์ด
 const KB_COLS = [
   { key:'assigned', title:'มอบหมายแล้ว', ic:'ti-user-check', st:['assigned'],                                     drop:'assigned' },
   { key:'working',  title:'กำลังซ่อม',   ic:'ti-tool',       st:['working','survey'],                             drop:'working' },
@@ -13,7 +13,7 @@ const KB_COLS = [
 ];
 function kbCard(t){
   const b=getBI(t.building), s=getSI(t.status), di=dueInfo(t), late=isLate(t);
-  return `<article class="kb-card ${t.priority==='high'?'hi':''} ${late?'late':''}" draggable="${can('manage_tickets')}" data-id="${escAttr(t.id)}" tabindex="0" aria-label="${escAttr(t.id+' '+(b.short||b.name)+' '+t.room)}">
+  return `<article class="kb-card ${t.priority==='high'?'hi':''} ${late?'late':''}" style="border-left-color:${stColor(t)}" draggable="${can('manage_tickets')}" data-id="${escAttr(t.id)}" tabindex="0" aria-label="${escAttr(t.id+' '+(b.short||b.name)+' '+t.room)}">
     <div class="kb-top"><span class="mono">${escHtml(t.id)}</span>${t.priority==='high'?'<span class="kb-hi">ด่วน</span>':''}</div>
     <div class="kb-room">${b.icon} ${escHtml(t.room||'-')}</div>
     <div class="kb-meta">${escHtml(b.short||b.name)}</div><div style="margin-top:5px">${catChip(t.category)}</div>
@@ -58,10 +58,11 @@ renderManageList = function(){
   const box=document.getElementById('mgList'); if(!box) return;
   let bar=document.getElementById('mgView');
   if(!bar){ box.insertAdjacentHTML('beforebegin',`<div id="mgView" class="seg" role="tablist" aria-label="มุมมอง">
+    <button role="tab" data-action="mg-view" data-v="grid"><i class="ti ti-layout-grid"></i> การ์ด</button>
     <button role="tab" data-action="mg-view" data-v="list"><i class="ti ti-list"></i> รายการ</button>
     <button role="tab" data-action="mg-view" data-v="kanban"><i class="ti ti-layout-kanban"></i> Kanban</button></div>`); bar=document.getElementById('mgView'); }
   bar.querySelectorAll('button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===MG_VIEW));
-  if(MG_VIEW==='kanban') renderKanban(box); else _renderManageList0();
+  if(MG_VIEW==='kanban') renderKanban(box); else if(MG_VIEW==='grid') renderGrid(box); else _renderManageList0();
 };
 ACTIONS['mg-view']=el=>{ MG_VIEW=el.dataset.v; try{ localStorage.setItem('vr3_mgview',MG_VIEW); }catch(e){} renderManageList(); };
 
@@ -172,3 +173,73 @@ document.addEventListener('keydown',e=>{
   const typing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||'');
   if(((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k') || (e.key==='/'&&!typing)){ e.preventDefault(); openPalette(); }
 });
+
+// ════════ 5) มุมมอง "การ์ด" ในหน้าจัดการงาน (v17.6) ════════
+//   การ์ดตาราง 3–4 คอลัมน์ · แถบสีตามประเภทงาน · กรองสถานะด้วยปุ่มเม็ดยา (pill) พร้อมจำนวน
+const MG_PILLS = [
+  { k:'all',    label:'ทั้งหมด',          st:null },
+  { k:'late',   label:'เกินกำหนด',        st:null, fn:isLate },
+  { k:'assigned',label:'มอบหมายแล้ว',      st:['assigned'] },
+  { k:'working',label:'กำลังซ่อม',         st:['working','survey'] },
+  { k:'wait',   label:'รอของ/ภายนอก',     st:['pending_purchase','purchase','insurance','contractor'] },
+  { k:'done',   label:'เสร็จสิ้น',          st:['done'] },
+  { k:'closed', label:'ซ่อมไม่ได้/ยกเลิก',  st:['cannot','cancelled'] },
+];
+let MG_PILL='all';
+// v17.6: สีบอกสถานะงาน (แถบซ้ายของการ์ด · จุดสีบนปุ่มกรอง) — เกินกำหนดเป็นสีแดงเสมอ
+const ST_COLOR = { assigned:'#8B5CF6', working:'#F59E0B', survey:'#F59E0B', pending_purchase:'#0EA5E9', purchase:'#0EA5E9', insurance:'#0EA5E9', contractor:'#0EA5E9',
+  done:'#22C55E', cannot:'#94A3B8', cancelled:'#94A3B8', pending_approval:'#EAB308' };
+const ST_LATE = '#DC2626';
+const PILL_COLOR = { all:'var(--gold)', assigned:'#8B5CF6', working:'#F59E0B', wait:'#0EA5E9', done:'#22C55E', closed:'#94A3B8', late:ST_LATE };
+function stColor(t){ return isLate(t) ? ST_LATE : (ST_COLOR[t.status]||'#94A3B8'); }
+const PRI_INFO={ high:{t:'ด่วน',ic:'ti-alert-triangle',cls:'pr-hi'}, med:{t:'ปานกลาง',ic:'ti-arrow-up',cls:'pr-md'}, low:{t:'ปกติ',ic:'ti-arrow-down',cls:'pr-lo'} };
+// ชื่อย่อสำหรับการ์ด: ตัดคำนำหน้า เหลือชื่อแรก
+function shortName(n){ return String(n||'').trim().replace(/^(นางสาว|นาย|นาง|น\.ส\.|ดร\.|ผศ\.|รศ\.)\s*/,'').split(/\s+/)[0]||n; }
+function relDay(iso){ if(!iso) return ''; const d=Math.floor((Date.now()-new Date(iso))/86400000); return d<=0?'วันนี้':d===1?'เมื่อวาน':d<7?d+' วันที่แล้ว':fdShort(iso); }
+function gridCard(t){
+  const st=catStyle(t.category), b=getBI(t.building), s=getSI(t.status), pr=PRI_INFO[t.priority]||PRI_INFO.low;
+  const title=String(t.desc||t.category||'-').split('\n')[0].trim();
+  const who=(t.assignees||[]).map(u=>USERS[u]?.name||u);
+  const late=isLate(t), closed=CLOSED_STATUS.includes(t.status);
+  return `<article class="gc ${late?'late':t.status==='done'?'ok':''}" style="--c:${st.c};--s:${stColor(t)}" data-id="${escAttr(t.id)}" tabindex="0" aria-label="${escAttr(t.id+' '+title)}">
+    <div class="gc-top"><span class="gc-ic${st.ic.includes('+')?' duo':''}">${catIconHTML(t.category)}</span>
+      <div class="gc-tt"><span class="gc-id">${escHtml(t.id)}</span><b title="${escAttr(title)}">${escHtml(title)}</b></div></div>
+    <div class="gc-loc"><span><i class="ti ti-map-pin" aria-hidden="true"></i>${escHtml((b.short||b.name)+' · '+(t.room||'-'))}</span>
+      <span class="gc-pr ${pr.cls}"><i class="ti ${pr.ic}" aria-hidden="true"></i>${pr.t}</span>${t.source==='PM'?'<span class="gc-pr pr-pm">PM</span>':''}</div>
+    <div class="gc-foot"><span class="gc-st">${s.label}</span>
+      ${who.length?`<span class="gc-who" title="${escAttr(who.join(', '))}"><span class="kb-av">${escHtml(shortName(who[0]).charAt(0))}</span>${escHtml(shortName(who[0]))}${who.length>1?' +'+(who.length-1):''}</span>`:'<span class="gc-who none">ยังไม่มอบหมาย</span>'}
+      <span class="gc-date ${late?'late':''}">${late?'⚠ '+escHtml(String(dueInfo(t).sub||'').split(' · ')[0]):escHtml(closed?relDay(t.completedAt||t.createdAt):relDay(t.createdAt))}</span></div>
+    ${t.rating?`<div class="gc-rate" aria-label="คะแนน ${t.rating} จาก 5">${'★'.repeat(t.rating)}<span>${'★'.repeat(5-t.rating)}</span></div>`:''}
+    ${!closed&&can('manage_tickets')?`<button type="button" class="gc-upd" data-action="gc-upd" data-id="${escAttr(t.id)}" aria-label="อัปเดตงาน ${escAttr(t.id)}"><i class="ti ti-edit"></i></button>`:''}
+  </article>`;
+}
+function renderGrid(box){
+  const all=manageFiltered();
+  const pick=p=>p.fn?all.filter(p.fn):p.st?all.filter(t=>p.st.includes(t.status)):all.filter(t=>t.status!=='cancelled');
+  const cnt=k=>pick(MG_PILLS.find(x=>x.k===k)).length;
+  const pill=MG_PILLS.find(x=>x.k===MG_PILL)||MG_PILLS[0];
+  let list=pick(pill);
+  list.sort((a,b)=>(CLOSED_STATUS.includes(a.status)-CLOSED_STATUS.includes(b.status)) || (isLate(b)-isLate(a)) || ((b.priority==='high')-(a.priority==='high')) || new Date(b.createdAt)-new Date(a.createdAt));
+  box.innerHTML=`<div class="pills" role="tablist" aria-label="กรองตามสถานะ">${MG_PILLS.filter(p=>p.k!=='late'||cnt('late')).map(p=>`<button role="tab" class="pill" style="--p:${PILL_COLOR[p.k]}" aria-selected="${p.k===MG_PILL}" data-action="mg-pill" data-k="${p.k}">${p.k==='all'?'':'<i class="pill-dot" aria-hidden="true"></i>'}${p.label}<span>${cnt(p.k)}</span></button>`).join('')}</div>
+    <div class="gc-grid">${list.length?list.slice(0,120).map(gridCard).join(''):`<div class="empty" style="grid-column:1/-1;padding:2.5rem"><div class="empty-ic"><i class="ti ti-checklist"></i></div><div class="empty-ttl">ไม่มีงานในกลุ่มนี้</div></div>`}</div>
+    ${list.length>120?`<div class="kb-hint">แสดง 120 จาก ${list.length} รายการ — ใช้ตัวกรองด้านบนเพื่อค้นหาเพิ่ม</div>`:''}`;
+  box.querySelectorAll('.gc').forEach(el=>{
+    el.addEventListener('click',e=>{ if(!e.target.closest('.gc-upd')) openDet(el.dataset.id); });
+    el.addEventListener('keydown',e=>{ if(e.key==='Enter') openDet(el.dataset.id); });
+  });
+}
+ACTIONS['mg-pill']=el=>{ MG_PILL=el.dataset.k; renderManageList(); };
+ACTIONS['gc-upd']=el=>openStatusUpdate(el.dataset.id);
+
+// ─── v17.6: มือถือ — ย่อแผงตัวกรองหน้าจัดการงาน (เหลือช่องค้นหา + ปุ่ม "ตัวกรอง") ───
+RENDER_HOOKS.push((p,root)=>{
+  if(p!=='manage') return;
+  const card=root.querySelector('.card'); if(!card || card.dataset.fx) return; card.dataset.fx='1';
+  const rows=[...card.children].slice(1); if(!rows.length) return;
+  rows.forEach(r=>r.classList.add('mf-more'));
+  const n=['who','st','over','bld','floor','cat','pri','from','to'].filter(k=>MF[k]).length;
+  const first=card.children[0];
+  first.insertAdjacentHTML('beforeend',`<button type="button" class="btn btn-sm mf-toggle" data-action="mf-toggle" aria-expanded="false"><i class="ti ti-adjustments-horizontal"></i> ตัวกรอง${n?` <span class="tb-cnt">${n}</span>`:''}</button>`);
+  card.classList.toggle('mf-open', !!window._mfOpen);
+});
+ACTIONS['mf-toggle']=el=>{ const c=el.closest('.card'); window._mfOpen=!c.classList.contains('mf-open'); c.classList.toggle('mf-open',window._mfOpen); el.setAttribute('aria-expanded',window._mfOpen); };

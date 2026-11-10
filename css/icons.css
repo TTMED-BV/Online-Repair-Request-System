@@ -1,12 +1,15 @@
-/*! Tabler Icons 3.31.0 (MIT) — v17.2: เฉพาะ 100 ไอคอนที่ระบบใช้ (โหลดจากเว็บเราเอง ไม่พึ่ง CDN) */
-@font-face{font-family:"tabler-icons";font-style:normal;font-weight:400;font-display:block;src:url("ti.woff2?v=17.4") format("woff2")}
+/*! Tabler Icons 3.31.0 (MIT) — เฉพาะ 103 ไอคอนที่ระบบใช้ (โหลดจากเว็บเราเอง ไม่พึ่ง CDN) */
+@font-face{font-family:"tabler-icons";font-style:normal;font-weight:400;font-display:block;src:url("ti.woff2?v=17.6") format("woff2")}
 .ti{font-family:"tabler-icons"!important;speak:none;font-style:normal;font-weight:normal;font-variant:normal;text-transform:none;line-height:1;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+.ti-adjustments-horizontal:before{content:"\ec38"}
 .ti-air-conditioning:before{content:"\f3a2"}
 .ti-alert-circle:before{content:"\ea05"}
 .ti-alert-triangle:before{content:"\ea06"}
 .ti-armchair:before{content:"\ef9e"}
+.ti-arrow-down:before{content:"\ea16"}
 .ti-arrow-left:before{content:"\ea19"}
 .ti-arrow-right:before{content:"\ea1f"}
+.ti-arrow-up:before{content:"\ea25"}
 .ti-ban:before{content:"\ea2e"}
 .ti-bell:before{content:"\ea35"}
 .ti-bell-ringing:before{content:"\ed07"}
