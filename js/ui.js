@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — ui.js (v17.3) : โครงสร้าง UI กลาง
+// ระบบแจ้งซ่อมออนไลน์ — ui.js (v17.4) : โครงสร้าง UI กลาง
 //   v17.0 เมนูตามบทบาท (เดสก์ท็อป: เมนูหลัก + "เพิ่มเติม" · มือถือ: แถบเมนูล่าง) · ธีม 3 สถานะ · skeleton
 //   v17.2 event delegation (data-action) · วาดหน้าใหม่โดยคงตำแหน่งเลื่อน/โฟกัส · หน้าเสริม (EXTRA_PAGES)
 // ═══════════════════════════════════════════
@@ -145,3 +145,30 @@ function a11yFix(root){
 }
 try{ new MutationObserver(ms=>{ for(const m of ms) m.addedNodes.forEach(n=>{ if(n.nodeType===1) a11yFix(n); }); }).observe(document.body,{childList:true,subtree:true}); }catch(e){}
 document.addEventListener('DOMContentLoaded',()=>a11yFix());
+
+// ─── v17.3: สี + ไอคอนประจำประเภทงาน (ใช้ทั้งระบบ: ฟอร์มแจ้งซ่อม · ป้ายในการ์ด · Kanban) ───
+const CAT_STYLE_EXACT = {
+  'ระบบไฟฟ้า':                  { ic:'bolt',             c:'#F5A300' },
+  'ระบบประปา/สุขาภิบาล':         { ic:'droplet',          c:'#2F7FF0' },
+  'ระบบปรับอากาศ':               { ic:'air-conditioning', c:'#06B6D4' },
+  'งานโครงสร้างอาคาร':           { ic:'building',         c:'#F26B1D' },
+  'ระบบสื่อสาร/เครือข่าย IT':     { ic:'network',          c:'#10B981' },
+  'งานครุภัณฑ์/เฟอร์นิเจอร์':      { ic:'armchair',         c:'#F43F5E' },
+  'คอมพิวเตอร์':                 { ic:'device-desktop',   c:'#6366F1' },
+  'ระบบภาพและเสียงในห้องเรียน':   { ic:'device-tv+volume', c:'#D946EF' },
+  'อื่นๆ':                       { ic:'dots',             c:'#64748B' },
+};
+// หมวดที่ตั้งชื่อใหม่ภายหลัง: เดาจากคำในชื่อก่อน แล้วค่อยใช้ชุดสำรอง (ไม่ซ้ำกับชุดหลัก)
+const CAT_STYLE_WORDS = [[/ไฟฟ้า/,'ระบบไฟฟ้า'],[/ประปา|สุขา|น้ำ/,'ระบบประปา/สุขาภิบาล'],[/อากาศ|แอร์/,'ระบบปรับอากาศ'],[/โครงสร้าง|โยธา|อาคาร/,'งานโครงสร้างอาคาร'],
+  [/เครือข่าย|สื่อสาร|อินเทอร์เน็ต|network/i,'ระบบสื่อสาร/เครือข่าย IT'],[/ครุภัณฑ์|เฟอร์นิเจอร์|โต๊ะ|เก้าอี้/,'งานครุภัณฑ์/เฟอร์นิเจอร์'],[/คอมพิวเตอร์|computer/i,'คอมพิวเตอร์'],[/ภาพ|เสียง|โปรเจก/,'ระบบภาพและเสียงในห้องเรียน'],[/^อื่น/,'อื่นๆ']];
+const CAT_STYLE_SPARE = [ {ic:'tool',c:'#0EA5A0'},{ic:'flame',c:'#E11D48'},{ic:'trees',c:'#65A30D'},{ic:'lock',c:'#7C3AED'},{ic:'elevator',c:'#0284C7'},{ic:'recycle',c:'#16A34A'},{ic:'paint',c:'#DB2777'},{ic:'key',c:'#CA8A04'} ];
+function catStyle(name){
+  name=String(name||'').trim();
+  if(CAT_STYLE_EXACT[name]) return CAT_STYLE_EXACT[name];
+  const w=CAT_STYLE_WORDS.find(([re])=>re.test(name)); if(w) return CAT_STYLE_EXACT[w[1]];
+  let h=0; for(const ch of name) h=(h*31+ch.charCodeAt(0))>>>0;
+  return CAT_STYLE_SPARE[h%CAT_STYLE_SPARE.length];
+}
+function catIconHTML(name){ const s=catStyle(name); return s.ic.split('+').map(i=>`<i class="ti ti-${i}" aria-hidden="true"></i>`).join(''); }
+// ป้ายประเภทงานสี (ใช้ในการ์ด/รายการ)
+function catChip(name){ const s=catStyle(name); return `<span class="cat-chip" style="--c:${s.c}"><span class="cat-chip-ic">${catIconHTML(name).split('</i>')[0]}</i></span>${escHtml(name||'-')}</span>`; }

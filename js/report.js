@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — report.js (v17.3) : หน้าแจ้งซ่อม · ใบที่ฉันแจ้ง · งานที่ฉันรับผิดชอบ · จุดซ่อมซ้ำ · รายงาน KPI
+// ระบบแจ้งซ่อมออนไลน์ — report.js (v17.4) : หน้าแจ้งซ่อม · ใบที่ฉันแจ้ง · งานที่ฉันรับผิดชอบ · จุดซ่อมซ้ำ · รายงาน KPI
 // โหลดตามลำดับใน index.html (classic script ใช้ตัวแปรร่วมกัน)
 // ════════════════════════ PAGE: REPORT ════════════════════════
 function pgReport() {
@@ -160,7 +160,7 @@ function checkDuplicate(){
       <div style="margin-top:6px;display:flex;flex-direction:column;gap:6px">
         ${list.map(({t,sc})=>{const s=getSI(t.status);return `<div style="font-size:12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;${sc>=2?'font-weight:600':''}">
           <span class="mono">${t.id}</span><span class="badge ${s.cls}" style="font-size:12px">${s.label}</span>
-          <span style="color:var(--tx2)">${escHtml(t.room||'')} · ${escHtml(t.category)} · แจ้ง ${fdShort(t.createdAt)}</span>
+          <span style="color:var(--tx2)">${escHtml(t.room||'')} · ${catChip(t.category)} · แจ้ง ${fdShort(t.createdAt)}</span>
           <button class="btn btn-sm" style="padding:2px 8px" onclick="openDet('${t.id}')">ดู</button>
           <button class="btn btn-sm" style="padding:2px 8px" onclick="followTicket('${t.id}')">ติดตามใบนี้แทน</button></div>`;}).join('')}
       </div>
@@ -274,7 +274,7 @@ function myWorkCard(t,dd){
       <span class="badge ${di.cls}" style="margin-left:auto">${di.text}${di.sub?' · '+di.sub:''}</span>
     </div>
     <div class="mw-title">${b.icon} ${escHtml(t.room||'')}</div>
-    <div class="mw-meta">${escHtml(b.short||b.name)} · ${escHtml(t.category)} · <span class="mono" style="font-size:12px">${t.id}</span></div>
+    <div class="mw-meta">${escHtml(b.short||b.name)} · ${catChip(t.category)} · <span class="mono" style="font-size:12px">${t.id}</span></div>
     ${t.desc?`<div style="font-size:13.5px;margin-top:6px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${escHtml(t.desc)}</div>`:''}
     <div class="mw-meta" style="margin-top:6px"><i class="ti ti-user"></i> ${escHtml(t.name||'-')}${t.dept?' · '+escHtml(t.dept):''}</div>
     ${timelineStrip(t)}

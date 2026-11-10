@@ -791,3 +791,20 @@ body.tv-on{overflow:hidden}
 #palList li em{font-style:normal;font-size:var(--fs-xs);color:var(--tx3)} .pal-none{color:var(--tx3);justify-content:center}
 
 .hp-trap{position:absolute!important;left:-9999px;width:1px;height:1px;overflow:hidden}
+
+/* ═══ v17.3 ประเภทงาน: ไอคอนขาวบนพื้นสีสด + สีประจำหมวด ═══ */
+.cat-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.cat-btn{--c:var(--accent);position:relative;gap:9px;padding:14px 8px 12px;min-height:118px;border-radius:16px;font-weight:600;
+  border:1.5px solid color-mix(in srgb,var(--c) 28%,var(--bd));background:color-mix(in srgb,var(--c) 7%,var(--surf))}
+.cat-btn:hover{border-color:var(--c);transform:translateY(-2px);box-shadow:0 8px 18px -10px color-mix(in srgb,var(--c) 60%,transparent)}
+.cat-btn .cat-ic{width:52px;height:52px;border-radius:15px;display:grid;place-items:center;font-size:28px;color:#fff;line-height:1;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--c) 75%,#fff),var(--c) 55%,color-mix(in srgb,var(--c) 80%,#000));
+  box-shadow:0 6px 14px -4px color-mix(in srgb,var(--c) 70%,transparent),inset 0 1px 0 rgba(255,255,255,.35);transition:transform var(--t-med) var(--ease)}
+.cat-btn .cat-ic.duo{grid-auto-flow:column;gap:1px;font-size:22px}
+.cat-btn.on{border-color:var(--c);color:var(--tx);background:color-mix(in srgb,var(--c) 16%,var(--surf));box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 25%,transparent)}
+.cat-btn.on .cat-ic{transform:scale(1.06)}
+.cat-btn.on::after{content:"✓";position:absolute;top:8px;right:9px;width:22px;height:22px;border-radius:50%;background:var(--c);color:#fff;font-size:13px;display:grid;place-items:center}
+.cat-chip{--c:#64748B;display:inline-flex;align-items:center;gap:5px;padding:1px 9px 1px 3px;border-radius:99px;font-weight:600;font-size:12.5px;line-height:20px;vertical-align:middle;white-space:nowrap;
+  background:color-mix(in srgb,var(--c) 14%,var(--surf));color:color-mix(in srgb,var(--c) 70%,var(--tx))}
+.cat-chip-ic{width:18px;height:18px;border-radius:50%;background:var(--c);color:#fff;display:inline-grid;place-items:center;font-size:12px}
+@media (max-width:480px){.cat-grid{grid-template-columns:repeat(2,1fr)}.cat-btn{min-height:108px}}

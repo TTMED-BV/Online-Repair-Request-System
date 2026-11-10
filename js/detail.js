@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — detail.js (v17.3) : รายละเอียดใบงาน · รูปภาพ · แก้ไข/ยกเลิก · ประเมิน
+// ระบบแจ้งซ่อมออนไลน์ — detail.js (v17.4) : รายละเอียดใบงาน · รูปภาพ · แก้ไข/ยกเลิก · ประเมิน
 // โหลดตามลำดับใน index.html (classic script ใช้ตัวแปรร่วมกัน)
 // ════════════════════════ DETAIL MODAL ════════════════════════
 
@@ -442,7 +442,7 @@ function openDet(id) {
     ${statusPipe(t.status)}
     ${(()=>{const h=cu?hotspotOf(t.building,t.room):null; return h?`<div class="notice n-red" style="margin-bottom:.8rem;font-size:12px"><i class="ti ti-flame ni"></i><div><b>จุดซ่อมซ้ำ</b> — ห้องนี้ถูกแจ้ง ${h.n} ครั้งใน ${OPS.hotMonths} เดือน (${Object.entries(h.cats).map(([c,n])=>escHtml(c)+' '+n).join(', ')}) ควรพิจารณาเปลี่ยนใหม่แทนการซ่อม</div></div>`:'';})()}
     <table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:1rem">
-    ${[['อาคาร',b.icon+' '+b.name],['ห้อง',escHtml(t.room)],['ประเภท',escHtml(t.category)],['ผู้แจ้ง',escHtml(t.name)],
+    ${[['อาคาร',b.icon+' '+b.name],['ห้อง',escHtml(t.room)],['ประเภท',catChip(t.category)],['ผู้แจ้ง',escHtml(t.name)],
        ...(cu?[['โทร',escHtml(t.phone)]]:[]),['หน่วยงาน',escHtml(t.dept)],['วันที่แจ้ง',fd(t.createdAt)],
        ...(cu?[['วันที่อนุมัติ',t.approvedAt?fd(t.approvedAt):'ยังไม่อนุมัติ'],
               ['คาดว่าเสร็จ',(()=>{const di=dueInfo(t);return `<span class="badge ${di.cls}">${di.text}</span>${di.sub?` <span style="font-size:12px;color:var(--tx3)">${di.sub}</span>`:''}${cu.isEngineer&&!CLOSED_STATUS.includes(t.status)?` <button class="btn btn-sm" style="margin-left:4px;padding:2px 8px" onclick="openDueEdit('${t.id}')">📅 แก้วันคาดว่าเสร็จ</button>`:''}`;})()]]:[]),

@@ -1,14 +1,18 @@
-/*! Tabler Icons 3.31.0 (MIT) — v17.2: เฉพาะ 88 ไอคอนที่ระบบใช้ (โหลดจากเว็บเราเอง ไม่พึ่ง CDN) */
-@font-face{font-family:"tabler-icons";font-style:normal;font-weight:400;font-display:block;src:url("ti.woff2?v=17.3") format("woff2")}
+/*! Tabler Icons 3.31.0 (MIT) — v17.2: เฉพาะ 100 ไอคอนที่ระบบใช้ (โหลดจากเว็บเราเอง ไม่พึ่ง CDN) */
+@font-face{font-family:"tabler-icons";font-style:normal;font-weight:400;font-display:block;src:url("ti.woff2?v=17.4") format("woff2")}
 .ti{font-family:"tabler-icons"!important;speak:none;font-style:normal;font-weight:normal;font-variant:normal;text-transform:none;line-height:1;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+.ti-air-conditioning:before{content:"\f3a2"}
 .ti-alert-circle:before{content:"\ea05"}
 .ti-alert-triangle:before{content:"\ea06"}
+.ti-armchair:before{content:"\ef9e"}
 .ti-arrow-left:before{content:"\ea19"}
 .ti-arrow-right:before{content:"\ea1f"}
 .ti-ban:before{content:"\ea2e"}
 .ti-bell:before{content:"\ea35"}
 .ti-bell-ringing:before{content:"\ed07"}
+.ti-bolt:before{content:"\ea38"}
 .ti-briefcase:before{content:"\ea46"}
+.ti-building:before{content:"\ea4f"}
 .ti-building-cog:before{content:"\10062"}
 .ti-calendar-cog:before{content:"\f826"}
 .ti-calendar-event:before{content:"\ea52"}
@@ -31,10 +35,13 @@
 .ti-cloud-upload:before{content:"\ea75"}
 .ti-contrast-2:before{content:"\efc7"}
 .ti-copy:before{content:"\ea7a"}
+.ti-device-desktop:before{content:"\ea89"}
 .ti-device-floppy:before{content:"\eb62"}
 .ti-device-tv:before{content:"\ea8d"}
 .ti-dots:before{content:"\ea95"}
+.ti-droplet:before{content:"\ea97"}
 .ti-edit:before{content:"\ea98"}
+.ti-elevator:before{content:"\efdf"}
 .ti-eye:before{content:"\ea9a"}
 .ti-file-search:before{content:"\ed5d"}
 .ti-file-spreadsheet:before{content:"\f03e"}
@@ -61,7 +68,9 @@
 .ti-menu-2:before{content:"\ec42"}
 .ti-message-2:before{content:"\eaec"}
 .ti-microphone:before{content:"\eaf0"}
+.ti-network:before{content:"\f09f"}
 .ti-package:before{content:"\eaff"}
+.ti-paint:before{content:"\eb00"}
 .ti-phone:before{content:"\eb09"}
 .ti-phone-off:before{content:"\ecf5"}
 .ti-photo:before{content:"\eb0a"}
@@ -71,6 +80,7 @@
 .ti-point:before{content:"\eb0c"}
 .ti-printer:before{content:"\eb0e"}
 .ti-qrcode:before{content:"\eb11"}
+.ti-recycle:before{content:"\eb9b"}
 .ti-refresh:before{content:"\eb13"}
 .ti-search:before{content:"\eb1c"}
 .ti-send:before{content:"\eb1e"}
@@ -81,11 +91,13 @@
 .ti-table:before{content:"\eba1"}
 .ti-tool:before{content:"\eb40"}
 .ti-trash:before{content:"\eb41"}
+.ti-trees:before{content:"\ec10"}
 .ti-user:before{content:"\eb4d"}
 .ti-user-check:before{content:"\eb49"}
 .ti-user-circle:before{content:"\ef68"}
 .ti-user-off:before{content:"\ecf9"}
 .ti-user-plus:before{content:"\eb4b"}
+.ti-volume:before{content:"\eb51"}
 .ti-wifi:before{content:"\eb52"}
 .ti-wifi-off:before{content:"\ecfa"}
 .ti-x:before{content:"\eb55"}

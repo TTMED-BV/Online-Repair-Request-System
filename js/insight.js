@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — insight.js (v17.3) : Kanban · แผนผังจุดซ่อม (Heatmap) · โหมดจอทีวี · ค้นหาด่วน (Ctrl+K)
+// ระบบแจ้งซ่อมออนไลน์ — insight.js (v17.4) : Kanban · แผนผังจุดซ่อม (Heatmap) · โหมดจอทีวี · ค้นหาด่วน (Ctrl+K)
 // ═══════════════════════════════════════════
 
 function isLate(t){ const di=dueInfo(t); return !CLOSED_STATUS.includes(t.status) && /เกิน/.test(di.sub||''); }
@@ -16,7 +16,7 @@ function kbCard(t){
   return `<article class="kb-card ${t.priority==='high'?'hi':''} ${late?'late':''}" draggable="${can('manage_tickets')}" data-id="${escAttr(t.id)}" tabindex="0" aria-label="${escAttr(t.id+' '+(b.short||b.name)+' '+t.room)}">
     <div class="kb-top"><span class="mono">${escHtml(t.id)}</span>${t.priority==='high'?'<span class="kb-hi">ด่วน</span>':''}</div>
     <div class="kb-room">${b.icon} ${escHtml(t.room||'-')}</div>
-    <div class="kb-meta">${escHtml(b.short||b.name)} · ${escHtml(t.category)}</div>
+    <div class="kb-meta">${escHtml(b.short||b.name)}</div><div style="margin-top:5px">${catChip(t.category)}</div>
     <div class="kb-foot"><span class="badge ${s.cls}">${s.label}</span><span class="kb-due ${late?'late':''}">${escHtml(di.sub&&/เกิน|วันนี้/.test(di.sub)?di.sub:di.text||'')}</span></div>
     <div class="kb-who">${(t.assignees||[]).map(u=>`<span class="kb-av" title="${escAttr(USERS[u]?.name||u)}">${escHtml(((USERS[u]?.name||u)+'').trim().charAt(0))}</span>`).join('')}</div>
   </article>`;

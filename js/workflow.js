@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — workflow.js (v17.3) : หน้าอนุมัติ · หน้าจัดการงาน
+// ระบบแจ้งซ่อมออนไลน์ — workflow.js (v17.4) : หน้าอนุมัติ · หน้าจัดการงาน
 // โหลดตามลำดับใน index.html (classic script ใช้ตัวแปรร่วมกัน)
 // ════════════════════════ PAGE: APPROVE ════════════════════════
 function pgApprove() {
@@ -20,7 +20,7 @@ function pgApprove() {
           <div style="flex:1">
             <div style="margin-bottom:3px"><span class="mono">${t.id}</span></div>
             <div style="font-weight:600">${b.icon} ${escHtml(b.name)} — ${escHtml(t.room)}</div>
-            <div style="font-size:12px;color:var(--tx2)">${escHtml(t.category)} · ประมาณการ <b>${(t.approvedBudget||t.estimatedCost||0).toLocaleString()}</b> บาท</div>
+            <div style="font-size:12px;color:var(--tx2)">${catChip(t.category)} · ประมาณการ <b>${(t.approvedBudget||t.estimatedCost||0).toLocaleString()}</b> บาท</div>
             <div style="font-size:12px;color:var(--tx2);margin-top:2px">ผู้รับผิดชอบ: ${assigneeChips(t.assignees)}</div>
           </div>
           <div style="display:flex;flex-direction:column;gap:5px">
@@ -53,7 +53,7 @@ function pgApprove() {
               ${t._local?'<span class="badge b-red nodot" style="cursor:pointer" onclick="openSyncPanel()">⚠️ ยังไม่ถึงเซิร์ฟเวอร์ — กดดู</span>':''}
             </div>
             <div style="font-weight:600;margin-bottom:3px">${b.icon} ${escHtml(b.name)} — ${escHtml(t.room)}</div>
-            <div style="font-size:12px;color:var(--tx2)">${escHtml(t.category)} | ผู้แจ้ง: ${escHtml(t.name)} (${escHtml(t.dept)})</div>
+            <div style="font-size:12px;color:var(--tx2)">${catChip(t.category)} · ผู้แจ้ง: ${escHtml(t.name)} (${escHtml(t.dept)})</div>
             <div style="font-size:12px;color:var(--tx2);margin:2px 0">${escHtml(String(t.desc||'').substring(0,90))}${String(t.desc||'').length>90?'...':''}</div>
             ${t.estimatedCost?`<div style="font-size:12px">ประมาณการ: <b>${t.estimatedCost.toLocaleString()} บาท</b></div>`:''}
             <div style="font-size:12px;background:var(--teal-bg);color:var(--teal-tx);padding:4px 8px;border-radius:6px;margin-top:6px;display:inline-block">
@@ -194,7 +194,7 @@ function manageCard(t){
           ${over?'<span class="badge b-red">เกิน SLA</span>':''}
         </div>
         <div style="font-weight:600;font-size:13px">${b.icon} ${b.name} — ${escHtml(t.room)}</div>
-        <div style="font-size:12px;color:var(--tx2)">${escHtml(t.category)} | ${escHtml(t.name)} | นับ SLA ${el} วัน / ${sla} วัน${pd>0?` <span style="color:var(--purple-tx)">(พัก ${pd} วัน)</span>`:''}</div>
+        <div style="font-size:12px;color:var(--tx2)">${catChip(t.category)} · ${escHtml(t.name)} | นับ SLA ${el} วัน / ${sla} วัน${pd>0?` <span style="color:var(--purple-tx)">(พัก ${pd} วัน)</span>`:''}</div>
         ${timelineStrip(t)}
         <div style="margin-top:4px">${assigneeChips(t.assignees)}</div>
       </div>

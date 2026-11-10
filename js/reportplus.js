@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — reportplus.js (v17.3) : UX หน้าแจ้งซ่อม (v17.1)
+// ระบบแจ้งซ่อมออนไลน์ — reportplus.js (v17.4) : UX หน้าแจ้งซ่อม (v17.1)
 //   ฟอร์ม 3 ขั้น (ที่ไหน → เสียอะไร → ผู้แจ้ง) · ปุ่มประเภทงานแบบไอคอน · พิมพ์ด้วยเสียง
 //   QR ประจำห้อง (?b=&f=&r= กรอกสถานที่ให้) · หน้าจอ "ส่งสำเร็จ" เต็มจอ
 // ═══════════════════════════════════════════
@@ -46,7 +46,7 @@ function enhanceReport(root){
   // 2) ปุ่มประเภทงานแบบไอคอน (ยังเก็บค่าใน select เดิม)
   const sel=card.querySelector('#fC');
   if(sel){ const g=document.createElement('div'); g.className='cat-grid'; g.setAttribute('role','radiogroup'); g.setAttribute('aria-label','ประเภทงาน');
-    g.innerHTML=CATS.map(c=>`<button type="button" role="radio" aria-checked="false" class="cat-btn" data-action="pick-cat" data-c="${escAttr(c)}"><span class="cat-ic" aria-hidden="true">${catIcon(c)}</span>${escHtml(c)}</button>`).join('');
+    g.innerHTML=CATS.map(c=>{ const st=catStyle(c); return `<button type="button" role="radio" aria-checked="false" class="cat-btn" style="--c:${st.c}" data-action="pick-cat" data-c="${escAttr(c)}"><span class="cat-ic${st.ic.includes('+')?' duo':''}">${catIconHTML(c)}</span>${escHtml(c)}</button>`; }).join('');
     sel.before(g); sel.classList.add('sr-sel'); sel.addEventListener('change',syncCatBtns); }
   // 3) ไมค์ — พิมพ์ด้วยเสียง (ถ้าเบราว์เซอร์รองรับ)
   const ta=card.querySelector('#fDesc');
