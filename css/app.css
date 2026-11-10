@@ -808,3 +808,19 @@ body.tv-on{overflow:hidden}
   background:color-mix(in srgb,var(--c) 14%,var(--surf));color:color-mix(in srgb,var(--c) 70%,var(--tx))}
 .cat-chip-ic{width:18px;height:18px;border-radius:50%;background:var(--c);color:#fff;display:inline-grid;place-items:center;font-size:12px}
 @media (max-width:480px){.cat-grid{grid-template-columns:repeat(2,1fr)}.cat-btn{min-height:108px}}
+
+/* v17.4: ประเภทงานแบบกะทัดรัด — 3 คอลัมน์ (9 หมวด = 3 แถว) */
+.cat-grid{grid-template-columns:repeat(3,1fr)!important;gap:8px}
+@media (min-width:600px){
+  .cat-btn{flex-direction:row;justify-content:flex-start;text-align:left;gap:10px;min-height:64px;padding:10px 12px;font-size:var(--fs-sm)}
+  .cat-btn .cat-ic{width:40px;height:40px;border-radius:12px;font-size:22px;flex:none}
+  .cat-btn .cat-ic.duo{font-size:17px}
+  .cat-btn.on::after{top:50%;transform:translateY(-50%);right:8px;width:20px;height:20px;font-size:12px}
+  .cat-btn.on{padding-right:32px}
+}
+@media (max-width:599px){
+  .cat-btn{min-height:92px;padding:10px 4px 8px;gap:6px;font-size:12.5px;line-height:1.25}
+  .cat-btn .cat-ic{width:40px;height:40px;border-radius:12px;font-size:22px}
+  .cat-btn .cat-ic.duo{font-size:16px}
+  .cat-btn.on::after{top:5px;right:5px;width:18px;height:18px;font-size:11px}
+}

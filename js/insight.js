@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — insight.js (v17.4) : Kanban · แผนผังจุดซ่อม (Heatmap) · โหมดจอทีวี · ค้นหาด่วน (Ctrl+K)
+// ระบบแจ้งซ่อมออนไลน์ — insight.js (v17.5) : Kanban · แผนผังจุดซ่อม (Heatmap) · โหมดจอทีวี · ค้นหาด่วน (Ctrl+K)
 // ═══════════════════════════════════════════
 
 function isLate(t){ const di=dueInfo(t); return !CLOSED_STATUS.includes(t.status) && /เกิน/.test(di.sub||''); }
