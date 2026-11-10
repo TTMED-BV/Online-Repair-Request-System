@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — status.js (v16.2) : หน้าติดตามงาน · ส่งออก Excel/PDF
+// ระบบแจ้งซ่อมออนไลน์ — status.js (v17.3) : หน้าติดตามงาน · ส่งออก Excel/PDF
 // โหลดตามลำดับใน index.html (classic script ใช้ตัวแปรร่วมกัน)
 // ════════════════════════ PAGE: STATUS ════════════════════════
 // ─── Export Excel / PDF ───
@@ -58,11 +58,11 @@ function exportPDF(){
   w.document.write(`<html><head><meta charset="utf-8"><title>รายงานแจ้งซ่อม</title>
   <style>
     @page{size:A4 landscape;margin:12mm}
-    body{font-family:'Sarabun','TH SarabunPSK',sans-serif;font-size:11px;color:#111}
+    body{font-family:'Sarabun','TH SarabunPSK',sans-serif;font-size:12px;color:#111}
     h2{margin:0 0 2px} .sub{color:#666;font-size:12px;margin-bottom:12px}
     table{width:100%;border-collapse:collapse}
     th,td{border:0.5px solid #999;padding:4px 6px;text-align:left;vertical-align:top}
-    th{background:#12233b;color:#fff;font-size:10px}
+    th{background:#12233b;color:#fff;font-size:12px}
     tr:nth-child(even) td{background:#f4f4f0}
   </style></head><body>
   <h2>รายงานการแจ้งซ่อม — คณะการแพทย์แผนไทย มหาวิทยาลัยสงขลานครินทร์</h2>
@@ -110,7 +110,7 @@ function pgStatus() {
         </select>`:''}
         <button class="btn btn-sm" onclick="clearFilters()" style="margin-left:auto">✕ ล้างตัวกรอง</button>
       </div>
-      <div id="filterCount" style="font-size:11.5px;color:var(--tx3);margin-top:8px"></div>
+      <div id="filterCount" style="font-size:12px;color:var(--tx3);margin-top:8px"></div>
     </div>
     <div id="stlist">${renderStatusList(tickets)}</div>
     <div class="card" style="margin-top:1.25rem">
@@ -119,7 +119,7 @@ function pgStatus() {
         <span style="display:flex;gap:6px;align-items:center">
           ${cu?`<button class="btn btn-sm btn-green" onclick="exportExcel()"><i class="ti ti-file-spreadsheet"></i> Excel</button>
           <button class="btn btn-sm" onclick="exportPDF()"><i class="ti ti-file-type-pdf"></i> PDF</button>`:''}
-          <span style="font-size:11px;font-weight:400;color:var(--tx3)">${tickets.length} รายการ</span>
+          <span style="font-size:12px;font-weight:400;color:var(--tx3)">${tickets.length} รายการ</span>
         </span>
       </div>
       <div style="overflow-x:auto" id="sttable">${renderStatusTable(tickets)}</div>
@@ -166,7 +166,7 @@ function renderStatusTable(tickets){
         <td>${escHtml(t.category)}</td>
         <td><span class="badge ${pCls[t.priority]} nodot">${pLbl[t.priority]}</span></td>
         <td><span class="badge ${s.cls}">${s.label}</span>${over?' <span class="badge b-red">เกิน SLA</span>':''}</td>
-        ${cu?(()=>{const di=dueInfo(t);return `<td style="white-space:nowrap"><span class="badge ${di.cls}">${di.text}</span>${di.sub?`<div style="font-size:10.5px;color:var(--tx3);margin-top:2px">${di.sub}</div>`:''}</td>`;})():''}
+        ${cu?(()=>{const di=dueInfo(t);return `<td style="white-space:nowrap"><span class="badge ${di.cls}">${di.text}</span>${di.sub?`<div style="font-size:12px;color:var(--tx3);margin-top:2px">${di.sub}</div>`:''}</td>`;})():''}
       </tr>`;
     }).join('')}</tbody>
   </table>`;
@@ -203,7 +203,7 @@ function timelineStrip(t){
   const last = doneAt ? step('เสร็จจริง',fdShort(doneAt),true)
     : closed ? step(escHtml(getSI(t.status).label),t.completedAt?fdShort(t.completedAt):'-',true)
     : !t.approvedAt ? step('คาดว่าเสร็จ','หลังอนุมัติ',false)
-    : step('คาดว่าเสร็จ',`<span class="badge ${di.cls}" style="font-size:10.5px">${di.text}${di.sub?' · '+di.sub:''}</span>`,true);
+    : step('คาดว่าเสร็จ',`<span class="badge ${di.cls}" style="font-size:12px">${di.text}${di.sub?' · '+di.sub:''}</span>`,true);
   return `<div class="tl-strip">${step('แจ้ง',fdShort(t.createdAt),true)}<span class="tl-ar">→</span>${step('อนุมัติ',t.approvedAt?fdShort(t.approvedAt):'รออนุมัติ',!!t.approvedAt)}<span class="tl-ar">→</span>${last}</div>`;
 }
 function renderStatusList(tickets) {

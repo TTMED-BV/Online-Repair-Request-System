@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — admin.js (v16.2) : ตั้งค่า · ผู้ใช้/บทบาท · แจ้งเตือน · กติกาวิ่งงาน · คลัง · จัดการระบบ
+// ระบบแจ้งซ่อมออนไลน์ — admin.js (v17.3) : ตั้งค่า · ผู้ใช้/บทบาท · แจ้งเตือน · กติกาวิ่งงาน · คลัง · จัดการระบบ
 // โหลดตามลำดับใน index.html (classic script ใช้ตัวแปรร่วมกัน)
 // ════════════════════════ PAGE: CONFIG ════════════════════════
 function pgConfig() {
@@ -35,7 +35,7 @@ function pgConfig() {
       <div style="font-size:13px;color:var(--tx2);line-height:2">
         งานในระบบ: <b>${DB.tickets.length}</b><br>
         สำเนาในเครื่องนี้ (แคช): <b>${JSON.parse(localStorage.getItem('vr3_t')||'[]').length}</b> รายการ<br>
-        URL ปัจจุบัน: <span class="mono" style="font-size:11px;word-break:break-all">${GAS_URL||'ยังไม่ได้ตั้งค่า'}</span><br>
+        URL ปัจจุบัน: <span class="mono" style="font-size:12px;word-break:break-all">${GAS_URL||'ยังไม่ได้ตั้งค่า'}</span><br>
         เวอร์ชันหน้าเว็บ: <b>${APP_VERSION}</b> (${APP_BUILD}) · เวอร์ชันเซิร์ฟเวอร์ (Code.gs): <b>${SERVER_VERSION||'—'}</b>
         ${SERVER_VERSION&&SERVER_VERSION!==SERVER_REQUIRED?`<div class="notice n-amber" style="margin:6px 0 0;font-size:12px">เวอร์ชันไม่ตรงกัน — ให้ Deploy Code.gs ${SERVER_REQUIRED} (Edit → New version)</div>`:''}
       </div>
@@ -93,7 +93,7 @@ function renderUserManage(){
   <div class="card" style="margin-bottom:1rem">
     <div class="ctitle" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
       <span>🔑 บทบาทและสิทธิ์</span>
-      <span style="font-size:11px;color:var(--tx3)">ติ๊กเพื่อเปิด/ปิดสิทธิ์ของแต่ละบทบาท</span>
+      <span style="font-size:12px;color:var(--tx3)">ติ๊กเพื่อเปิด/ปิดสิทธิ์ของแต่ละบทบาท</span>
     </div>
     <div id="roleMatrixBox">${renderRoleMatrix()}</div>
   </div>`;
@@ -104,7 +104,7 @@ function ensureRoleDraft(){ if(!roleDraft) roleDraft=JSON.parse(JSON.stringify(R
 function renderRoleMatrix(){
   const roles=ensureRoleDraft();
   if(!roles.length) return '<div style="color:var(--tx3);font-size:13px">ยังไม่มีข้อมูลบทบาท (จะถูกสร้างอัตโนมัติเมื่อเชื่อมต่อเซิร์ฟเวอร์)</div>';
-  const head=`<th style="text-align:left">สิทธิ์ \\ บทบาท</th>`+roles.map(r=>`<th style="text-align:center;font-size:11.5px">${escAttr(r.label)}${r.isEngineer?' ★':''}</th>`).join('');
+  const head=`<th style="text-align:left">สิทธิ์ \\ บทบาท</th>`+roles.map(r=>`<th style="text-align:center;font-size:12px">${escAttr(r.label)}${r.isEngineer?' ★':''}</th>`).join('');
   const rows=ALL_CAPS_FE.map(cap=>`<tr>
     <td style="font-size:12.5px;color:var(--tx2)">${CAP_LABELS[cap]}</td>
     ${roles.map((r,ri)=>{
@@ -115,7 +115,7 @@ function renderRoleMatrix(){
   </tr>`).join('');
   return `<div style="overflow-x:auto"><table class="tbl" style="min-width:${120+roles.length*90}px">
     <thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div>
-    <div style="font-size:11px;color:var(--tx3);margin:8px 0">★ = บทบาทวิศวกร/แอดมิน (ได้ทุกสิทธิ์โดยอัตโนมัติ)</div>
+    <div style="font-size:12px;color:var(--tx3);margin:8px 0">★ = บทบาทวิศวกร/แอดมิน (ได้ทุกสิทธิ์โดยอัตโนมัติ)</div>
     <button class="btn btn-accent btn-sm" onclick="saveRoleMatrix()"><i class="ti ti-device-floppy"></i> บันทึกสิทธิ์</button>`;
 }
 function toggleCap(ri,cap,on){
@@ -146,7 +146,7 @@ function notifyIcons(u){
 function notifyFormHtml(info,prefix){
   return `<div class="ff"><label>อีเมลสำหรับรับแจ้งเตือน</label><input id="${prefix}Email" type="email" value="${escAttr(info.email||'')}" placeholder="name@psu.ac.th"></div>
     <div class="ff"><label>รับแจ้งเตือนทาง</label><select id="${prefix}Ch">${Object.entries(NOTIFY_LBL).map(([k,l])=>`<option value="${k}" ${(info.notify||'both')===k?'selected':''}>${l}</option>`).join('')}</select>
-      <div style="font-size:11px;color:var(--tx3);margin-top:3px">ถ้าเลือก LINE แต่ส่งไม่ได้ (ยังไม่ผูก/เกินโควตาเดือนนี้) ระบบส่งทางอีเมลแทน</div></div>
+      <div style="font-size:12px;color:var(--tx3);margin-top:3px">ถ้าเลือก LINE แต่ส่งไม่ได้ (ยังไม่ผูก/เกินโควตาเดือนนี้) ระบบส่งทางอีเมลแทน</div></div>
     <div class="ff"><label>แจ้งเมื่อ</label>${Object.entries(NOTIFY_EVT).map(([k,l])=>`<label style="display:flex;gap:6px;align-items:center;font-size:13px;cursor:pointer;margin:3px 0"><input type="checkbox" class="${prefix}Evt" value="${k}" style="width:auto" ${(info.events||Object.keys(NOTIFY_EVT)).includes(k)?'checked':''}> ${l}</label>`).join('')}</div>`;
 }
 function readNotifyForm(prefix){
@@ -170,7 +170,7 @@ async function openMyNotify(extra){
         info.linkCode?`<div>1) เพิ่มเพื่อน LINE OA ของระบบแจ้งซ่อม<br>2) พิมพ์รหัสนี้ส่งในแชท OA (ใช้ได้ 15 นาที)</div><div style="font-size:30px;font-weight:700;letter-spacing:6px;text-align:center;margin:8px 0" class="mono">${info.linkCode}</div>`:
         `<button class="btn btn-sm" onclick="openMyNotify({newCode:true})">${info.hasLine?'ผูกใหม่ (เปลี่ยนบัญชี LINE)':'ขอรหัสผูก LINE'}</button>
          ${info.hasLine?`<button class="btn btn-sm btn-red" onclick="if(confirm('ยกเลิกการผูก LINE?'))openMyNotify({unlinkLine:true})">ยกเลิกการผูก</button>`:''}`}
-      ${cu.isEngineer&&ln.ready?`<div style="font-size:11.5px;color:var(--tx3);margin-top:6px">โควตา LINE เดือนนี้: ${ln.used} / ${ln.limit} ข้อความ</div>`:''}
+      ${cu.isEngineer&&ln.ready?`<div style="font-size:12px;color:var(--tx3);margin-top:6px">โควตา LINE เดือนนี้: ${ln.used} / ${ln.limit} ข้อความ</div>`:''}
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-accent" style="flex:1" onclick="saveMyNotify()"><i class="ti ti-device-floppy"></i> บันทึก</button>
@@ -289,7 +289,7 @@ function renderRouting(){
       <option value="">— ไม่ออโต้ (รอมอบหมาย) —</option>
       ${assignable.map(u=>`<option value="${u.username}" ${r.autoAssign===u.username?'selected':''}>${escAttr(u.name)}</option>`).join('')}
     </select></td>
-    <td><div style="display:flex;gap:5px;flex-wrap:wrap">${roleChips.map(rc=>`<label class="pill ${r.approverRoles.includes(rc.role)?'on':''}" style="cursor:pointer;font-size:11px"><input type="checkbox" ${r.approverRoles.includes(rc.role)?'checked':''} onchange="routeApprover(${i},'${rc.role}',this.checked)" style="display:none">${escAttr(rc.label)}</label>`).join('')||'<span style="color:var(--tx3);font-size:11px">—</span>'}</div></td>
+    <td><div style="display:flex;gap:5px;flex-wrap:wrap">${roleChips.map(rc=>`<label class="pill ${r.approverRoles.includes(rc.role)?'on':''}" style="cursor:pointer;font-size:12px"><input type="checkbox" ${r.approverRoles.includes(rc.role)?'checked':''} onchange="routeApprover(${i},'${rc.role}',this.checked)" style="display:none">${escAttr(rc.label)}</label>`).join('')||'<span style="color:var(--tx3);font-size:12px">—</span>'}</div></td>
   </tr>`).join('');
   return `<div class="card" style="margin-bottom:1rem">
     <div class="ctitle">🔀 กติกาการวิ่งงาน (อัตโนมัติ)</div>
@@ -378,7 +378,7 @@ function renderOpsConfig(){
     <div class="frow" style="margin-top:.6rem">${num('kpiDone','ซ่อมสำเร็จ ≥',0,100,1,'%')}<div></div></div>
     <div class="fsec">สรุปรายเดือนอัตโนมัติ</div>
     <label style="display:flex;gap:8px;align-items:center;font-size:13px;cursor:pointer"><input type="checkbox" id="ops_monthly" style="width:auto" ${o.monthly?'checked':''}> ส่งสรุปเดือนก่อนทางอีเมลให้วิศวกร + ผู้บริหาร ทุกวันที่ 1 เวลา 08:00</label>
-    <div style="font-size:11.5px;color:var(--tx3);margin:4px 0 0 26px">ผู้รับเลือกเปิด/ปิดเองได้ที่ "การแจ้งเตือนของฉัน" · ผู้ที่ไม่มีอีเมลแต่ผูก LINE จะได้สรุปย่อทาง LINE</div>
+    <div style="font-size:12px;color:var(--tx3);margin:4px 0 0 26px">ผู้รับเลือกเปิด/ปิดเองได้ที่ "การแจ้งเตือนของฉัน" · ผู้ที่ไม่มีอีเมลแต่ผูก LINE จะได้สรุปย่อทาง LINE</div>
     <div style="display:flex;gap:8px;margin-top:.9rem;flex-wrap:wrap">
       <button class="btn btn-accent btn-sm" onclick="saveOps()"><i class="ti ti-device-floppy"></i> บันทึก</button>
       <button class="btn btn-sm" onclick="testMonthly()"><i class="ti ti-mail"></i> ส่งสรุปรายเดือนทดสอบ (ถึงฉัน)</button>
@@ -468,7 +468,7 @@ function renderAdminManage(){
       <button class="btn btn-sm" onclick="cfgAdd('buildings')"><i class="ti ti-plus"></i> เพิ่มอาคาร</button>
     </div>
     <div style="overflow-x:auto"><table class="tbl xls"><thead><tr><th>ไอคอน</th><th>ชื่ออาคาร</th><th>ชื่อย่อ</th><th>งบ/ปี</th><th>ซ่อน</th></tr></thead><tbody>${bRows}</tbody></table></div>
-    <div style="font-size:11px;color:var(--tx3);margin-top:6px">* อาคารที่มีงานใช้อยู่จะซ่อนได้อย่างเดียว ลบไม่ได้ (กันข้อมูลเก่าเพี้ยน)</div>
+    <div style="font-size:12px;color:var(--tx3);margin-top:6px">* อาคารที่มีงานใช้อยู่จะซ่อนได้อย่างเดียว ลบไม่ได้ (กันข้อมูลเก่าเพี้ยน)</div>
   </div>
   ${floorManageCard(cfg)}
   <div class="card" style="margin-bottom:1rem">
@@ -477,7 +477,7 @@ function renderAdminManage(){
       <button class="btn btn-sm" onclick="cfgAdd('statuses')"><i class="ti ti-plus"></i> เพิ่มสถานะ</button>
     </div>
     <div style="overflow-x:auto"><table class="tbl xls"><thead><tr><th>ชื่อสถานะ</th><th>สี</th><th>พัก SLA</th><th>จบงาน</th><th>ซ่อน</th></tr></thead><tbody>${sRows}</tbody></table></div>
-    <div style="font-size:11px;color:var(--tx3);margin-top:6px">* "พัก SLA" = หยุดนับเวลา (เช่น ประกัน/ผู้รับเหมา) · "จบงาน" = นับเป็นงานสิ้นสุด</div>
+    <div style="font-size:12px;color:var(--tx3);margin-top:6px">* "พัก SLA" = หยุดนับเวลา (เช่น ประกัน/ผู้รับเหมา) · "จบงาน" = นับเป็นงานสิ้นสุด</div>
   </div>
   <div class="card" style="margin-bottom:1rem">
     <div class="ctitle" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
@@ -492,7 +492,7 @@ function renderAdminManage(){
       <button class="btn btn-sm" onclick="cfgAdd('holidays')"><i class="ti ti-plus"></i> เพิ่มวันหยุด</button>
     </div>
     <div style="overflow-x:auto"><table class="tbl xls"><thead><tr><th>วันที่</th><th>ชื่อวันหยุด</th><th>ลบ</th></tr></thead><tbody>${hRows}</tbody></table></div>
-    <div style="font-size:11px;color:var(--tx3);margin-top:6px">* ระบบจะข้ามเสาร์–อาทิตย์ให้อยู่แล้ว ใส่เฉพาะวันหยุดนักขัตฤกษ์/วันหยุดพิเศษ · รูปแบบวันที่ ปปปป-ดด-วว (ค.ศ.)</div>
+    <div style="font-size:12px;color:var(--tx3);margin-top:6px">* ระบบจะข้ามเสาร์–อาทิตย์ให้อยู่แล้ว ใส่เฉพาะวันหยุดนักขัตฤกษ์/วันหยุดพิเศษ · รูปแบบวันที่ ปปปป-ดด-วว (ค.ศ.)</div>
   </div>
   ${carbonCfgCard()}
   <div class="card" style="margin-bottom:1rem">
@@ -500,13 +500,13 @@ function renderAdminManage(){
     <input value="${escAttr(ensureDraft().siteUrl||'')}" placeholder="${escAttr(location.origin+location.pathname)}" onchange="ensureDraft().siteUrl=this.value.trim()">
     <div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap">
       <button class="btn btn-sm" onclick="(()=>{const d=ensureDraft();d.siteUrl=location.origin+location.pathname;rp();})()">ใช้ลิงก์หน้านี้</button>
-      <span style="font-size:11px;color:var(--tx3)">เมื่อปิดงานเป็น "เสร็จเรียบร้อย" ระบบจะส่งอีเมลลิงก์ประเมินถึงผู้แจ้งที่กรอกอีเมลไว้ · ว่าง = ไม่ส่งอีเมล</span>
+      <span style="font-size:12px;color:var(--tx3)">เมื่อปิดงานเป็น "เสร็จเรียบร้อย" ระบบจะส่งอีเมลลิงก์ประเมินถึงผู้แจ้งที่กรอกอีเมลไว้ · ว่าง = ไม่ส่งอีเมล</span>
     </div>
   </div>
   <div class="card" style="margin-bottom:1rem;text-align:center">
     <button class="btn btn-accent" onclick="saveAdminConfig()"><i class="ti ti-device-floppy"></i> บันทึกการตั้งค่าทั้งหมด</button>
     <div id="admCfgMsg" style="margin-top:.6rem"></div>
-    <div style="font-size:11px;color:var(--tx3);margin-top:6px">การเปลี่ยนแปลงจะมีผลกับทุกคนหลังบันทึกและรีเฟรช</div>
+    <div style="font-size:12px;color:var(--tx3);margin-top:6px">การเปลี่ยนแปลงจะมีผลกับทุกคนหลังบันทึกและรีเฟรช</div>
   </div>`;
 }
 
@@ -531,7 +531,7 @@ function floorManageCard(cfg){
       <select onchange="floorMgBuilding=this.value;rp()">${blds.map(b=>`<option value="${b.id}" ${b.id===floorMgBuilding?'selected':''}>${b.icon||'🏢'} ${b.name}</option>`).join('')}</select>
     </div>
     <div style="overflow-x:auto"><table class="tbl xls"><thead><tr><th>ชื่อชั้น</th><th>ลบ</th></tr></thead><tbody>${body}</tbody></table></div>
-    <div style="font-size:11px;color:var(--tx3);margin-top:6px">* ชั้นที่กำหนดจะไปแสดงเป็นตัวเลือกในฟอร์มแจ้งซ่อม เมื่อผู้แจ้งเลือกอาคารนี้</div>
+    <div style="font-size:12px;color:var(--tx3);margin-top:6px">* ชั้นที่กำหนดจะไปแสดงเป็นตัวเลือกในฟอร์มแจ้งซ่อม เมื่อผู้แจ้งเลือกอาคารนี้</div>
   </div>`;
 }
 function cfgAddFloor(){
@@ -561,7 +561,7 @@ function carbonCfgCard(){
       <label>ต้นไม้ 1 ต้นดูดซับ ${num(['treeKgYear'],c.treeKgYear,60)} kgCO2e/ปี</label>
     </div>
     <div style="overflow-x:auto"><table class="tbl xls"><thead><tr><th>ประเภทงาน</th><th>ไฟฟ้าที่ประหยัด (kWh/ใบ)</th><th>งาน PM (kWh/ใบ)</th><th>น้ำที่ประหยัด (ลบ.ม./ใบ)</th><th>ซ่อมแทนซื้อใหม่ (kgCO2e)</th></tr></thead><tbody>${rows}</tbody></table></div>
-    <div style="font-size:11px;color:var(--tx3);margin-top:6px">EF ไฟฟ้า 0.4750 (อบก. มีผล 1 ม.ค. 2569) · EF กระดาษ A4 2.1020 (อบก.) · R-32 GWP 677 (IPCC AR5) · ค่า kWh/ลบ.ม./ซ่อมแทนซื้อใหม่ เป็นค่าประมาณตั้งต้น ควรปรับตามหน้างานจริง · "ซ่อมแทนซื้อใหม่" และ "น้ำยาแอร์" นับเฉพาะใบที่ช่างติ๊กตอนปิดงาน</div>
+    <div style="font-size:12px;color:var(--tx3);margin-top:6px">EF ไฟฟ้า 0.4750 (อบก. มีผล 1 ม.ค. 2569) · EF กระดาษ A4 2.1020 (อบก.) · R-32 GWP 677 (IPCC AR5) · ค่า kWh/ลบ.ม./ซ่อมแทนซื้อใหม่ เป็นค่าประมาณตั้งต้น ควรปรับตามหน้างานจริง · "ซ่อมแทนซื้อใหม่" และ "น้ำยาแอร์" นับเฉพาะใบที่ช่างติ๊กตอนปิดงาน</div>
   </div>`;
 }
 function ensureDraft(){

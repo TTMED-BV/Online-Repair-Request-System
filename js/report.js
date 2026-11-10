@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — report.js (v16.2) : หน้าแจ้งซ่อม · ใบที่ฉันแจ้ง · งานที่ฉันรับผิดชอบ · จุดซ่อมซ้ำ · รายงาน KPI
+// ระบบแจ้งซ่อมออนไลน์ — report.js (v17.3) : หน้าแจ้งซ่อม · ใบที่ฉันแจ้ง · งานที่ฉันรับผิดชอบ · จุดซ่อมซ้ำ · รายงาน KPI
 // โหลดตามลำดับใน index.html (classic script ใช้ตัวแปรร่วมกัน)
 // ════════════════════════ PAGE: REPORT ════════════════════════
 function pgReport() {
@@ -70,6 +70,7 @@ async function submitR() {
     if(!val){ el.classList.add('err'); if(er)er.classList.add('show'); if(!firstBad)firstBad=el; }
     else { el.classList.remove('err'); if(er)er.classList.remove('show'); }
   });
+  if(firstBad && typeof stepShowFor==='function') stepShowFor(firstBad);   // v17.1 ข้ามไปขั้นที่ยังกรอกไม่ครบ
   if(firstBad){ msg.innerHTML='<div class="notice n-red" style="margin:0"><i class="ti ti-alert-circle ni"></i><div>ยังกรอกข้อมูลไม่ครบ กรุณาตรวจช่องที่ทำเครื่องหมายสีแดง</div></div>'; firstBad.focus(); firstBad.scrollIntoView({behavior:'smooth',block:'center'}); return; }
   const roomFull = fl ? (fl + ' — ' + r) : r;   // รวมชั้น + ห้องเข้าด้วยกัน
   const ticket = {
@@ -79,6 +80,7 @@ async function submitR() {
     actualCost:0, desc, status:'pending_approval',
     assignees:[], approvedAt:null, approvedBy:null, approvedBudget:0,
     history:[{status:'pending_approval',date:now(),note:'รับแจ้งซ่อมเข้าระบบ',by:'ระบบ'}],
+    hp:(document.getElementById('fHp')||{}).value||'', dev:deviceId(),   // v17.2 กันสแปม (ช่องดักบอท + รหัสเครื่อง)
     trackPin:genPin()   // v16.1 รหัสติดตามทาง LINE (เซิร์ฟเวอร์เก็บแยก ไม่แสดงสาธารณะ)
   };
   savePinLocal(ticket.id, ticket.trackPin);
@@ -98,6 +100,7 @@ async function submitR() {
     msg.innerHTML+=`<div class="notice n-amber" style="margin:8px 0 0"><i class="ti ti-wifi-off ni"></i><div><b>บันทึกไว้ในเครื่องนี้แล้ว</b>${photoWait?` (รวมรูป ${photoWait} รูป)`:''} — ยังไม่ถึงเซิร์ฟเวอร์เพราะไม่มีสัญญาณ ระบบจะส่งให้อัตโนมัติเมื่อกลับมาออนไลน์ <b>อย่าล้างข้อมูลเบราว์เซอร์</b> จนกว่าป้ายมุมขวาล่างจะหายไป</div></div>`;
   msg.innerHTML+=lineFollowBox(ticket.id, ticket.trackPin);   // v16.1
   rememberRequester({n,ph,d,e:v('fE')}, document.getElementById('fRemember')?.checked);
+  if(typeof showSubmitSuccess==='function') showSubmitSuccess(ticket, !navigator.onLine || SYNC_Q.some(j=>j.op==='add'&&j.ticket.id===ticket.id));   // v17.1
   addMine(ticket.id);
   if(cu) msg.innerHTML+=`<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" onclick="gp('mine')"><i class="ti ti-file-text"></i> ดูใบที่ฉันแจ้ง</button></div>`;
   ['fR','fDesc'].concat(ME.n?[]:['fN','fP','fD','fE','fDo']).forEach(f=>{const el=document.getElementById(f);if(el)el.value='';}); if(!ME.n) deptToggle();
@@ -156,12 +159,12 @@ function checkDuplicate(){
       <b>${strong.length?'⚠️ น่าจะแจ้งซ้ำ — จุดนี้มีใบเรื่องเดียวกันที่ยังดำเนินการอยู่':'⚠️ ชั้นนี้มีใบที่ยังดำเนินการอยู่ '+openOnes.length+' ใบ'}</b> — ตรวจก่อนว่าเป็นเรื่องเดียวกันไหม
       <div style="margin-top:6px;display:flex;flex-direction:column;gap:6px">
         ${list.map(({t,sc})=>{const s=getSI(t.status);return `<div style="font-size:12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;${sc>=2?'font-weight:600':''}">
-          <span class="mono">${t.id}</span><span class="badge ${s.cls}" style="font-size:10px">${s.label}</span>
+          <span class="mono">${t.id}</span><span class="badge ${s.cls}" style="font-size:12px">${s.label}</span>
           <span style="color:var(--tx2)">${escHtml(t.room||'')} · ${escHtml(t.category)} · แจ้ง ${fdShort(t.createdAt)}</span>
           <button class="btn btn-sm" style="padding:2px 8px" onclick="openDet('${t.id}')">ดู</button>
           <button class="btn btn-sm" style="padding:2px 8px" onclick="followTicket('${t.id}')">ติดตามใบนี้แทน</button></div>`;}).join('')}
       </div>
-      <div style="font-size:11.5px;color:var(--tx3);margin-top:6px">ถ้าเป็นคนละปัญหา แจ้งต่อได้ตามปกติ · กด "ติดตามใบนี้แทน" เพื่อเก็บไว้ในหน้า "ใบที่ฉันแจ้ง" โดยไม่ต้องแจ้งใหม่</div>
+      <div style="font-size:12px;color:var(--tx3);margin-top:6px">ถ้าเป็นคนละปัญหา แจ้งต่อได้ตามปกติ · กด "ติดตามใบนี้แทน" เพื่อเก็บไว้ในหน้า "ใบที่ฉันแจ้ง" โดยไม่ต้องแจ้งใหม่</div>
     </div></div>`:''}
   ${hs?`<div class="notice n-info" style="margin-bottom:.9rem;font-size:12px"><i class="ti ti-flame ni"></i><div>จุดนี้ถูกแจ้งซ่อม <b>${hs.n} ครั้ง</b> ใน ${OPS.hotMonths} เดือนล่าสุด — ถ้าเป็นอาการเดิม ระบุในรายละเอียดว่า <b>"เสียซ้ำ"</b> เพื่อให้ช่างพิจารณาเปลี่ยนใหม่</div></div>`:''}`;
 }
@@ -255,7 +258,7 @@ function pgMyWork(){
     ${mine.length?shown.map(([ttl,arr])=>arr.length?`<div class="mw-sec">${ttl} <span class="badge b-gray nodot">${arr.length}</span></div>${arr.map(x=>myWorkCard(x.t,x.dd)).join('')}`:'').join(''):`<div class="mw-empty">🎉 ไม่มีงานค้างที่มอบหมายให้คุณ</div>`}
     ${pmDueList.length?`<div class="mw-sec">🛠 PM ถึงรอบ <span class="badge b-gray nodot">${pmDueList.length}</span></div>
       ${pmDueList.slice(0,8).map(p=>{const b=getBI(p.building);return `<div class="mw-card pm"><div class="mw-title">${escHtml(p.name)}</div><div class="mw-meta">${b.icon} ${b.short||b.name}${p.floor?' · '+escHtml(p.floor):''} · ${escHtml(p.category||'')}</div><div class="mw-acts" style="grid-template-columns:1fr"><button class="btn" onclick="gp('pm')"><i class="ti ti-calendar-cog"></i> ไปหน้า PM</button></div></div>`;}).join('')}`:''}
-    <div style="font-size:11.5px;color:var(--tx3);text-align:center;margin:1.2rem 0">💡 เพิ่มหน้านี้ลงหน้าจอโฮม: เมนูเบราว์เซอร์ → "เพิ่มลงในหน้าจอหลัก" จะเปิดได้เหมือนแอป</div>
+    <div style="font-size:12px;color:var(--tx3);text-align:center;margin:1.2rem 0">💡 เพิ่มหน้านี้ลงหน้าจอโฮม: เมนูเบราว์เซอร์ → "เพิ่มลงในหน้าจอหลัก" จะเปิดได้เหมือนแอป</div>
   </div>`;
 }
 function myWorkCard(t,dd){
@@ -271,7 +274,7 @@ function myWorkCard(t,dd){
       <span class="badge ${di.cls}" style="margin-left:auto">${di.text}${di.sub?' · '+di.sub:''}</span>
     </div>
     <div class="mw-title">${b.icon} ${escHtml(t.room||'')}</div>
-    <div class="mw-meta">${escHtml(b.short||b.name)} · ${escHtml(t.category)} · <span class="mono" style="font-size:11px">${t.id}</span></div>
+    <div class="mw-meta">${escHtml(b.short||b.name)} · ${escHtml(t.category)} · <span class="mono" style="font-size:12px">${t.id}</span></div>
     ${t.desc?`<div style="font-size:13.5px;margin-top:6px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">${escHtml(t.desc)}</div>`:''}
     <div class="mw-meta" style="margin-top:6px"><i class="ti ti-user"></i> ${escHtml(t.name||'-')}${t.dept?' · '+escHtml(t.dept):''}</div>
     ${timelineStrip(t)}
@@ -316,7 +319,7 @@ function hotspotCard(){
   const list=hotspots();
   return `<div class="card" style="margin-bottom:1rem">
     <div class="ctitle" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><span>🔥 จุดซ่อมซ้ำ — ควรพิจารณาเปลี่ยนใหม่</span>
-      <span style="font-size:11.5px;font-weight:400;color:var(--tx3)">ห้องเดียวกัน ≥ ${OPS.hotCount} ครั้ง ใน ${OPS.hotMonths} เดือน</span></div>
+      <span style="font-size:12px;font-weight:400;color:var(--tx3)">ห้องเดียวกัน ≥ ${OPS.hotCount} ครั้ง ใน ${OPS.hotMonths} เดือน</span></div>
     ${list.length?list.slice(0,10).map(h=>{const b=getBI(h.building);const top=Object.entries(h.cats).sort((a,c)=>c[1]-a[1]);
       const sug=top[0][1]>=OPS.hotCount?`แนะนำ: ประเมินเปลี่ยน<b>${escHtml(top[0][0])}</b>ใหม่ทั้งชุด แทนการซ่อมซ้ำ`:'แนะนำ: สำรวจหน้างานหาสาเหตุร่วม';
       return `<div class="hs-row"><div class="hs-n">${h.n}<small>ครั้ง</small></div><div style="flex:1;min-width:0">
@@ -432,7 +435,7 @@ function printKPIInner(fy){
   <h2>5. จุดซ่อมซ้ำ (≥ ${o.hotCount} ครั้งใน ${o.hotMonths} เดือนล่าสุด)</h2>
   <table><thead><tr><th>สถานที่</th><th>จำนวนครั้ง</th><th>ประเภท</th><th>ค่าซ่อมรวม (บาท)</th></tr></thead><tbody>
   ${hs.length?hs.map(h=>`<tr><td class="l">${escHtml(getBI(h.building).name)} — ${escHtml(h.room||'')}</td><td>${h.n}</td><td class="l">${Object.entries(h.cats).map(([c,n])=>escHtml(c)+' '+n).join(', ')}</td><td>${h.cost.toLocaleString()}</td></tr>`).join(''):'<tr><td colspan="4">ไม่มี</td></tr>'}</tbody></table>
-  <div style="font-size:11px;color:#666;margin-top:8px">หมายเหตุ: "ซ่อมสำเร็จ" = ใบที่เสร็จ ÷ (เสร็จ + ซ่อมไม่ได้) ไม่นับใบที่ยังดำเนินการ · "ทันกำหนด" = เสร็จภายในวันคาดว่าเสร็จ (วันอนุมัติ + SLA วันทำการ + วันที่พักงาน หรือวันที่วิศวกรกำหนดเอง) · เวลาซ่อมเฉลี่ยนับจากวันอนุมัติถึงวันเสร็จ</div>
+  <div style="font-size:12px;color:#666;margin-top:8px">หมายเหตุ: "ซ่อมสำเร็จ" = ใบที่เสร็จ ÷ (เสร็จ + ซ่อมไม่ได้) ไม่นับใบที่ยังดำเนินการ · "ทันกำหนด" = เสร็จภายในวันคาดว่าเสร็จ (วันอนุมัติ + SLA วันทำการ + วันที่พักงาน หรือวันที่วิศวกรกำหนดเอง) · เวลาซ่อมเฉลี่ยนับจากวันอนุมัติถึงวันเสร็จ</div>
   <div class="sign"><div>ลงชื่อ ...................................<br>( ................................... )<br>ผู้จัดทำรายงาน</div><div>ลงชื่อ ...................................<br>( ................................... )<br>ผู้บริหาร</div></div>
   <script>window.onload=function(){window.print();}<\/script></body></html>`);
   w.document.close();

@@ -1,11 +1,12 @@
 /**
  * ═══════════════════════════════════════════════════════════════════════
- *  ระบบแจ้งซ่อมออนไลน์ — Google Apps Script Backend (v16.2)
+ *  ระบบแจ้งซ่อมออนไลน์ — Google Apps Script Backend (v17.3)
  *  เวอร์ชัน v15 (2026-10-26) — ต้องใช้คู่กับหน้าเว็บ index.html v15
  *  ประวัติ: v12 ฟิลเตอร์/ปฏิทินแถบ/วันคาดว่าเสร็จ/PM 5 แบบ/ประเมินแทน+อีเมล · v12.1–12.2 แก้ใบค้าง ใบรหัสซ้ำ
  *           v13 คาร์บอนที่ประหยัดได้รายเดือน · v14 แจ้งเตือนรายคน LINE OA/อีเมล
  *           v15 คลังอุปกรณ์+จุดสั่งซื้อ/แจ้งของใกล้หมด · สรุปรายเดือนอัตโนมัติ (วันที่ 1 08:00)
  *               · ตั้งค่าจุดซ่อมซ้ำ/เป้า KPI · บันทึกการเคลื่อนไหวคลัง (แท็บ InvLog)
+ *           v17.3 (10 พ.ย.) กันสแปมใบแจ้งซ่อม (ช่องดักบอท + จำกัดต่อเครื่อง/ทั้งระบบ) · LINE: ปุ่ม "⋯ อื่น" เปลี่ยนสถานะ สำรวจ/ผู้รับเหมา/เคลมประกัน/ซ่อมไม่ได้
  *           v16.2 (9 พ.ย.) รายงานสรุปรายเดือน PDF (แนบอีเมล + ดาวน์โหลดจากเว็บ + เก็บใน Drive) · รองรับคิวรูปจากโหมดออฟไลน์
  *           v16.1 (9 พ.ย.) LINE: ผู้แจ้งติดตามใบงาน (เลขใบ+รหัส 4 หลัก) + แจ้งเมื่อสถานะเปลี่ยน · ปุ่มเริ่มซ่อม/เสร็จแล้วในการ์ด · Rich Menu 6 ปุ่ม
  *           v16.0 (9 พ.ย.) จัดโครงสร้างใหม่: ตารางเส้นทาง ROUTES (สิทธิ์ต่อ action ในที่เดียว) + ตัวช่วยอ่านตารางตามชื่อคอลัมน์ table_()
@@ -171,6 +172,7 @@ var ROUTES = {
   getAll:          { auth:'public',   read:true,  fn:function(b){ return verifyToken_(b.token) ? getAllTickets() : publicView_(getAllTickets()); } },
   // ─── ใบแจ้งซ่อม ───
   add:             { auth:'public',               fn:function(b){
+                       var spam = spamGuard_(b); if (spam) return spam;   // v17.2 กันสแปม
                        var r = addTicket(sanitizeObj_(b.ticket));
                        if (b.entry && r && !r.error && !r.duplicate) addHistory(b.ticket.id, sanitizeObj_(b.entry));   // รวมประวัติแรกในคำขอเดียว
                        return r; } },
@@ -267,7 +269,7 @@ function doPost(e) {
 
 // รองรับการเปิด URL ตรง ๆ ด้วย GET (ไว้ทดสอบว่า deploy ติดไหม)
 function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({ ok:true, data:{ status:'online', version:'v16.2' } }))
+  return ContentService.createTextOutput(JSON.stringify({ ok:true, data:{ status:'online', version:'v17.3' } }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -2437,12 +2439,16 @@ function jobButtons_(t) {
   var c = [];
   if (t.status !== 'working') c.push(btn('▶ เริ่มซ่อม', 'start', 'secondary'));
   c.push(btn('✅ เสร็จแล้ว', 'done', 'primary', '#29914f'));
+  c.push(btn('⋯ อื่น', 'more', 'secondary'));   // v17.1 สถานะอื่น
   return { type:'box', layout:'horizontal', spacing:'sm', margin:'sm', contents: c };
 }
+var LINE_OTHER_ST = ['survey', 'contractor', 'insurance', 'cannot'];   // สถานะที่เปลี่ยนจาก LINE ได้ (นอกจากเริ่มซ่อม/เสร็จ)
+var LINE_ST_ICON = { survey:'🔍 ', contractor:'🏗️ ', insurance:'🛡️ ', cannot:'⛔ ' };
+var LINE_ST_DEF = { survey:'กำลังสำรวจ', contractor:'ส่งผู้รับเหมา', insurance:'ส่งเคลมประกัน', cannot:'ซ่อมไม่ได้' };
 function parseQs_(s) { var o = {}; String(s || '').split('&').forEach(function(p){ var kv = p.split('='); if (kv[0]) o[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1] || ''); }); return o; }
 function handleJobPostback_(ev, uid) {
   var q = parseQs_(ev.postback && ev.postback.data), id = String(q.id || '');
-  if (!/^(start|done|doneok)$/.test(q.act || '') || !id) return;
+  if (!/^(start|done|doneok|more|set|setok)$/.test(q.act || '') || !id) return;
   var users = allUserRows_().filter(function(r){ return String(r[11]) === String(uid); });
   if (!users.length) { lineReply_(ev.replyToken, 'บัญชี LINE นี้ยังไม่ได้ผูกกับผู้ใช้ในระบบ'); return; }
   var t = ticketById_(id); if (!t) { lineReply_(ev.replyToken, 'ไม่พบใบงาน ' + id); return; }
@@ -2458,17 +2464,30 @@ function handleJobPostback_(ev, uid) {
         { type:'action', action:{ type:'message', label:'ยกเลิก', text:'งานค้าง' } } ] } }]);
     return;
   }
+  if (q.act === 'more') {   // v17.1 เลือกสถานะอื่น (quick reply)
+    lineReplyMsgs_(ev.replyToken, [{ type:'text', text:'เลือกสถานะใหม่ของ ' + id + '\n' + placeOf_(t, C) + '\n(ต้องใส่งบจัดซื้อ/ค่าใช้จ่าย → ทำในเว็บ)',
+      quickReply:{ items: LINE_OTHER_ST.filter(function(k){ return k !== t.status; }).map(function(k){ C.st[k] = C.st[k] || LINE_ST_DEF[k];
+        return { type:'action', action:{ type:'postback', label:(LINE_ST_ICON[k] || '') + C.st[k], data:'act=' + (k === 'cannot' ? 'setok' : 'set') + '&s=' + k + '&id=' + id, displayText:'เปลี่ยน ' + id + ' → ' + C.st[k] } }; }) } }]);
+    return;
+  }
+  if (q.act === 'setok' && !q.c) {   // ซ่อมไม่ได้ → ยืนยันก่อน
+    lineReplyMsgs_(ev.replyToken, [{ type:'text', text:'ยืนยันเปลี่ยน ' + id + ' เป็น "' + (C.st[q.s] || q.s) + '" ?',
+      quickReply:{ items:[{ type:'action', action:{ type:'postback', label:'ยืนยัน', data:'act=set&c=1&s=' + q.s + '&id=' + id, displayText:'ยืนยัน ' + (C.st[q.s] || q.s) } },
+        { type:'action', action:{ type:'message', label:'ยกเลิก', text:'งานค้าง' } }] } }]);
+    return;
+  }
+  if (q.act === 'set' && LINE_OTHER_ST.indexOf(q.s) < 0) { lineReply_(ev.replyToken, 'สถานะนี้เปลี่ยนจาก LINE ไม่ได้ กรุณาทำในเว็บ'); return; }
   if (q.act === 'start' && t.status === 'working') { lineReply_(ev.replyToken, 'ใบ ' + id + ' อยู่ในสถานะกำลังซ่อมอยู่แล้ว'); return; }
   var lock = LockService.getScriptLock(); if (!lock.tryLock(20000)) { lineReply_(ev.replyToken, 'ระบบกำลังบันทึกข้อมูลอื่นอยู่ ลองกดใหม่อีกครั้ง'); return; }
-  var now = new Date().toISOString(), st = q.act === 'start' ? 'working' : 'done';
+  var now = new Date().toISOString(), st = q.act === 'start' ? 'working' : q.act === 'set' ? q.s : 'done';
   try {
     var f = { status: st }; if (st === 'done') f.completedAt = now;
     var r = updateTicket(id, f);
     if (r && r.error) { lineReply_(ev.replyToken, 'บันทึกไม่สำเร็จ: ' + r.error); return; }
-    addHistory(id, { status: st, date: now, note: st === 'working' ? 'เริ่มซ่อม (กดจาก LINE)' : 'ซ่อมเสร็จ (กดจาก LINE)', by: name });
+    addHistory(id, { status: st, date: now, note: st === 'working' ? 'เริ่มซ่อม (กดจาก LINE)' : st === 'done' ? 'ซ่อมเสร็จ (กดจาก LINE)' : 'เปลี่ยนเป็น ' + (C.st[st] || st) + ' (กดจาก LINE)', by: name });
     invalidateCache_();
   } finally { lock.releaseLock(); }
-  lineReply_(ev.replyToken, (st === 'working' ? '🔧 บันทึกแล้ว: เริ่มซ่อม ' : '✅ บันทึกแล้ว: ปิดงาน ') + id + '\n' + placeOf_(t, C) +
+  lineReply_(ev.replyToken, (st === 'working' ? '🔧 บันทึกแล้ว: เริ่มซ่อม ' : st === 'done' ? '✅ บันทึกแล้ว: ปิดงาน ' : '📝 บันทึกแล้ว: ' + (C.st[st] || st) + ' ') + id + '\n' + placeOf_(t, C) +
     (st === 'done' ? '\n\nถ้ามีค่าใช้จ่าย/รูปหลังซ่อม เพิ่มได้ในเว็บ' : '') + '\n💡 พิมพ์ "งานค้าง" เพื่อดูรายการล่าสุด');
 }
 
@@ -2478,10 +2497,11 @@ function handleJobPostback_(ev, uid) {
 //  (หรือ Run setupRichMenu ในหน้านี้)
 // ═══════════════════════════════════════════════════════════════
 function setupRichMenu() {
-  var token = lineOAToken_(); if (!token) return { error:'ยังไม่ได้ตั้งค่า LINE_OA_TOKEN' };
-  var site = siteLink_(''); if (!site) return { error:'ยังไม่ได้ตั้งค่า SITE_URL' };
+  var token = lineOAToken_(); if (!token) { Logger.log('ยังไม่ได้ตั้งค่า LINE_OA_TOKEN'); return { error:'ยังไม่ได้ตั้งค่า LINE_OA_TOKEN' }; }
+  var site = siteLink_(''); if (!site) { Logger.log('ยังไม่ได้ตั้งค่า SITE_URL'); return { error:'ยังไม่ได้ตั้งค่า SITE_URL' }; }
   var base = site.replace(/[^\/]*$/, '');
   var img = UrlFetchApp.fetch(base + 'richmenu.png?_v=' + Date.now(), { muteHttpExceptions:true });
+  Logger.log('รูปเมนู: ' + base + 'richmenu.png → ' + img.getResponseCode());
   if (img.getResponseCode() !== 200) return { error:'ไม่พบไฟล์ ' + base + 'richmenu.png — อัปโหลดรูปเมนูขึ้นเว็บก่อน' };
   var W = 2500, H = 1686, w = Math.floor(W / 3), h = H / 2;
   var acts = [
@@ -2502,13 +2522,21 @@ function setupRichMenu() {
   try { (JSON.parse(old.body).richmenus || []).forEach(function(m){ if (/^TTMED-/.test(m.name)) call('https://api.line.me/v2/bot/richmenu/' + m.richMenuId, 'delete'); }); } catch (e) {}
   var cr = call('https://api.line.me/v2/bot/richmenu', 'post', JSON.stringify({ size:{ width:W, height:H }, selected:true,
     name:'TTMED-' + Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyyMMdd-HHmm'), chatBarText:'เมนูระบบแจ้งซ่อม', areas: areas }));
-  if (cr.code !== 200) return { error:'สร้างเมนูไม่สำเร็จ (' + cr.code + '): ' + cr.body };
+  if (cr.code !== 200) { Logger.log('สร้างเมนูไม่สำเร็จ (' + cr.code + '): ' + cr.body); return { error:'สร้างเมนูไม่สำเร็จ (' + cr.code + '): ' + cr.body }; }
   var id = JSON.parse(cr.body).richMenuId;
   var up = call('https://api-data.line.me/v2/bot/richmenu/' + id + '/content', 'post', img.getBlob().getBytes(), 'image/png');
-  if (up.code !== 200) return { error:'อัปโหลดรูปเมนูไม่สำเร็จ (' + up.code + '): ' + up.body };
+  if (up.code !== 200) { Logger.log('อัปโหลดรูปเมนูไม่สำเร็จ (' + up.code + '): ' + up.body); return { error:'อัปโหลดรูปเมนูไม่สำเร็จ (' + up.code + '): ' + up.body }; }
   var df = call('https://api.line.me/v2/bot/user/all/richmenu/' + id, 'post');
-  if (df.code !== 200) return { error:'ตั้งเป็นเมนูหลักไม่สำเร็จ (' + df.code + '): ' + df.body };
+  if (df.code !== 200) { Logger.log('ตั้งเป็นเมนูหลักไม่สำเร็จ (' + df.code + '): ' + df.body); return { error:'ตั้งเป็นเมนูหลักไม่สำเร็จ (' + df.code + '): ' + df.body }; }
+  Logger.log('ติดตั้งเมนู LINE แล้ว: ' + id);
   return { ok:true, richMenuId:id, message:'ติดตั้งเมนู LINE แล้ว — ปิดแล้วเปิดแชท OA ใหม่เพื่อดูเมนู' };
+}
+// ตรวจสถานะเมนู LINE (Run ในหน้านี้ แล้วดู Execution log)
+function richMenuStatus() {
+  var token = lineOAToken_(); if (!token) { Logger.log('ยังไม่ได้ตั้งค่า LINE_OA_TOKEN'); return; }
+  var get = function(u){ var r = UrlFetchApp.fetch(u, { headers:{ Authorization:'Bearer ' + token }, muteHttpExceptions:true }); return r.getResponseCode() + ' ' + r.getContentText().substring(0, 600); };
+  Logger.log('เมนูหลัก: ' + get('https://api.line.me/v2/bot/user/all/richmenu'));
+  Logger.log('เมนูทั้งหมด: ' + get('https://api.line.me/v2/bot/richmenu/list'));
 }
 // ข้อความ "วิธีใช้" ในแชท
 function replyHelp_(replyToken) {
@@ -2565,4 +2593,25 @@ function monthlyPdfDownload_(ym) {
   var m = String(ym || '').match(/^(\d{4})-(\d{1,2})$/); if (m) pm = { y: Number(m[1]), m: Number(m[2]) - 1 };
   var st = monthlyStats_(pm), pdf = monthlyPdf_(st);
   return { name: pdf.getName(), mimeType:'application/pdf', data: Utilities.base64Encode(pdf.getBytes()), label: st.label, url: saveMonthlyPdf_(pdf) };
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+//  v17.2: กันสแปมใบแจ้งซ่อม (ผู้แจ้งไม่ต้องล็อกอิน)
+//  - ช่องดักบอท (hp) มีค่า → ตอบเหมือนสำเร็จแต่ไม่บันทึก
+//  - เครื่องเดียวกัน (dev) แจ้งได้ไม่เกิน 10 ใบ/ชั่วโมง · ทั้งระบบไม่เกิน 40 ใบ/10 นาที (เจ้าหน้าที่ที่ล็อกอินไม่ถูกจำกัด)
+// ═══════════════════════════════════════════════════════════════
+var SPAM_PER_DEVICE_HOUR = 10, SPAM_GLOBAL_10MIN = 40;
+function spamGuard_(b) {
+  var t = b.ticket || {};
+  if (t.hp) return { inserted: 0, ignored: true };
+  if (verifyToken_(b.token)) return null;
+  var c = CacheService.getScriptCache();
+  var dk = 'ADD_D_' + String(t.dev || 'none').replace(/[^A-Za-z0-9]/g, '').substring(0, 24);
+  var gk = 'ADD_G_' + Math.floor(Date.now() / 600000);
+  var nd = Number(c.get(dk) || 0), ng = Number(c.get(gk) || 0);
+  if (nd >= SPAM_PER_DEVICE_HOUR) return { error: 'แจ้งซ่อมจากเครื่องนี้หลายครั้งเกินไป กรุณาลองใหม่ภายหลัง หรือติดต่องานอาคารสถานที่โดยตรง' };
+  if (ng >= SPAM_GLOBAL_10MIN) return { error: 'ระบบมีการแจ้งซ่อมจำนวนมากผิดปกติ กรุณาลองใหม่ในอีกสักครู่' };
+  c.put(dk, String(nd + 1), 3600); c.put(gk, String(ng + 1), 600);
+  return null;
 }

@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — detail.js (v16.2) : รายละเอียดใบงาน · รูปภาพ · แก้ไข/ยกเลิก · ประเมิน
+// ระบบแจ้งซ่อมออนไลน์ — detail.js (v17.3) : รายละเอียดใบงาน · รูปภาพ · แก้ไข/ยกเลิก · ประเมิน
 // โหลดตามลำดับใน index.html (classic script ใช้ตัวแปรร่วมกัน)
 // ════════════════════════ DETAIL MODAL ════════════════════════
 
@@ -165,7 +165,7 @@ function renderTicketPhotos(t){
     if(!items.length) return;
     any=true;
     html+=`<div style="margin-bottom:10px">
-      <div style="font-size:11px;color:var(--tx3);margin-bottom:5px"><i class="ti ${g.icon}"></i> ${g.label} (${items.length})</div>
+      <div style="font-size:12px;color:var(--tx3);margin-bottom:5px"><i class="ti ${g.icon}"></i> ${g.label} (${items.length})</div>
       <div class="ph-grid">${items.map(p=>`<div class="ph-thumb">
         <a href="${fullUrl(p.fileId)}" target="_blank" rel="noopener"><img src="${thumbUrl(p.fileId)}" alt="${g.label}" loading="lazy"></a>
         ${cu&&cu.isEngineer?`<button type="button" class="ph-del" onclick="removeTicketPhoto('${t.id}','${p.fileId}')" title="ลบรูป"><i class="ti ti-x"></i></button>`:''}
@@ -202,7 +202,7 @@ function statusPipe(cur){
     const lineCls=i<ci?'done':'';
     return `<div class="pipe-step">
       ${i>0?`<div class="pipe-line ${i<=ci?'done':''}"></div>`:''}
-      <div class="pipe-dot ${cls}">${i<ci?'<i class="ti ti-check" style="font-size:11px"></i>':i+1}</div>
+      <div class="pipe-dot ${cls}">${i<ci?'<i class="ti ti-check" style="font-size:12px"></i>':i+1}</div>
       <div class="pipe-lbl ${i===ci?'act':''}">${short[st]}</div>
     </div>`;
   }).join('')}</div><div style="height:1px;background:var(--bd);margin:0 0 1rem"></div>`;
@@ -315,7 +315,7 @@ function ratingBlock(t){
   // ให้คะแนนแล้ว → โชว์ผล
   if(t.rating && t.rating>0){
     return `<div class="rate-box rated">
-      <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">⭐ ความพึงพอใจ${t.ratedBy?` <span class="badge b-purple nodot" style="font-size:10.5px">ประเมินแทนโดย ${escHtml(t.ratedBy)}</span>`:'ของผู้แจ้ง'}</div>
+      <div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">⭐ ความพึงพอใจ${t.ratedBy?` <span class="badge b-purple nodot" style="font-size:12px">ประเมินแทนโดย ${escHtml(t.ratedBy)}</span>`:'ของผู้แจ้ง'}</div>
       <div style="display:flex;align-items:center;gap:8px">
         <div style="display:flex;gap:2px">${[1,2,3,4,5].map(i=>`<span style="opacity:${i<=t.rating?1:.25}">${starSVG(i<=t.rating)}</span>`).join('')}</div>
         <span style="font-weight:700;font-size:16px;color:var(--gold)">${t.rating}.0</span>
@@ -337,8 +337,8 @@ function ratingBlock(t){
       ${proxyOk?`<b>เกิน ${RATE_PROXY_DAYS} วันแล้วยังไม่มีการประเมิน</b> — ผู้เกี่ยวข้องหรือผู้ปฏิบัติงานในชั้นนั้น (${escHtml(ticketFloor(t)||getBI(t.building).short)}) ประเมินแทนได้ เช่น งานที่ช่างหรือแม่บ้านแจ้งเอง หรือผู้แจ้งไม่สะดวกประเมิน`
       :`หมายเหตุ: หากผู้แจ้งไม่ประเมินภายใน ${RATE_PROXY_DAYS} วัน${left?` (อีก ${left} วัน)`:''} ผู้เกี่ยวข้องหรือผู้ปฏิบัติงานในชั้นนั้นจะประเมินแทนได้ เช่น งานที่ช่างหรือแม่บ้านแจ้งเอง`}
     </div></div>
-    <div class="star-row" id="starRow">${[1,2,3,4,5].map(i=>`<button type="button" class="star-btn" data-v="${i}" onclick="setStars(${i})" onmouseover="hoverStars(${i})" onmouseout="hoverStars(0)">${starSVG(i<=pendingRating)}</button>`).join('')}</div>
-    <div id="starPicked" style="font-size:12.5px;color:var(--tx2);margin-top:4px">${pendingRating?`เลือก ${pendingRating} ดาว`:'แตะดาวเพื่อให้คะแนน'}</div>
+    <div class="star-row emo-row" id="starRow" role="radiogroup" aria-label="ความพึงพอใจ">${RATE_EMO.map((e,k)=>{ const i=k+1; return `<button type="button" role="radio" aria-checked="${i===pendingRating}" aria-label="${i} — ${e[1]}" class="star-btn emo-btn ${i===pendingRating?'on':''}" data-v="${i}" onclick="setStars(${i})" onmouseover="hoverStars(${i})" onmouseout="hoverStars(0)"><span class="emo" aria-hidden="true">${e[0]}</span><small>${e[1]}</small></button>`; }).join('')}</div>
+    <div id="starPicked" style="font-size:13px;color:var(--tx2);margin-top:4px">${pendingRating?`เลือก: ${RATE_EMO[pendingRating-1][1]} (${pendingRating}/5)`:'แตะหน้าที่ตรงกับความรู้สึกของคุณ'}</div>
     <textarea id="rateComment" placeholder="ความเห็นเพิ่มเติม (ไม่บังคับ)" style="margin-top:10px;min-height:60px" oninput="(rateDraft['${t.id}']=rateDraft['${t.id}']||{}).c=this.value">${escHtml(dr.c||'')}</textarea>
     ${proxyOk?`<label style="display:flex;align-items:center;gap:6px;font-size:12.5px;margin-top:8px;cursor:pointer"><input type="checkbox" id="rateProxy" style="width:auto" onchange="document.getElementById('rateProxyName').style.display=this.checked?'block':'none'"> ประเมินแทนผู้แจ้ง</label>
     <input id="rateProxyName" placeholder="ชื่อ-นามสกุล ผู้ประเมินแทน (เช่น ผู้ปฏิบัติงานชั้นนั้น)" style="display:none;margin-top:6px" value="${cu?escAttr(cu.name):''}">`:''}
@@ -346,7 +346,10 @@ function ratingBlock(t){
     <button class="btn btn-accent btn-sm" onclick="submitRating('${t.id}')"><i class="ti ti-send"></i> ส่งคะแนน</button>
   </div>`;
 }
+// v17.3: ประเมินแบบ Emoji (ยังเก็บเป็นคะแนน 1–5 เหมือนเดิม)
+const RATE_EMO=[['😡','ไม่พอใจมาก'],['😕','ไม่พอใจ'],['😐','เฉย ๆ'],['🙂','พอใจ'],['😍','พอใจมาก']];
 function paintStars(n){
+  document.querySelectorAll('#starRow .emo-btn').forEach(b=>{ const on=+b.dataset.v===n; b.classList.toggle('on',on); b.classList.toggle('hov',+b.dataset.v===n&&n!==pendingRating); });
   // v15.5: เปลี่ยนแค่สีดาว ไม่วาดปุ่มใหม่ (การวาดใหม่ทำให้คลิกด้วยเมาส์ไม่ติด)
   document.querySelectorAll('#starRow .star-btn').forEach(b=>{
     const v=+b.dataset.v, path=b.querySelector('path');
@@ -354,7 +357,7 @@ function paintStars(n){
   });
 }
 function hoverStars(n){ paintStars(n||pendingRating); }
-function setStars(n){ pendingRating=n; if(rateCurId){ (rateDraft[rateCurId]=rateDraft[rateCurId]||{}).n=n; } paintStars(n); const p=document.getElementById('starPicked'); if(p) p.textContent='เลือก '+n+' ดาว'; }
+function setStars(n){ pendingRating=n; if(rateCurId){ (rateDraft[rateCurId]=rateDraft[rateCurId]||{}).n=n; } paintStars(n); const p=document.getElementById('starPicked'); if(p) p.textContent='เลือก: '+RATE_EMO[n-1][1]+' ('+n+'/5)'; document.querySelectorAll('#starRow .emo-btn').forEach(b=>b.setAttribute('aria-checked',+b.dataset.v===n)); }
 // ─── v15.2: จำการประเมินที่ส่งจากเครื่องนี้ (กันฟอร์มขึ้นซ้ำระหว่างรอข้อมูลเซิร์ฟเวอร์) ───
 let rateDraft={}, rateCurId=null;
 function ratedLocal(){ try{ return JSON.parse(localStorage.getItem('vr3_rated')||'{}'); }catch(e){ return {}; } }
@@ -442,11 +445,11 @@ function openDet(id) {
     ${[['อาคาร',b.icon+' '+b.name],['ห้อง',escHtml(t.room)],['ประเภท',escHtml(t.category)],['ผู้แจ้ง',escHtml(t.name)],
        ...(cu?[['โทร',escHtml(t.phone)]]:[]),['หน่วยงาน',escHtml(t.dept)],['วันที่แจ้ง',fd(t.createdAt)],
        ...(cu?[['วันที่อนุมัติ',t.approvedAt?fd(t.approvedAt):'ยังไม่อนุมัติ'],
-              ['คาดว่าเสร็จ',(()=>{const di=dueInfo(t);return `<span class="badge ${di.cls}">${di.text}</span>${di.sub?` <span style="font-size:11px;color:var(--tx3)">${di.sub}</span>`:''}${cu.isEngineer&&!CLOSED_STATUS.includes(t.status)?` <button class="btn btn-sm" style="margin-left:4px;padding:2px 8px" onclick="openDueEdit('${t.id}')">📅 แก้วันคาดว่าเสร็จ</button>`:''}`;})()]]:[]),
+              ['คาดว่าเสร็จ',(()=>{const di=dueInfo(t);return `<span class="badge ${di.cls}">${di.text}</span>${di.sub?` <span style="font-size:12px;color:var(--tx3)">${di.sub}</span>`:''}${cu.isEngineer&&!CLOSED_STATUS.includes(t.status)?` <button class="btn btn-sm" style="margin-left:4px;padding:2px 8px" onclick="openDueEdit('${t.id}')">📅 แก้วันคาดว่าเสร็จ</button>`:''}`;})()]]:[]),
        ['ผู้รับผิดชอบ',assigneeChips(t.assignees)],
        ['ประมาณการ',(t.estimatedCost||0).toLocaleString()+' บาท'],
        ['ค่าใช้จ่ายจริง',(t.actualCost||0).toLocaleString()+' บาท'],
-       ...(t.status==='done'?[['คาร์บอนที่ประหยัด',(()=>{const c=carbonOf(t);return c.total?`<b>🌱 ${fmtKg(c.total)} kgCO2e</b><div style="font-size:11.5px;color:var(--tx3)">${carbonTip(c)}</div>`:'—';})()]]:[]),
+       ...(t.status==='done'?[['คาร์บอนที่ประหยัด',(()=>{const c=carbonOf(t);return c.total?`<b>🌱 ${fmtKg(c.total)} kgCO2e</b><div style="font-size:12px;color:var(--tx3)">${carbonTip(c)}</div>`:'—';})()]]:[]),
     ].map(([l,v2])=>`<tr><td style="color:var(--tx3);padding:4px 0;width:110px;font-size:12px;vertical-align:top">${l}</td><td style="padding:4px 0">${v2}</td></tr>`).join('')}
     </table>
     ${!CLOSED_STATUS.includes(t.status)&&pinFor(t.id)?lineFollowBox(t.id,pinFor(t.id),true):''}
@@ -468,9 +471,9 @@ function openDet(id) {
         ${i<arr.length-1?`<div class="tl-ln"></div>`:''}
       </div>
       <div style="padding-bottom:12px;flex:1">
-        <span class="badge ${si.cls}" style="font-size:10px">${si.label}</span>
+        <span class="badge ${si.cls}" style="font-size:12px">${si.label}</span>
         ${h.note&&h.note!=='-'?`<div style="font-size:12px;color:var(--tx2);margin-top:3px">${escHtml(h.note)}</div>`:''}
-        <div style="font-size:11px;color:var(--tx3);margin-top:2px">${fd(h.date)} — ${escHtml(h.by)}</div>
+        <div style="font-size:12px;color:var(--tx3);margin-top:2px">${fd(h.date)} — ${escHtml(h.by)}</div>
       </div>
     </div>`;}).join('')}`;
   const _md=document.getElementById('detMd'); _md.dataset.tid=id; _md.style.display='flex';

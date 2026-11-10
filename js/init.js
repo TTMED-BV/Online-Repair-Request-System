@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — init.js (v16.2) : เริ่มต้นโปรแกรม · ธีม · ตรวจเวอร์ชันใหม่
+// ระบบแจ้งซ่อมออนไลน์ — init.js (v17.3) : เริ่มต้นโปรแกรม · ธีม · ตรวจเวอร์ชันใหม่
 // โหลดตามลำดับใน index.html (classic script ใช้ตัวแปรร่วมกัน)
 // ════════════════════════ INIT ════════════════════════
 // กู้คืน session เดิม (ถ้ามี) — เซิร์ฟเวอร์จะปฏิเสธเองถ้า token หมดอายุ
@@ -18,12 +18,7 @@ function applyTheme(t){
   const btn=document.getElementById('themeBtn');
   if(btn) btn.textContent = t==='dark' ? '☀️' : '🌙';
 }
-function toggleTheme(){
-  const cur=document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light';
-  const next=cur==='dark'?'light':'dark';
-  localStorage.setItem('vr3_theme',next);
-  applyTheme(next);
-}
+function toggleTheme(){ cycleThemeMode(); }   // v17: อัตโนมัติ → สว่าง → มืด (js/ui.js)
 
 // ══ v15.3: ธีมเทศกาล ══
 const SEASONS={ normal:{label:'ปกติ (ไทย)',icon:'🌿'}, halloween:{label:'ฮาโลวีน',icon:'🎃'}, xmas:{label:'คริสต์มาส',icon:'🎄'} };
@@ -64,7 +59,7 @@ function cycleSeason(){ const order=['auto','normal','halloween','xmas']; const 
 function renderSeasonMenu(){
   const m=document.getElementById('seasonMenu'); if(!m) return;
   const p=seasonPref(), a=autoSeason();
-  m.innerHTML=`<button class="${p==='auto'?'on':''}" onclick="setSeason('auto')">🗓️ อัตโนมัติตามเทศกาล <span style="margin-left:auto;font-size:11px;color:var(--tx3)">ตอนนี้: ${SEASONS[a].icon}</span></button>
+  m.innerHTML=`<button class="${p==='auto'?'on':''}" onclick="setSeason('auto')">🗓️ อัตโนมัติตามเทศกาล <span style="margin-left:auto;font-size:12px;color:var(--tx3)">ตอนนี้: ${SEASONS[a].icon}</span></button>
     <div class="sm-sep"></div>
     ${Object.entries(SEASONS).map(([k,v])=>`<button class="${p===k?'on':''}" onclick="setSeason('${k}')">${v.icon} ${v.label}</button>`).join('')}
     <div class="sm-sep"></div>
@@ -78,7 +73,7 @@ applySeason();
 (function initTheme(){
   const saved=localStorage.getItem('vr3_theme');
   const prefers=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
-  applyTheme(saved || (prefers?'dark':'light'));
+  applyThemeMode();   // v17: อัตโนมัติ / สว่าง / มืด (js/ui.js)
 })();
 
 (function restoreSession(){

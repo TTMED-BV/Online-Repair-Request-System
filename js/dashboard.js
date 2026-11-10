@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — dashboard.js (v16.2) : Dashboard · PM · ปฏิทิน · ตัวกรอง
+// ระบบแจ้งซ่อมออนไลน์ — dashboard.js (v17.3) : Dashboard · PM · ปฏิทิน · ตัวกรอง
 // โหลดตามลำดับใน index.html (classic script ใช้ตัวแปรร่วมกัน)
 // ════════════════════════ PAGE: DASHBOARD ════════════════════════
 // สร้าง donut chart เป็น SVG (ไล่สีตามสถานะ)
@@ -86,7 +86,7 @@ function pmSchedCell(p,i){
   const sel=`<select onchange="pmEdit(${i},'mode',this.value)" style="margin-bottom:5px">${Object.entries(PM_MODES).map(([k,l])=>`<option value="${k}" ${mode===k?'selected':''}>${l}</option>`).join('')}</select>`;
   let body='';
   if(mode==='interval') body=`ทุก <input type="number" value="${p.intervalDays||180}" min="1" style="width:70px" onchange="pmEdit(${i},'intervalDays',this.value)"> วัน`;
-  else if(mode==='dates') body=`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px">${(sc.dates||[]).slice().sort().map((d,k)=>`<span class="badge b-blue nodot">${fdShort(parseYmd(d))} <a href="javascript:void 0" onclick="pmDateDel(${i},'${d}')" style="color:inherit;text-decoration:none;margin-left:3px">✕</a></span>`).join('')||'<span style="font-size:11px;color:var(--tx3)">ยังไม่มีวันที่</span>'}</div>
+  else if(mode==='dates') body=`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px">${(sc.dates||[]).slice().sort().map((d,k)=>`<span class="badge b-blue nodot">${fdShort(parseYmd(d))} <a href="javascript:void 0" onclick="pmDateDel(${i},'${d}')" style="color:inherit;text-decoration:none;margin-left:3px">✕</a></span>`).join('')||'<span style="font-size:12px;color:var(--tx3)">ยังไม่มีวันที่</span>'}</div>
       <input type="date" id="pmdt_${i}" style="width:auto"> <button class="btn btn-sm" onclick="pmDateAdd(${i})">+ เพิ่มวัน</button>`;
   else if(mode==='range') body=`<input type="date" value="${sc.start||''}" style="width:auto" onchange="pmSched(${i},'start',this.value)"> ถึง <input type="date" value="${sc.end||''}" style="width:auto" onchange="pmSched(${i},'end',this.value)">
       <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;margin-left:4px;cursor:pointer"><input type="checkbox" ${sc.yearly?'checked':''} style="width:auto" onchange="pmSched(${i},'yearly',this.checked)"> ทำซ้ำทุกปี</label>`;
@@ -106,8 +106,8 @@ function pgPM(){
     const occTxt = st&&st.occ ? (st.occ.end?`${fdShort(st.occ.start)} – ${fdShort(st.occ.end)}`:fdShort(st.occ.start)) : '';
     const statusBadge = p.active===false ? '<span class="badge b-gray">ปิดอยู่</span>'
       : st&&st.none ? '<span class="badge b-gray">ไม่มีรอบถัดไป</span>'
-      : st&&st.due ? `<span class="badge b-red">ถึงรอบแล้ว</span><div style="font-size:10.5px;color:var(--tx3);margin-top:3px">${occTxt}</div>`
-      : `<span class="badge b-green">อีก ${st.days} วัน</span><div style="font-size:10.5px;color:var(--tx3);margin-top:3px">${occTxt}</div>`;
+      : st&&st.due ? `<span class="badge b-red">ถึงรอบแล้ว</span><div style="font-size:12px;color:var(--tx3);margin-top:3px">${occTxt}</div>`
+      : `<span class="badge b-green">อีก ${st.days} วัน</span><div style="font-size:12px;color:var(--tx3);margin-top:3px">${occTxt}</div>`;
     const fls=floorsOf(p.building);
     return `<tr>
       <td><input value="${escAttr(p.name||'')}" placeholder="เช่น ล้างแอร์ชั้น 3" onchange="pmEdit(${i},'name',this.value)" style="min-width:150px"></td>
@@ -215,7 +215,7 @@ function monthlyTrendCard(allTickets){
   return `<div class="card" style="margin-bottom:1rem">
     <div class="ctitle" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
       <span>📈 แนวโน้มรายเดือน (6 เดือนล่าสุด)</span>
-      <span style="display:flex;gap:14px;font-size:11.5px;font-weight:400">
+      <span style="display:flex;gap:14px;font-size:12px;font-weight:400">
         <span style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:3px;background:#3ba7d6;display:inline-block"></span>งานเข้า</span>
         <span style="display:flex;align-items:center;gap:5px"><span style="width:11px;height:11px;border-radius:3px;background:#5cc93f;display:inline-block"></span>เสร็จ</span>
       </span>
@@ -307,7 +307,7 @@ function pgCalendar(){
       </div>
     </div>
     ${overCard}
-    <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;margin-bottom:.7rem">
+    <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin-bottom:.7rem">
       <span><span class="cal-dot ev-tk"></span> งานค้าง</span>
       <span><span class="cal-dot ev-high"></span> เร่งด่วน</span>
       <span><span class="cal-dot ev-pend"></span> รออนุมัติ (ถึงวันนี้)</span>
@@ -477,7 +477,7 @@ function pgDashboardInner() {
         <div class="bar-wrap">${budgetData.map(b=>`<div class="bar-row">
           <div class="bar-lbl">${b.icon} ${b.short}</div>
           <div><div class="bar-track"><div class="bar-fill" style="width:${b.pct}%;background:${b.pct>80?'#e35b5b':b.pct>50?'#e0a94b':'#5cc93f'}"></div></div>
-          <div style="font-size:10px;color:var(--tx3);margin-top:2px">${b.spent.toLocaleString()} / ${b.budget.toLocaleString()} บาท</div></div>
+          <div style="font-size:12px;color:var(--tx3);margin-top:2px">${b.spent.toLocaleString()} / ${b.budget.toLocaleString()} บาท</div></div>
           <div class="bar-val">${b.pct}%</div>
         </div>`).join('')}</div>
       </div>`}
@@ -488,7 +488,7 @@ function pgDashboardInner() {
           return `<div class="hs-card"><div class="hs-icon">${h.icon}</div><div class="hs-name">${h.short}</div>
             <div class="hs-count" style="color:${col}">${h.count}</div>
             <div class="hs-bar" style="background:${col}33"><div style="height:100%;border-radius:2px;background:${col};width:${pct}%"></div></div>
-            <div style="font-size:11px;color:var(--tx3)">คงค้าง ${h.active}</div></div>`;
+            <div style="font-size:12px;color:var(--tx3)">คงค้าง ${h.active}</div></div>`;
         }).join('')}</div>
         ${recurring.length?`<div style="font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:6px">ปัญหาซ้ำซาก</div>${recurring.slice(0,3).map(r=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:.5px solid var(--bd);font-size:12px"><span>${r.building.icon} ${r.building.short} — ${r.cat}</span><span class="badge b-red">${r.count} ครั้ง</span></div>`).join('')}`:''}
       </div>
@@ -502,7 +502,7 @@ function pgDashboardInner() {
             <div class="tech-av" style="background:${t.v.color}33;color:${t.v.color}">${t.v.initials}</div>
             <div class="tech-info">
               <div class="tech-name">${t.v.name}</div>
-              <div style="font-size:11px;color:var(--tx3)">${(t.v.specialty||[]).join(' · ')}</div>
+              <div style="font-size:12px;color:var(--tx3)">${(t.v.specialty||[]).join(' · ')}</div>
               <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px">
                 <span class="badge b-blue">งานซ่อมคงค้าง ${t.own}</span>
                 <span class="badge b-green">เสร็จ ${t.done}</span>

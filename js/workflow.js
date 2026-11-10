@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — workflow.js (v16.2) : หน้าอนุมัติ · หน้าจัดการงาน
+// ระบบแจ้งซ่อมออนไลน์ — workflow.js (v17.3) : หน้าอนุมัติ · หน้าจัดการงาน
 // โหลดตามลำดับใน index.html (classic script ใช้ตัวแปรร่วมกัน)
 // ════════════════════════ PAGE: APPROVE ════════════════════════
 function pgApprove() {
@@ -82,8 +82,8 @@ function openAssign(id) {
     const sugg=isSugg===0?'⭐ แนะนำ':isSugg===1?'✓ รอง':'';
     return `<div class="cb-item ${(t.assignees||[]).includes(u)?'selected':''}" onclick="toggleCb(this,'${u}')">
       <input type="checkbox" id="cb_${u}" ${(t.assignees||[]).includes(u)?'checked':''} style="pointer-events:none">
-      <div class="tech-av" style="background:${usr.color}22;color:${usr.color};width:28px;height:28px;font-size:11px">${usr.initials}</div>
-      <div class="cb-label"><b>${escHtml(usr.name)}</b>${sugg?` <span class="badge b-teal" style="font-size:10px">${sugg}</span>`:''}</div>
+      <div class="tech-av" style="background:${usr.color}22;color:${usr.color};width:28px;height:28px;font-size:12px">${usr.initials}</div>
+      <div class="cb-label"><b>${escHtml(usr.name)}</b>${sugg?` <span class="badge b-teal" style="font-size:12px">${sugg}</span>`:''}</div>
       <div class="cb-sub">งานคงค้าง: ${wl}</div>
     </div>`;
   }).join('');
@@ -264,7 +264,7 @@ function pgManage() {
         <span style="font-size:12.5px;display:inline-flex;align-items:center;gap:4px">แจ้งตั้งแต่ <input type="date" style="width:auto" value="${MF.from||''}" onchange="mfSet('from',this.value)"> ถึง <input type="date" style="width:auto" value="${MF.to||''}" onchange="mfSet('to',this.value)"></span>
         <button class="btn btn-sm" onclick="mfClear()" style="margin-left:auto">✕ ล้างตัวกรอง</button>
       </div>
-      <div id="mgCount" style="font-size:11.5px;color:var(--tx3);margin-top:8px"></div>
+      <div id="mgCount" style="font-size:12px;color:var(--tx3);margin-top:8px"></div>
     </div>
     <div id="mgList"></div>
   </div>`;
@@ -284,7 +284,7 @@ function openStatusUpdate(id) {
     </div>
     <div id="buyBox" style="display:${['pending_purchase','purchase'].includes(t.status)?'block':'none'};background:var(--amber-bg);border-radius:8px;padding:.6rem .75rem;margin-bottom:.9rem">
       <div class="ff" style="margin:0"><label>💰 งบประมาณจัดซื้อ (บาท)<span class="req">*</span></label><input id="updBudget" type="number" min="0" value="${t.approvedBudget||t.estimatedCost||''}" placeholder="ราคาประเมินจากช่าง/ใบเสนอราคา">
-      <div style="font-size:11.5px;color:var(--tx2);margin-top:3px">ใช้เสนอบริหารอนุมัติจัดซื้อ — ใส่ตามราคาที่สำรวจหรือใบเสนอราคา</div></div>
+      <div style="font-size:12px;color:var(--tx2);margin-top:3px">ใช้เสนอบริหารอนุมัติจัดซื้อ — ใส่ตามราคาที่สำรวจหรือใบเสนอราคา</div></div>
     </div>
     <div class="ff"><label>ค่าใช้จ่ายจริง (บาท)</label><input id="updCost" type="number" value="${t.actualCost||0}"></div>
     ${FLAGS.inventory&&(INVENTORY||[]).filter(x=>!x.hidden).length?`<div class="fsec">เบิกอุปกรณ์ (ตัดสต็อก)</div>

@@ -1,4 +1,4 @@
-// ระบบแจ้งซ่อมออนไลน์ — core.js (v16.2) : ค่าตั้งต้น · สถานะ · API · คาร์บอน · สิทธิ์ · คิวบันทึก · ตัวช่วย · ล็อกอิน · เราเตอร์
+// ระบบแจ้งซ่อมออนไลน์ — core.js (v17.3) : ค่าตั้งต้น · สถานะ · API · คาร์บอน · สิทธิ์ · คิวบันทึก · ตัวช่วย · ล็อกอิน · เราเตอร์
 // โหลดตามลำดับใน index.html (classic script ใช้ตัวแปรร่วมกัน)
 // ═══════════════════════════════════════════
 // CONFIG — แก้ GAS_URL หลัง Deploy Apps Script
@@ -6,7 +6,7 @@
 // URL ของ Google Apps Script ฝังไว้ในโปรแกรม (แก้ได้ที่หน้า ⚙ ตั้งค่า)
 // ─── เวอร์ชันโปรแกรม (อัปเดตทุกครั้งที่ออกเวอร์ชันใหม่ — ต้องตรงกับ Code.gs) ───
 // APP_VERSION อยู่ใน index.html (ให้ตัวตรวจเวอร์ชันใหม่อ่านได้จากไฟล์เดียว)
-const SERVER_REQUIRED = 'v16.2';   // เวอร์ชัน Code.gs ที่หน้าเว็บนี้ต้องใช้
+const SERVER_REQUIRED = 'v17.3';   // เวอร์ชัน Code.gs ที่หน้าเว็บนี้ต้องใช้
 const APP_BUILD   = '2026-11-09';
 let SERVER_VERSION = '';   // อ่านจาก Code.gs ตอนเปิดเว็บ
 const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbyOsSEC8KI1bmWJpWoCXC18XEWRqNTyzN4sRQwc4UV_GAWOUlvnzTzaUCwVId-FmaY2/exec';
@@ -168,15 +168,15 @@ function carbonCard(){
   const bars=data.map(d=>{
     const segs=Object.keys(COL).map(k=>d[k]>0?`<div title="${LBL[k]} ${fmtKg(d[k])} kgCO2e" style="height:${d[k]/maxV*100}%;background:${COL[k]}"></div>`:'').join('');
     return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0">
-      <div style="font-size:10px;color:var(--tx3)">${d.total?fmtKg(d.total):''}</div>
+      <div style="font-size:12px;color:var(--tx3)">${d.total?fmtKg(d.total):''}</div>
       <div style="height:120px;width:70%;max-width:28px;display:flex;flex-direction:column-reverse;border-radius:4px;overflow:hidden;background:var(--surf2)">${segs}</div>
-      <div style="font-size:10px;color:var(--tx3);white-space:nowrap">${TH[d.m]}</div></div>`;
+      <div style="font-size:12px;color:var(--tx3);white-space:nowrap">${TH[d.m]}</div></div>`;
   }).join('');
   const trees=CARBON.treeKgYear?Math.round(cur.total/(+CARBON.treeKgYear)*12):0;
   return `<div class="card" style="margin-bottom:1rem">
     <div class="ctitle" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
       <span>🌱 คาร์บอนที่ประหยัดได้ (รายเดือน)</span>
-      <span style="display:flex;gap:10px;flex-wrap:wrap;font-size:11.5px;font-weight:400">${Object.keys(COL).map(k=>`<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:3px;background:${COL[k]};display:inline-block"></span>${LBL[k]}</span>`).join('')}</span>
+      <span style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px;font-weight:400">${Object.keys(COL).map(k=>`<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:3px;background:${COL[k]};display:inline-block"></span>${LBL[k]}</span>`).join('')}</span>
     </div>
     <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px">
       <div><div style="font-size:12px;color:var(--tx3)">เดือนนี้ (${TH[cur.m]})</div><div style="font-size:28px;font-weight:700;color:var(--green-tx,#2f7d32)">${fmtKg(cur.total)} <span style="font-size:13px;font-weight:500">kgCO2e</span></div>
@@ -184,7 +184,7 @@ function carbonCard(){
       <div style="font-size:12px;color:var(--tx2);line-height:1.7">ไฟฟ้า ${Math.round(cur.kwh)} kWh · น้ำ ${Math.round(cur.m3)} ลบ.ม.<br>รวม 12 เดือน <b>${fmtKg(yearTotal)}</b> kgCO2e</div>
     </div>
     <div style="display:flex;gap:4px;align-items:flex-end">${bars}</div>
-    <div style="font-size:10.5px;color:var(--tx3);margin-top:8px">คำนวณอัตโนมัติจากใบที่ "เสร็จเรียบร้อย" ตามเดือนที่ปิดงาน · EF ไฟฟ้า ${CARBON.efElec} kgCO2e/kWh, กระดาษ ${CARBON.efPaper} kgCO2e/kg (อบก.)${CARBON.efWater?'':' · ยังไม่ได้ตั้งค่า EF น้ำ (แสดงเป็น ลบ.ม.)'} · ค่ามาตรฐานต่อใบเป็นค่าประมาณ แก้ได้ที่หน้าตั้งค่า</div>
+    <div style="font-size:12px;color:var(--tx3);margin-top:8px">คำนวณอัตโนมัติจากใบที่ "เสร็จเรียบร้อย" ตามเดือนที่ปิดงาน · EF ไฟฟ้า ${CARBON.efElec} kgCO2e/kWh, กระดาษ ${CARBON.efPaper} kgCO2e/kg (อบก.)${CARBON.efWater?'':' · ยังไม่ได้ตั้งค่า EF น้ำ (แสดงเป็น ลบ.ม.)'} · ค่ามาตรฐานต่อใบเป็นค่าประมาณ แก้ได้ที่หน้าตั้งค่า</div>
   </div>`;
 }
 
